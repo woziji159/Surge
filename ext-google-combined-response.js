@@ -1,5 +1,5 @@
 /*
- * Google search response chain for Surge. Pagination early-loading edition 2026-10-14.
+ * Google search response chain for Surge. Pagination locale and loading fix 2026-10-14.
  * Exactly one final $done; a failed stage preserves the preceding response.
  * Cleanup: limbopro/Adblock4limbo, Adguard/Adblock4limbo.js (MIT).
  * Pagination: native Google More results or automatic next-page navigation; no HTML cloning.
@@ -319,7 +319,7 @@ main();
 
 }
 /*
- * Google automatic pagination for Safari + Surge (native early-loading edition).
+ * Google automatic pagination for Safari + Surge (native locale-aware edition).
  * No fetch/DOMParser, cloned Google HTML, iframe, or preloading.
  * Native "More results" is clicked when available; otherwise use the real next-page URL.
  * Keep surgeCleanup (Adblock4limbo) untouched.
@@ -364,7 +364,7 @@ function surgeEndless($response, $done) {
   }
   function isMoreResultsText(element) {
     var text = (element.textContent || '').replace(/\s+/g, ' ').trim();
-    return text.length < 65 && /^(?:More results|Show more results|更多结果|更多搜索结果|显示更多结果|查看更多结果)(?:\s*[›»→])?$/i.test(text);
+    return text.length < 65 && /^(?:More results|Show more results|Show more|更多结果|更多搜索结果|显示更多结果|查看更多结果|更多結果|更多搜尋結果|顯示更多結果|查看更多結果)(?:\s*[›»→])?$/i.test(text);
   }
   // Only scan Google pagination regions to avoid clicking unrelated "more" controls.
   function findNativeMore() {
@@ -373,12 +373,22 @@ function surgeEndless($response, $done) {
       '#foot button', '#foot [role="button"]', '#foot a',
       '#nav button', '#nav [role="button"]', '#nav a',
       'nav[aria-label*="分页"] button', 'nav[aria-label*="Page"] button',
-      '[role="navigation"] button'
+      '[role="navigation"] button', '#botstuff [role="button"]', 'main button', 'main [role="button"]'
     ];
     var candidates = document.querySelectorAll(selectors.join(','));
     for (var i = 0; i < candidates.length; i++) {
       var candidate = candidates[i];
       if (isVisible(candidate) && isMoreResultsText(candidate)) return candidate;
+    }
+    // Google sometimes moves its pagination outside #botstuff/#foot.
+    // Only consider short visible controls in the lower half of the document.
+    var fallback = document.querySelectorAll('button, [role="button"], a');
+    for (var k = 0; k < fallback.length && k < 900; k++) {
+      var el = fallback[k];
+      if (!isVisible(el) || !isMoreResultsText(el)) continue;
+      var box = el.getBoundingClientRect();
+      var at = box.top + (window.scrollY || document.documentElement.scrollTop || 0);
+      if (at > document.documentElement.scrollHeight * 0.45) return el;
     }
     return null;
   }
@@ -398,8 +408,8 @@ function surgeEndless($response, $done) {
   }
   function findNextLink() {
     var direct = document.querySelectorAll(
-      'a#pnnext, a[rel="next"], a[aria-label="Next page"], a[aria-label="下一页"], ' +
-      'a[aria-label="More results"], a[aria-label="更多结果"]');
+      'a#pnnext, a[rel="next"], a[aria-label="Next page"], a[aria-label="下一页"], a[aria-label="下一頁"], ' +
+      'a[aria-label="More results"], a[aria-label="更多结果"], a[aria-label="更多結果"]');
     for (var i = 0; i < direct.length; i++) {
       var found = goodNextLink(direct[i], false);
       if (found && isVisible(direct[i])) return found;
@@ -415,7 +425,17 @@ function surgeEndless($response, $done) {
       var s = Number(new URL(href).searchParams.get('start'));
       if (s < bestStart) { bestStart = s; bestURL = href; }
     }
-    return bestURL;
+    if (bestURL) return bestURL;
+    // Last resort: Google's mobile layout occasionally omits visible pagination anchors.
+    // Only navigate when an ordinary result list exists, and cap the synthetic page number.
+    var start = Number(searchURL.searchParams.get('start')) || 0;
+    var results = document.querySelectorAll('#search .MjjYud, #rso .MjjYud, #search .g, #rso .g');
+    if (results.length >= 5 && start >= 0 && start < 90 && start % 10 === 0) {
+      var fallbackURL = new URL(location.href);
+      fallbackURL.searchParams.set('start', String(start + 10));
+      return fallbackURL.href;
+    }
+    return null;
   }
   function activate() {
     if (loading || stopped || navigationStarted) return;
@@ -425,6 +445,7 @@ function surgeEndless($response, $done) {
     var more = findNativeMore();
     if (more && clicks < MAX_CLICKS) {
       clicks++;
+      userScrolled = false; // Require another user gesture before auto-loading again.
       loading = true;
       var oldHeight = document.documentElement.scrollHeight;
       var oldMore = more;
@@ -453,8 +474,10 @@ function surgeEndless($response, $done) {
       // Fallback for slow requests or Google layouts that do not append immediately.
       loadingTimeout = window.setTimeout(function () {
         if (!resultsAdded() && oldMore.isConnected && isVisible(oldMore)) {
-          // Prevent an endless loop against a button that does nothing.
-          stopped = true;
+          // Native click failed; fall back to the next page only when a link exists.
+          var nextURL = findNextLink();
+          if (nextURL) { navigationStarted = true; window.location.assign(nextURL); }
+          else stopped = true;
         }
         releaseLoading();
       }, 3800);
@@ -480,6 +503,7 @@ function surgeEndless($response, $done) {
     if (!document.body) return;
     // Prevent automatic next-page loops caused by restored scroll positions.
     window.addEventListener('touchstart', function () { userScrolled = true; }, { passive: true });
+    window.addEventListener('touchmove', function () { userScrolled = true; }, { passive: true });
     window.addEventListener('wheel', function () { userScrolled = true; }, { passive: true });
     window.addEventListener('keydown', function (e) {
       if (/^(ArrowDown|PageDown|End| |Space)$/.test(e.key)) userScrolled = true;
@@ -498,10 +522,51 @@ function surgeEndless($response, $done) {
   $done({ body: body.replace(/<\/body\s*>/i, injection + '\n</body>') });
 }
 
+// Defer only Google search's Adblock4limbo network assets until AFTER browser 'load'.
+// This keeps the original cleanup logic, but avoids making Safari wait on four external scripts.
+function surgeDeferGoogleCleanupAssets() {
+  if (typeof surgeState.body !== 'string') return;
+  const urls = [
+    'https://limbopro.com/Adguard/autoAdDetector.js',
+    'https://limbopro.com/Adguard/Adblock4limbo.user.js',
+    'https://limbopro.com/Adguard/Adblock4limbo.function.js',
+    'https://limbopro.com/Adguard/elementBlocker.user.js'
+  ];
+  const re = /<script\b[^>]*\bsrc=["']https:\/\/limbopro\.com\/Adguard\/(?:autoAdDetector|Adblock4limbo\.user|Adblock4limbo\.function|elementBlocker\.user)\.js["'][^>]*>\s*<\/script>\s*/gi;
+  let body = surgeState.body;
+  const matches = body.match(re);
+  if (!matches || matches.length === 0 || !/<\/head\s*>/i.test(body)) return;
+  body = body.replace(re, '');
+  const loader = `<script id="surge-google-postload-cleanup">(function () {
+    var urls = ${JSON.stringify(urls)};
+    function begin() {
+      if (window.__surgeGoogleCleanupLoaded) return;
+      window.__surgeGoogleCleanupLoaded = true;
+      var i = 0;
+      function next() {
+        if (i >= urls.length) return;
+        var e = document.createElement('script');
+        e.src = urls[i++];
+        e.onload = next;
+        e.onerror = next;
+        (document.head || document.documentElement).appendChild(e);
+      }
+      next();
+    }
+    if (document.readyState === 'complete') window.setTimeout(begin, 50);
+    else window.addEventListener('load', function () { window.setTimeout(begin, 50); }, { once: true });
+  })();</script>`;
+  body = body.replace(/<\/head\s*>/i, loader + '\n</head>');
+  surgeState.body = body;
+  surgePatch.body = body;
+}
 (async () => {
   if (surgeStatus() !== 200 || !surgeHTML()) return;
+  // If both .conf and .sgmodule are enabled, do not inject a second identical chain.
+  if (/id=["']surge-google-native-pagination["']/.test(surgeState.body)) return;
   await surgeRun('web cleanup', surgeCleanup, 2000);
   if (/\/search(?:\?|$)/.test($request.url) && /<html|<head/i.test(surgeState.body)) {
+    surgeDeferGoogleCleanupAssets();
     await surgeRun('endless results', surgeEndless, 1500);
   }
 })().catch(e => console.log('[Surge Google chain] ' + e)).finally(() => surgeFinalDone(surgePatch));

@@ -1,8 +1,6 @@
-#!name=Google 综合增强
-#!desc=历史连续下滑版：Google 下一页追加在当前页下方；无自动换线路重试。
+#!name=Google 综合增强（原生翻页修复）
+#!desc=繁体中文翻页兼容、提前加载、Google页面加载优化；保留毒奶净化。
 [Script]
-# 唯一 Google response 处理器：网页净化 → 下方连续追加；保留历史脚本原样。
-Google 综合增强 = type=http-response, pattern=^https://www[.]google[.][a-z.]+/(?:search[?]|[?](?:sa|FORM)=|$), requires-body=true, max-size=-1, timeout=10, engine=auto, script-path=https://raw.githubusercontent.com/woziji159/Surge/main/ext-google-combined-response.js?v=continuous-0c5322a
-
+Google 综合增强 = type=http-response, pattern=^https://www[.]google[.][a-z.]+/(?:search[?]|[?](?:sa|FORM)=|$), requires-body=true, max-size=-1, timeout=10, engine=auto, script-path=https://raw.githubusercontent.com/woziji159/Surge/main/ext-google-combined-response.js?v=20261014-native-zhfix3
 [MITM]
 hostname = %APPEND% www.google.*

@@ -1,0 +1,11 @@
+Google 搜索修复版（2026-10-14）
+一、先解决重复启用：仅保留 Surge.conf 或 google-search.sgmodule 里的一个「Google 综合增强」，千万不要同时开启。
+推荐：保留单独 google-search.sgmodule；在 Surge.conf 的 [Script] 找到“Google 综合增强 = ...”这一整行，前面加 # 注释掉。
+二、把本包 ext-google-combined-response-fixed.js 重命名为 ext-google-combined-response.js，上传 GitHub 仓库 main 根目录并覆盖同名旧文件。
+三、把 google-search.sgmodule 上传同仓库，覆盖原同名文件；如果使用独立模块方式，在 Surge 中更新该模块和脚本资源。
+四、注意：脚本的 URL 带有新版 ?v=20261014-native-zhfix3 缓存参数。如果你不使用独立模块，而只使用 Surge.conf，则不要上传本包模块，需要手动把 conf Google 综合增强那一行末尾的 ?v=continuous-0c5322a 改为 ?v=20261014-native-zhfix3。
+五、重载 Surge 配置，更新远程资源，Safari 关闭原 Google 页面重新打开。
+
+改变：识别繁体的“更多結果”“下一頁”，提前翻页；Google 搜索页里毒奶的四个外部脚本改为页面完成后顺序加载，可能让净化功能出现得稍晚。毒奶原功能代码未删。
+注意：如果 Google 只提供传统「下一页」，会切换到下一页而不是无缝追加；媒体封面优先使用 Google 原生加载。不保证各地区的 Google 界面均有效。
+恢复：重新上传之前的 ext-google-combined-response.js，并恢复原模块版本。
