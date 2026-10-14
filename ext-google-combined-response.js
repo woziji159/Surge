@@ -2,7 +2,7 @@
  * Google search response chain for Surge. Pagination refresh 2026-10-14.
  * Exactly one final $done; a failed stage preserves the preceding response.
  * Cleanup: limbopro/Adblock4limbo, Adguard/Adblock4limbo.js (MIT).
- * Pagination: revised automatic loading with image/video preview fallback (based on MIT pagination).
+ * Pagination: native Google More results or automatic next-page navigation; no HTML cloning.
  * See THIRD-PARTY-NOTICES.md and the accompanying license files.
  * Original combined work GPL-3.0; existing license and MIT component notices retained.
  */
@@ -318,260 +318,159 @@ function main() {
 main();
 
 }
-/* Replacement for surgeEndless in ext-google-combined-response.js.
- * Preserve the existing surgeCleanup (Adblock4limbo) stage unchanged.
- * Inline browser code runs only on first-party Google result pages.
+/*
+ * Google automatic pagination for Safari + Surge (native loading edition).
+ * No fetch/DOMParser, cloned Google HTML, iframe, or preloading.
+ * Native "More results" is clicked when available; otherwise use the real next-page URL.
+ * Keep surgeCleanup (Adblock4limbo) untouched.
  */
 function surgeEndless($response, $done) {
   const body = $response.body;
-  if (typeof body !== 'string' || !/<\/body\s*>/i.test(body)) {
+  if (typeof body !== 'string' || !/<\/body\s*>/i.test(body) ||
+      /id=["']surge-google-native-pagination["']/.test(body)) {
     $done({});
     return;
   }
-
-  const injection = String.raw`<script id="surge-google-endless-fixed">
+  const injection = String.raw`<script id="surge-google-native-pagination">
 (function () {
   'use strict';
-  if (window.top !== window.self || window.__surgeGooglePages2026) return;
-  window.__surgeGooglePages2026 = true;
+  if (window.top !== window.self || window.__surgeGoogleNativePaging) return;
+  if (location.pathname !== '/search') return;
+  var searchURL = new URL(location.href);
+  var query = searchURL.searchParams.get('q');
+  if (!query) return;
+  // Image Search and AI mode manage their own loading UI; leave them alone.
+  if (searchURL.searchParams.get('tbm') === 'isch' ||
+      searchURL.searchParams.get('udm') === '2' ||
+      searchURL.searchParams.get('udm') === '50') return;
+  window.__surgeGoogleNativePaging = true;
 
-  var url = new URL(location.href);
-  if (!url.searchParams.get('q') ||
-      url.searchParams.get('tbm') === 'isch' ||
-      url.searchParams.get('udm') === '2') return;
-
-  var MAX_EXTRA_PAGES = 12;
-  var pageCount = 0;
-  var pageStart = Math.max(0, Number(url.searchParams.get('start')) || 0);
-  var pageSize = Math.min(100, Math.max(1, Number(url.searchParams.get('num')) || 10));
+  var userScrolled = false;
+  var lastY = window.scrollY || 0;
+  var lastActionTime = 0;
   var loading = false;
-  var finished = false;
-  var prevY = 0;
-  var host = null;
-  var note = null;
-  var seen = new Set();
+  var stopped = false;
+  var navigationStarted = false;
+  var MAX_CLICKS = 16;
+  var clicks = 0;
 
-  function makeURL(start) {
-    var next = new URL(location.href);
-    next.searchParams.set('start', String(start));
-    return next;
+  function isVisible(element) {
+    if (!element || !element.isConnected) return false;
+    if (element.closest('[hidden], [aria-hidden="true"]')) return false;
+    var style = window.getComputedStyle(element);
+    return style.display !== 'none' && style.visibility !== 'hidden' &&
+           element.getClientRects().length > 0;
   }
-  function absolute(raw, base) {
-    if (!raw || typeof raw !== 'string') return '';
-    raw = raw.trim();
-    try {
-      var parsed = new URL(raw, base);
-      return /^(https?:|data:image\/|blob:)/i.test(parsed.href) ? parsed.href : '';
-    } catch (e) { return ''; }
+  function isMoreResultsText(element) {
+    var text = (element.textContent || '').replace(/\s+/g, ' ').trim();
+    return text.length < 65 && /^(?:More results|Show more results|更多结果|更多搜索结果|显示更多结果|查看更多结果)(?:\s*[›»→])?$/i.test(text);
   }
-  function imageURLs(img, base) {
-    var out = [];
-    ['data-src', 'data-original-src', 'data-original', 'data-lazy-src',
-     'data-deferred-src', 'data-iurl', 'data-thumb', 'data-url', 'src'].forEach(function (key) {
-      var val = absolute(img.getAttribute(key), base);
-      if (val && out.indexOf(val) === -1) out.push(val);
-    });
-    var set = img.getAttribute('data-srcset') || img.getAttribute('srcset');
-    if (set) {
-      // Avoid parsing data: URI commas as srcset delimiters.
-      set.split(/,\s+(?=https?:|\/\/|\/)/).forEach(function (part) {
-        var candidate = part.trim().split(/\s+/)[0];
-        var val = absolute(candidate, base);
-        if (val && out.indexOf(val) === -1) out.push(val);
-      });
+  // Only scan Google pagination regions to avoid clicking unrelated "more" controls.
+  function findNativeMore() {
+    var selectors = [
+      '#botstuff button', '#botstuff [role="button"]', '#botstuff a',
+      '#foot button', '#foot [role="button"]', '#foot a',
+      '#nav button', '#nav [role="button"]', '#nav a',
+      'nav[aria-label*="分页"] button', 'nav[aria-label*="Page"] button',
+      '[role="navigation"] button'
+    ];
+    var candidates = document.querySelectorAll(selectors.join(','));
+    for (var i = 0; i < candidates.length; i++) {
+      var candidate = candidates[i];
+      if (isVisible(candidate) && isMoreResultsText(candidate)) return candidate;
     }
-    return out;
+    return null;
   }
-  function placeholder(src) {
-    return !src || /^about:blank/i.test(src) ||
-      /^data:image\/(gif|svg\+xml)/i.test(src) ||
-      /^data:image\/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB/i.test(src);
+  function goodNextLink(link, requireStep) {
+    if (!link || !link.href) return null;
+    try {
+      var u = new URL(link.href, location.href);
+      if (u.origin !== location.origin || u.pathname !== '/search' ||
+          u.searchParams.get('q') !== query) return null;
+      var now = Number(searchURL.searchParams.get('start')) || 0;
+      var next = Number(u.searchParams.get('start'));
+      if (u.searchParams.has('start') && (!Number.isFinite(next) || next <= now)) return null;
+      if (requireStep && !u.searchParams.has('start')) return null;
+      if (u.href === location.href) return null;
+      return u.href;
+    } catch (e) { return null; }
   }
-  function restoreMedia(root, base) {
-    if (!root || root.nodeType !== 1) return;
-    var imgs = Array.prototype.slice.call(root.querySelectorAll('img'));
-    if (root.matches && root.matches('img')) imgs.unshift(root);
-    imgs.forEach(function (img, index) {
-      if (img.dataset.sgImageFixed) return;
-      img.dataset.sgImageFixed = '1';
-      var candidates = imageURLs(img, base).filter(function (val) { return !placeholder(val); });
-      var existing = absolute(img.getAttribute('src'), base);
-      var retry = 0;
-      // Google frequently defers video thumbnails in data-* attributes.
-      if (placeholder(existing) && candidates.length) {
-        img.removeAttribute('srcset');
-        img.src = candidates[0];
-        retry = 1;
-      }
-      var deferredSet = img.getAttribute('data-srcset');
-      if (deferredSet && !img.getAttribute('srcset')) {
-        img.setAttribute('srcset', deferredSet);
-      }
-      img.loading = index < 18 ? 'eager' : 'lazy';
-      img.decoding = 'async';
-      img.addEventListener('error', function () {
-        while (retry < candidates.length) {
-          var alternative = candidates[retry++];
-          if (alternative !== img.currentSrc && alternative !== img.src) {
-            img.removeAttribute('srcset');
-            img.src = alternative;
-            return;
-          }
-        }
-      });
-    });
-    root.querySelectorAll('video').forEach(function (video) {
-      if (video.getAttribute('poster')) return;
-      var p = absolute(video.getAttribute('data-poster') || video.getAttribute('data-src'), base);
-      if (p) video.poster = p;
-    });
-    root.querySelectorAll('[data-bg], [data-background-image]').forEach(function (item) {
-      if (item.style.backgroundImage && item.style.backgroundImage !== 'none') return;
-      var bg = absolute(item.getAttribute('data-bg') || item.getAttribute('data-background-image'), base);
-      if (bg) item.style.backgroundImage = 'url("' + bg.replace(/"/g, '%22') + '")';
-    });
+  function findNextLink() {
+    var direct = document.querySelectorAll(
+      'a#pnnext, a[rel="next"], a[aria-label="Next page"], a[aria-label="下一页"], ' +
+      'a[aria-label="More results"], a[aria-label="更多结果"]');
+    for (var i = 0; i < direct.length; i++) {
+      var found = goodNextLink(direct[i], false);
+      if (found && isVisible(direct[i])) return found;
+    }
+    var pages = document.querySelectorAll(
+      '#botstuff a[href*="start="], #foot a[href*="start="], #nav a[href*="start="], ' +
+      '[role="navigation"] a[href*="start="]');
+    var bestURL = null;
+    var bestStart = Infinity;
+    for (var j = 0; j < pages.length; j++) {
+      var href = goodNextLink(pages[j], true);
+      if (!href || !isVisible(pages[j])) continue;
+      var s = Number(new URL(href).searchParams.get('start'));
+      if (s < bestStart) { bestStart = s; bestURL = href; }
+    }
+    return bestURL;
   }
-  function status(value) {
-    if (!note) return;
-    note.textContent = value;
-    note.style.display = value ? 'block' : 'none';
-  }
-  function findResults(doc) {
-    return doc.querySelector('#center_col #rso') || doc.querySelector('#rso') ||
-           doc.querySelector('#center_col') || doc.querySelector('main [role="main"]');
-  }
-  function nextHrefFromDocument(doc, fallback) {
-    var el = doc.querySelector('a#pnnext, a[aria-label="Next page"], a[aria-label="下一页"]');
-    if (el) {
+  function activate() {
+    if (loading || stopped || navigationStarted) return;
+    var now = Date.now();
+    if (now - lastActionTime < 1400) return;
+    lastActionTime = now;
+    var more = findNativeMore();
+    if (more && clicks < MAX_CLICKS) {
+      clicks++;
+      loading = true;
+      var oldHeight = document.documentElement.scrollHeight;
+      var oldMore = more;
       try {
-        var found = new URL(el.getAttribute('href'), location.href);
-        if (found.origin === location.origin && found.pathname === location.pathname &&
-            found.searchParams.get('q') === url.searchParams.get('q')) return found.href;
-      } catch (e) { /* fall back to start */ }
+        // Use Google's own JavaScript and DOM initialization for photos and video thumbnails.
+        more.click();
+      } catch (e) { loading = false; return; }
+      window.setTimeout(function () {
+        loading = false;
+        // Avoid repeatedly clicking a broken control without any new results.
+        if (document.documentElement.scrollHeight < oldHeight + 60 &&
+            oldMore.isConnected && isVisible(oldMore)) stopped = true;
+      }, 3800);
+      return;
     }
-    return fallback;
-  }
-  function showNativeLink(href, label) {
-    if (!host) return;
-    var row = document.createElement('div');
-    row.className = 'sg-open-native';
-    var link = document.createElement('a');
-    link.href = href;
-    link.textContent = label;
-    link.rel = 'noopener';
-    row.appendChild(link);
-    host.appendChild(row);
-  }
-  function renderPage(doc, address, number) {
-    var result = findResults(doc);
-    if (!result || !result.querySelector('a, h3, img')) return false;
-    var fingerprint = (result.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 800);
-    if (!fingerprint || seen.has(fingerprint)) return false;
-    seen.add(fingerprint);
-    var page = document.createElement('section');
-    page.className = 'sg-extra-page';
-    page.setAttribute('data-page', String(number));
-    var heading = document.createElement('div');
-    heading.className = 'sg-extra-heading';
-    heading.textContent = 'Google 第 ' + number + ' 页';
-    page.appendChild(heading);
-    var cloned = result.cloneNode(true);
-    // Avoid duplicate IDs from Google result DOM. Do not execute fetched inline scripts.
-    if (cloned.hasAttribute('id')) cloned.removeAttribute('id');
-    cloned.querySelectorAll('[id]').forEach(function (node) { node.removeAttribute('id'); });
-    cloned.querySelectorAll('script, noscript').forEach(function (node) { node.remove(); });
-    restoreMedia(cloned, address);
-    page.appendChild(cloned);
-    var footer = document.createElement('div');
-    footer.className = 'sg-open-native';
-    var link = document.createElement('a');
-    link.href = address;
-    link.rel = 'noopener';
-    link.textContent = '图片或视频封面异常？打开完整第 ' + number + ' 页';
-    footer.appendChild(link);
-    page.appendChild(footer);
-    host.appendChild(page);
-    // Media created after insertion is also normalized.
-    var mutation = new MutationObserver(function (changes) {
-      changes.forEach(function (change) {
-        change.addedNodes.forEach(function (child) {
-          if (child.nodeType === 1) restoreMedia(child, address);
-        });
-      });
-    });
-    mutation.observe(page, { childList: true, subtree: true });
-    return true;
-  }
-  async function fetchPage() {
-    if (loading || finished || pageCount >= MAX_EXTRA_PAGES) return;
-    loading = true;
-    var targetStart = pageStart + pageSize;
-    var targetURL = makeURL(targetStart);
-    status('正在加载第 ' + (pageCount + 2) + ' 页…');
-    try {
-      var response = await fetch(targetURL.href, { credentials: 'same-origin', redirect: 'follow' });
-      if (!response.ok || new URL(response.url).origin !== location.origin) throw new Error('HTTP ' + response.status);
-      var contentType = response.headers.get('content-type') || '';
-      if (contentType && contentType.indexOf('text/html') === -1) throw new Error('非 HTML 响应');
-      var html = await response.text();
-      var doc = new DOMParser().parseFromString(html, 'text/html');
-      if (doc.querySelector('form[action*="/sorry/"], input[name="captcha"]')) throw new Error('需要人工验证');
-      if (!renderPage(doc, response.url, pageCount + 2)) {
-        finished = true;
-        status('已到达末页，或 Google 页面结构已变化。');
-        showNativeLink(targetURL.href, '打开 Google 下一页');
-        return;
-      }
-      pageCount++;
-      pageStart = targetStart;
-      if (!doc.querySelector('a#pnnext') && !doc.querySelector('#rso')) {
-        finished = true;
-      }
-      status('');
-    } catch (e) {
-      finished = true;
-      status('自动翻页失败，可用 Google 原生下一页继续浏览。');
-      showNativeLink(targetURL.href, '打开 Google 下一页');
-      console.log('[Surge Google pages] ' + String(e));
-    } finally {
-      loading = false;
-    }
+    // Google's traditional pagination does a normal navigation: media initialize normally.
+    var nextURL = findNextLink();
+    if (!nextURL) return;
+    navigationStarted = true;
+    window.location.assign(nextURL);
   }
   function onScroll() {
     var y = window.scrollY || document.documentElement.scrollTop || 0;
-    var forward = y > prevY;
-    prevY = y;
-    if (forward && !loading && !finished &&
-        y + window.innerHeight * 1.5 >= document.documentElement.scrollHeight) {
-      fetchPage();
-    }
+    var downward = y > lastY + 1;
+    lastY = y;
+    if (!userScrolled || !downward || y < 90) return;
+    var maxHeight = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight);
+    if (y + window.innerHeight >= maxHeight - 300) activate();
   }
-  function start() {
-    var results = findResults(document);
-    if (!results || !results.parentNode) return;
-    host = document.createElement('div');
-    host.id = 'sg-endless-pages-2026';
-    if (results.id === 'rso') results.parentNode.insertBefore(host, results.nextSibling);
-    else results.appendChild(host);
-    var styles = document.createElement('style');
-    styles.textContent = '.sg-extra-page{margin:2rem 0 3rem;border-top:1px solid #dadce0;padding-top:1rem}' +
-      '.sg-extra-heading{color:#777;margin:0 0 1rem;font-size:13px}' +
-      '.sg-open-native{margin:1rem 0;font-size:13px}' +
-      '#sg-endless-status{font-size:12px;color:#666;padding:8px 0}';
-    document.head.appendChild(styles);
-    note = document.createElement('div');
-    note.id = 'sg-endless-status';
-    note.setAttribute('role', 'status');
-    host.appendChild(note);
-    prevY = window.scrollY || 0;
+  function install() {
+    if (!document.body) return;
+    // Prevent automatic next-page loops caused by restored scroll positions.
+    window.addEventListener('touchstart', function () { userScrolled = true; }, { passive: true });
+    window.addEventListener('wheel', function () { userScrolled = true; }, { passive: true });
+    window.addEventListener('keydown', function (e) {
+      if (/^(ArrowDown|PageDown|End| |Space)$/.test(e.key)) userScrolled = true;
+    });
     window.addEventListener('scroll', onScroll, { passive: true });
   }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
-  else start();
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', install, { once: true });
+  } else { install(); }
 })();
 </script>`;
   $done({ body: body.replace(/<\/body\s*>/i, injection + '\n</body>') });
 }
+
 (async () => {
   if (surgeStatus() !== 200 || !surgeHTML()) return;
   await surgeRun('web cleanup', surgeCleanup, 2000);
