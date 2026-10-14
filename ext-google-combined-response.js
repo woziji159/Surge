@@ -1,5 +1,5 @@
 /*
- * Google search response chain for Surge. Pagination refresh 2026-10-14.
+ * Google search response chain for Surge. Pagination early-loading edition 2026-10-14.
  * Exactly one final $done; a failed stage preserves the preceding response.
  * Cleanup: limbopro/Adblock4limbo, Adguard/Adblock4limbo.js (MIT).
  * Pagination: native Google More results or automatic next-page navigation; no HTML cloning.
@@ -319,7 +319,7 @@ main();
 
 }
 /*
- * Google automatic pagination for Safari + Surge (native loading edition).
+ * Google automatic pagination for Safari + Surge (native early-loading edition).
  * No fetch/DOMParser, cloned Google HTML, iframe, or preloading.
  * Native "More results" is clicked when available; otherwise use the real next-page URL.
  * Keep surgeCleanup (Adblock4limbo) untouched.
@@ -346,9 +346,10 @@ function surgeEndless($response, $done) {
   window.__surgeGoogleNativePaging = true;
 
   var userScrolled = false;
-  var lastY = window.scrollY || 0;
   var lastActionTime = 0;
   var loading = false;
+  var loadingTimeout = null;
+  var loadingObserver = null;
   var stopped = false;
   var navigationStarted = false;
   var MAX_CLICKS = 16;
@@ -427,15 +428,35 @@ function surgeEndless($response, $done) {
       loading = true;
       var oldHeight = document.documentElement.scrollHeight;
       var oldMore = more;
-      try {
-        // Use Google's own JavaScript and DOM initialization for photos and video thumbnails.
-        more.click();
-      } catch (e) { loading = false; return; }
-      window.setTimeout(function () {
+      function releaseLoading() {
+        if (loadingObserver) { loadingObserver.disconnect(); loadingObserver = null; }
+        if (loadingTimeout) { window.clearTimeout(loadingTimeout); loadingTimeout = null; }
         loading = false;
-        // Avoid repeatedly clicking a broken control without any new results.
-        if (document.documentElement.scrollHeight < oldHeight + 60 &&
-            oldMore.isConnected && isVisible(oldMore)) stopped = true;
+      }
+      function resultsAdded() {
+        // A new native result block usually increases page height or replaces the button.
+        return document.documentElement.scrollHeight > oldHeight + 100 ||
+          !oldMore.isConnected;
+      }
+      // Watch only during a native click. End the wait once Google appends results.
+      // This does not fetch, copy, or run scripts inside Google's result cards.
+      if (typeof MutationObserver !== 'undefined') {
+        loadingObserver = new MutationObserver(function () {
+          if (resultsAdded()) releaseLoading();
+        });
+        loadingObserver.observe(document.body, { childList: true, subtree: true });
+      }
+      try {
+        // Keep Google's own initialization for images and video thumbnails.
+        more.click();
+      } catch (e) { releaseLoading(); return; }
+      // Fallback for slow requests or Google layouts that do not append immediately.
+      loadingTimeout = window.setTimeout(function () {
+        if (!resultsAdded() && oldMore.isConnected && isVisible(oldMore)) {
+          // Prevent an endless loop against a button that does nothing.
+          stopped = true;
+        }
+        releaseLoading();
       }, 3800);
       return;
     }
@@ -446,12 +467,14 @@ function surgeEndless($response, $done) {
     window.location.assign(nextURL);
   }
   function onScroll() {
+    if (!userScrolled) return;
     var y = window.scrollY || document.documentElement.scrollTop || 0;
-    var downward = y > lastY + 1;
-    lastY = y;
-    if (!userScrolled || !downward || y < 90) return;
+    if (y < 70) return;
     var maxHeight = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight);
-    if (y + window.innerHeight >= maxHeight - 300) activate();
+    // Trigger ~1.4 screen heights before the bottom (not only the last 300px).
+    // Avoid Safari's small/rounded scroll deltas dropping the trigger entirely.
+    var advance = Math.max(950, Math.min(1600, Math.round(window.innerHeight * 1.4)));
+    if (y + window.innerHeight >= maxHeight - advance) activate();
   }
   function install() {
     if (!document.body) return;
@@ -462,6 +485,10 @@ function surgeEndless($response, $done) {
       if (/^(ArrowDown|PageDown|End| |Space)$/.test(e.key)) userScrolled = true;
     });
     window.addEventListener('scroll', onScroll, { passive: true });
+    // iOS can finish a short inertial swipe without a final scroll event.
+    window.addEventListener('touchend', function () {
+      if (userScrolled) window.requestAnimationFrame(onScroll);
+    }, { passive: true });
   }
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', install, { once: true });
