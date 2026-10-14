@@ -9,21 +9,35 @@
   "shortcutCases": 444,
   "otherRewriteCases": 15,
   "responseScenarios": [
-    "200 HTML: cleanup + pagination; no CAPTCHA API/network calls; injected JavaScript parses",
-    "429 to 200: Surge policy retry + cleanup + pagination; numeric status 200",
-    "429 remains 429: unchanged response; no cleanup or pagination injected",
-    "Surge status 429 overrides legacy statusCode 200; no false successful HTML injection",
-    "No available policies: unchanged response",
-    "200 JSON: unchanged response",
-    "Missing Surge status: never assumes success",
-    "Google homepage: cleanup only",
-    "CAPTCHA timeout: unchanged response; one final completion",
-    "Missing body: unchanged response",
-    "503 to JSON 200: preserves retry response without HTML injection"
+    "200 HTML: synchronous JSC response, cleanup and native pagination, original image markup/initialization retained, both injected scripts parse",
+    "403 HTML: unchanged, zero retry/network/policy/timer API access, one synchronous completion",
+    "429 HTML: unchanged, zero retry/network/policy/timer API access, one synchronous completion",
+    "503 HTML: unchanged, zero retry/network/policy/timer API access, one synchronous completion",
+    "302 redirect: unchanged, zero retry/network/policy/timer API access, one synchronous completion",
+    "429 with conflicting legacy statusCode: unchanged, zero retry/network/policy/timer API access, one synchronous completion",
+    "200 JSON: unchanged, zero retry/network/policy/timer API access, one synchronous completion",
+    "missing status: unchanged, zero retry/network/policy/timer API access, one synchronous completion",
+    "missing body: unchanged, zero retry/network/policy/timer API access, one synchronous completion",
+    "HTML fragment: unchanged, zero retry/network/policy/timer API access, one synchronous completion",
+    "Google homepage: cleanup loader only",
+    "Repeated processing: no duplicate injected loaders"
   ],
   "limitations": [
-    "Node VM 模拟 Surge API；未在真实 iPhone Surge 内执行网络重写。",
-    "自动翻页验证注入和脚本语法；未验证 Google 当前页面 DOM 与滚动行为。",
-    "微信短链保持原目标；没有逐个启动微信小程序。"
-  ]
+    "响应阶段在 Node VM 中模拟 Surge JavaScriptCore API；没有在真实 iPhone Surge 中运行。",
+    "微信短链保持原目标；未逐个启动微信小程序。",
+    "浏览器验证使用受控 Google／百度／必应页面和外部脚本夹具，不代表真实 Google 当前服务端页面或用户本机规则。"
+  ],
+  "browser": {
+    "engine": "Playwright WebKit",
+    "passed": true,
+    "cases": [
+      "Google DOMContentLoaded/image initializer runs before delayed cleanup; cleanup order and load hooks retained",
+      "Traditional Chinese native More loads one screen early, single-flight; 4.5s response and native video thumbnail survive; paging continues",
+      "Google: navigates only at actual bottom and initializes destination thumbnails",
+      "Bing: navigates only at actual bottom and initializes destination thumbnails",
+      "Baidu mobile next link observed in public HTML: navigates only at actual bottom and initializes destination thumbnails",
+      "Rejects mismatched search mode; no navigation/retry",
+      "Image Search stays under native Google control"
+    ]
+  }
 }
