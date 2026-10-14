@@ -86,7 +86,7 @@
 ^https://duckduckgo[.]com/[?]q=jp(?:&.*)?$ https://itunes.apple.com/WebObjects/MZStore.woa/wa/resetAndRedirect?dsf=143462&mt=8&url=/WebObjects/MZStore.woa/wa/viewSoftware?mt=8&id=1108187390&cc=jp&urlDesc= 302
 ^https://duckduckgo[.]com/[?]q=kr(?:&.*)?$ https://itunes.apple.com/WebObjects/MZStore.woa/wa/resetAndRedirect?dsf=143466&mt=8&url=/WebObjects/MZStore.woa/wa/viewSoftware?mt=8&id=1108187390&cc=kr&urlDesc= 302
 ^https://duckduckgo[.]com/[?]q=tr(?:&.*)?$ https://itunes.apple.com/WebObjects/MZStore.woa/wa/resetAndRedirect?dsf=143480&mt=8&url=/WebObjects/MZStore.woa/wa/viewSoftware?mt=8&id=1108187390&cc=tr&urlDesc= 302
-^https://duckduckgo[.]com/[?]q=sg(?:&.*)?$ https://itunes.apple.com/WebObjects/MZStore.woa/wa/resetAndRedirect?dsf=143464&mt=8&url=/WebObjects/MZStore.woa/wa/viewSoftware?mt=8&id=1108187390&cc=tr&urlDesc= 302
+^https://duckduckgo[.]com/[?]q=sg(?:&.*)?$ https://itunes.apple.com/WebObjects/MZStore.woa/wa/resetAndRedirect?dsf=143464&mt=8&url=/WebObjects/MZStore.woa/wa/viewSoftware?mt=8&id=1108187390&cc=sg&urlDesc= 302
 ^https://duckduckgo[.]com/[?]q=bd(?:\+|%20)([^&]+)(?:&.*)?$ https://www.baidu.com/s?wd=$1%20-adclear 302
 ^https://duckduckgo[.]com/[?]q=([^&]+?)(?:\+|%20)bd(?:&.*)?$ https://www.baidu.com/s?wd=$1%20-adclear 302
 ^https://duckduckgo[.]com/[?]q=wk(?:\+|%20)([^&]+)(?:&.*)?$ https://zh.wikipedia.org/wiki/$1 302

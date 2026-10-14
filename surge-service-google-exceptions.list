@@ -1,4 +1,3 @@
 # Surge service-google-exceptions — 2026-10-14
-# Policy: 谷歌服务; rules: 2
-DOMAIN,safebrowsing.googleapis.com
+# Policy: 谷歌服务; rules: 1
 DOMAIN-SUFFIX,safebrowsing.googleapis.com
