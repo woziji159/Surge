@@ -1,0 +1,14 @@
+Google 综合增强 - 原生自动翻页修订版（2026-10-14）
+
+操作：
+1. 解压 zip，只取 ext-google-combined-response.js。
+2. 进入 GitHub 仓库 woziji159/Surge，上传同名文件覆盖旧文件，提交更改。
+3. 手机 Surge 更新远程脚本，并重新打开 Safari 的 Google 搜索页面。
+4. 在 Google 搜索结果页面向下滚动至接近底部：
+   - 有“更多结果”按钮时，尝试调用 Google 原生加载。
+   - 有“下一页”链接时，自动跳转到 Google 原生下一页。
+
+改动：不再 fetch/DOMParser 拼接下一页 HTML，避免视频封面初始化丢失。
+保留：原来的毒奶净化代码、异常换节点重试继续关闭，其他 Surge 配置不用更改。
+局限：只有“下一页”链接时会刷新页面而非无缝连载；网页结构可能因 Google 更新而变化。
+验证：Node.js 语法检查、Surge 响应链模拟、离线浏览器交互测试通过；实际 iPhone Safari + Surge 需安装后验证。
