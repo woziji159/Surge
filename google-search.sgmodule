@@ -1,10 +1,8 @@
 #!name=Google 综合增强
-#!desc=Google、百度、必应网页净化与原生自动翻页；不重试异常节点或验证码页面。
+#!desc=历史连续下滑版：Google 下一页追加在当前页下方；无自动换线路重试。
 [Script]
-# 唯一 Google response 处理器：网页净化 → 原生自动翻页；不进行节点重试。
-Google 综合增强 = type=http-response, pattern=^https://www[.]google[.][a-z.]+/(?:search[?]|[?](?:sa|FORM)=|$), requires-body=true, max-size=2097152, timeout=5, engine=jsc, script-update-interval=3600, script-path=https://raw.githubusercontent.com/woziji159/Surge/main/ext-google-combined-response.js?v=20261014-2
-# 搜索页净化及原生翻页；在通用毒奶脚本前执行，避免重复处理同一响应。
-百度必应搜索增强 = type=http-response, pattern=^https://(?:(?:www|cn)[.]bing[.]com/search[?]|(?:www|m)[.]baidu[.]com/(?:s|from[^/?]+(?:/[^/?]+)*/s)[?]), requires-body=true, max-size=5242880, timeout=5, engine=jsc, script-update-interval=3600, script-path=https://raw.githubusercontent.com/woziji159/Surge/main/ext-google-combined-response.js?v=20261014-2
+# 唯一 Google response 处理器：网页净化 → 下方连续追加；保留历史脚本原样。
+Google 综合增强 = type=http-response, pattern=^https://www[.]google[.][a-z.]+/(?:search[?]|[?](?:sa|FORM)=|$), requires-body=true, max-size=-1, timeout=10, engine=auto, script-path=https://raw.githubusercontent.com/woziji159/Surge/main/ext-google-combined-response.js?v=continuous-0c5322a
 
 [MITM]
-hostname = %APPEND% www.google.*, www.baidu.com, m.baidu.com, www.bing.com, cn.bing.com
+hostname = %APPEND% www.google.*

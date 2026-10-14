@@ -1,0 +1,20 @@
+这是正确的 Google 连续下滑原版，不是上一份“原版备份”。
+来源提交：0c5322aa3108a7a475b4ec40d770d86ee86fc253（2026-10-14 16:25）
+JavaScript 与该历史提交逐字节一致，没有重写它的翻页逻辑。
+
+行为：下滑接近底部时下载下一页，追加在当前结果下方；不会自动整页跳走。原版最多追加 12 页，失败后显示手动“打开下一页”链接，无异常换线路重试。
+本次只恢复你指定的 Google 旧版。原版不含百度、必应的连续追加功能；已从随包主配置移除上一版新增的“百度必应搜索增强”整页跳转处理，原有网页净化规则保留。
+
+上传：将本文件夹里的三个文件 Surge.conf、google-search.sgmodule、ext-google-combined-response.js 上传到 Surge 仓库根目录，覆盖同名文件。
+
+手机更新（二选一）：
+1. 已通过 Google 综合增强模块启用：更新模块配置，再更新脚本资源。
+2. 写在现用主配置中：在 [Script] 中，用下面整行替换旧的“Google 综合增强 =”行，并删除上一版的“百度必应搜索增强 =”行（若有）。其余节点订阅保留。
+
+Google 综合增强 = type=http-response, pattern=^https://www[.]google[.][a-z.]+/(?:search[?]|[?](?:sa|FORM)=|$), requires-body=true, max-size=-1, timeout=10, engine=auto, script-path=https://raw.githubusercontent.com/woziji159/Surge/main/ext-google-combined-response.js?v=continuous-0c5322a
+
+注意要更新整行／模块配置，不只是下载 JS：原版需要 engine=auto，不能沿用我上一包的 engine=jsc。
+新地址带 ?v=continuous-0c5322a，区分缓存。更新后重新打开 Google 搜索页。
+随包 Surge.conf 是仓库公开配置；手机的私人节点订阅请继续保留，不必整份覆盖。
+
+核验：JS 与历史提交一致；脚本语法与主配置语法通过检查。这是恢复历史版，不是新修复版，也没有重新承诺所有 Google 封面和所有页面结构都适用。

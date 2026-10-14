@@ -1,246 +1,581 @@
 /*
- * Google / Bing / Baidu search enhancement for Surge — 20261014-2.
- * Google keeps ownership of results, thumbnails and page initialization.
- * No HTML cloning, CAPTCHA retry, request replay or policy switching.
- * Adblock4limbo browser assets: Copyright (c) 2022 毒奶博主, MIT.
- * Original combined work GPL-3.0; see THIRD-PARTY-NOTICES.md.
+ * Google search response chain for Surge. Pagination refresh 2026-10-14.
+ * Exactly one final $done; a failed stage preserves the preceding response.
+ * Cleanup: limbopro/Adblock4limbo, Adguard/Adblock4limbo.js (MIT).
+ * Pagination: revised automatic loading with image/video preview fallback (based on MIT pagination).
+ * See THIRD-PARTY-NOTICES.md and the accompanying license files.
+ * Original combined work GPL-3.0; existing license and MIT component notices retained.
+ */
+const surgeFinalDone = $done;
+let surgeState = Object.assign({}, $response);
+let surgePatch = {};
+function surgeStatus() {
+  // Surge supplies a numeric $response.status. Never infer success from a missing statusCode.
+  return Number(surgeState.status);
+}
+function surgeHTML() {
+  const headers = surgeState.headers || {};
+  const name = Object.keys(headers).find(key => key.toLowerCase() === 'content-type');
+  return name && /text\/html/i.test(headers[name]) && typeof surgeState.body === 'string';
+}
+function surgeApply(result) {
+  if (!result || typeof result !== 'object') return;
+  const next = {};
+  // Only documented Surge response-result fields leave the chain.
+  for (const key of ['status', 'headers', 'body', 'abort']) {
+    if (Object.prototype.hasOwnProperty.call(result, key)) next[key] = result[key];
+  }
+  if (Object.prototype.hasOwnProperty.call(next, 'status')) next.status = Number(next.status);
+  Object.assign(surgeState, next);
+  Object.assign(surgePatch, next);
+}
+function surgeRun(label, handler, timeout) {
+  return new Promise(resolve => {
+    let finished = false;
+    const timer = setTimeout(() => finish(null, 'timeout'), timeout);
+    function finish(value, error) {
+      if (finished) return;
+      finished = true;
+      clearTimeout(timer);
+      if (error) console.log('[Surge Google ' + label + '] ' + error);
+      else surgeApply(value);
+      resolve();
+    }
+    try {
+      const result = handler(surgeState, value => finish(value));
+      if (result && typeof result.catch === 'function') result.catch(e => finish(null, String(e)));
+    } catch (e) { finish(null, String(e)); }
+  });
+}
+function surgeCleanup($response, $done) {
+// limbopro stage derived from 2026-10-12 snapshot; browser assets use the author origin.
+/**
+ * Adblock4limbo - Web Ad Removal Script
+ * Author: limbopro
+ * Documentation: https://limbopro.com/archives/12904.html
+ * Contact: https://t.me/limboprobot
+ * Telegram Group: https://t.me/Adblock4limbo
+ * FAQ: https://t.me/Adblock4limbo/21
+ * Github: https://github.com/limbopro/Adblock4limbo
+ */
+/**
+ * QuantumultX Configuration:
+ *
+ * [rewrite_local]
+ * ^https?:\/\/www\.example\.com(?!(.*(cdn-cgi|(\.(js|css|jpg|jpeg|png|webp|gif|zip|woff|woff2|m3u8|mp4|mov|m4v|avi|mkv|flv|rmvb|wmv|rm|asf|asx|mp3|json|ico|otf|ttf))))).* url script-response-body https://limbopro.com/Adguard/Adblock4limbo.js
+ *
+ * [mitm]
+ * hostname = www.example.com
+ */
+/**
+ * Modifies request headers to spoof User-Agent
+ * var requestHeaders = $request.headers;
+ * requestHeaders['User-Agent'] = 'Mozilla/6.0 (iPhone 15; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/116.0.5845.118 Mobile/15E148 Safari/604.1';
  */
 
-function surgeGoogleCleanupLoader() {
-  'use strict';
-  if (window.top !== window.self || window.__surgeGoogleCleanup) return;
-  window.__surgeGoogleCleanup = '20261014-2';
-  function load() {
-    // Dynamic ordered scripts do not hold up DOMContentLoaded. Starting inside
-    // that event still lets the author's scripts register their window.load hooks.
-    var sources = [
-      'https://limbopro.com/Adguard/Adblock4limbo.user.js',
-      'https://limbopro.com/Adguard/Adblock4limbo.function.js',
-      'https://limbopro.com/Adguard/elementBlocker.user.js'
+/**
+ * Adblock4limbo - Web Ad Removal Script (Enhanced with Domain-Specific CSS Injection)
+ * Author: limbopro
+ * ... (其他注释不变) ...
+ */
+//const CSS_URL = "https://limbopro.com/CSS/Adblock4limbo.user.css";
+const privacyGate_style = `
+<head>
+<style id="privacy-gate">
+    /* 初始强制黑屏 */
+    html.locked body {
+        visibility: hidden !important;
+        background: #000 !important;
+    }
+</style>
+`
+const privacyGate_script = `
+<script>
+    (function() {
+        const isOn = localStorage.getItem('nsfw_status') === 'on';
+        const isLocked = localStorage.getItem('is_locked') === 'true';
+        const hasPwd = !!localStorage.getItem('privateProtect');
+        // 只有在“开启了保护”且“处于锁定状态或没设密码”时，才保持黑屏
+        if (isOn && (isLocked || !hasPwd)) {
+            document.documentElement.classList.add('locked');
+        } else {
+            // 否则立即移除样式，显示正常页面
+            var gate = document.getElementById('privacy-gate');
+            if (gate) gate.remove();
+        }
+    })();
+</script>
+</body>
+`
+
+const JS_URL = "https://limbopro.com/Adguard/Adblock4limbo.user.js";
+const fc_JS_URL = "https://limbopro.com/Adguard/Adblock4limbo.function.js";
+const fd_JS_URL = "https://limbopro.com/Adguard/elementBlocker.user.js";
+const autoAdDetector_JS_URL = "https://limbopro.com/Adguard/autoAdDetector.js"; // 新增插入 autoAdDetector.js
+// 基础注入内容
+// const TITLE_INJECTION_BASE = `<link rel="stylesheet" href="${CSS_URL}" type="text/css" />
+// 不再默认加载全局 Adgurad基础过滤器（CSS） 如需去导航-工具箱开启
+const TITLE_INJECTION_BASE = `
+<script type="text/javascript" defer src="${autoAdDetector_JS_URL}"></script>
+<script type="text/javascript" defer src="${JS_URL}"></script>
+<script type="text/javascript" defer src="${fc_JS_URL}"></script>
+<script type="text/javascript" defer src="${fd_JS_URL}"></script>
+`;
+// const BODY_INJECTION_BASE = `<link rel="stylesheet" href="${CSS_URL}" type="text/css" />
+// 不再默认加载全局 Adgurad基础过滤器（CSS） 如需去导航-工具箱开启
+const BODY_INJECTION_BASE = `
+<script type="text/javascript" defer src="${autoAdDetector_JS_URL}"></script>
+<script type="text/javascript" defer src="${JS_URL}"></script>
+<script type="text/javascript" defer src="${fc_JS_URL}"></script>
+<script type="text/javascript" defer src="${fd_JS_URL}"></script>
+</body>
+`;
+// 正则表达式 (不变)
+const TARGET_SITES_REGEX = /(missav|iyf|netflav|hitomi|supjav|njav|javday|91porna|lk1\.supremejav\.com|turbovidhls\.com|trailerhg\.xyz|turbovidhls\.com|turboplayers\.xyz|javggvideo\.xyz|turtleviplay\.xyz|findjav\.com|stbturbo\.xyz|emturbovid\.com)/i;
+const JAVBUS_REGEX = /(javbus)/i;
+const DMM_REGEX = /dmm\.co/i;
+const MDSP_REGEX = /d1skbu98kuldnf\.cloudfront\.net/i;
+const HUARENLIVE_REGEX = /(huaren|huavod)\.(live|top)\/player\/ec\.php/i;
+// const TITLE_REGEX = /<head>/i;
+const TITLE_REGEX = /<head\b[^>]*>/i;
+const BODY_REGEX = /<\/body>/i;
+const WINDOW_OPEN_REGEX = /window\.open\s*\(/g;
+
+// ===========================================
+// 用户提供的 getRootDomain 函数
+// ===========================================
+/**
+ * 提取主域名 (Root Domain)，考虑复杂的公共后缀 (如 co.uk)。
+ * @param {string} hostname - 完整的 Hostname (e.g., www.bbc.co.uk)
+ * @returns {string} - 主域名 (e.g., bbc.co.uk)
+ */
+function getRootDomain(hostname) {
+    if (!hostname) return '';
+    // 1. 预处理：移除 www. 前缀
+    let siteName = hostname.toLowerCase();
+    if (siteName.startsWith('www.')) {
+        siteName = siteName.substring(4);
+    }
+    // 额外移除常见的移动端前缀 m. / mobile.
+    if (siteName.startsWith('m.')) {
+        siteName = siteName.substring(2);
+    }
+    if (siteName.startsWith('mobile.')) {
+        siteName = siteName.substring(7);
+    }
+
+    // 2. 将域名分解成段 (Label)
+    let parts = siteName.split('.');
+    // 3. 定义常见的复杂公共后缀 (Public Suffix List - PSL 的简化版)
+    const complexTLDs = [
+        'co.uk', 'com.cn', 'co.jp', 'com.au', 'com.hk', 'com.tw',
+        'nom.co', 'com.br', 'gov.cn', 'ac.jp', 'org.uk'
     ];
-    // autoAdDetector.js currently has an illegal top-level return when used as
-    // a classic script. It was already unable to execute; do not request it.
-    sources.forEach(function (src) {
-      if (Array.from(document.scripts).some(function (script) { return script.src === src; })) return;
-      var script = document.createElement('script');
-      script.async = false;
-      script.src = src;
-      script.dataset.surgeGoogle = '20261014-2';
-      script.onerror = function () { console.warn('[Surge Google] Cleanup asset unavailable:', src); };
-      document.head.appendChild(script);
-    });
-  }
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', load, { once: true });
-  } else { load(); }
+
+    // 4. 检查是否匹配复杂的公共后缀
+    if (parts.length > 2) {
+        // 检查最后两段是否是一个复杂的 TLD (e.g. "co.uk")
+        const lastTwo = parts.slice(-2).join('.');
+
+        if (complexTLDs.includes(lastTwo)) {
+            // 如果是复杂的 TLD，我们取最后三段作为主域名
+            return parts.slice(-3).join('.');
+        }
+    }
+    // 5. 默认行为 (简单 TLD，如 .com)
+    // 取最后两段作为主域名
+    return parts.slice(-2).join('.');
 }
 
-function surgeGoogleNativePagination() {
+
+// 主处理函数
+function main() {
+    try {
+        const url = $request.url;
+        const headers = $response.headers;
+        let body = $response.body;
+
+        // 1. 必须是 text/html 才处理
+        const contentType = headers['Content-Type'] || headers['content-type'] || '';
+        if (!contentType.includes('text/html')) {
+            $done({});
+            return;
+        }
+        // 2. 确保 body 是字符串
+        if (typeof body !== 'string') {
+            try {
+                // Surge 有时返回 Buffer，尝试转码
+                body = body.toString('utf8');
+            } catch (e) {
+                console.log("Failed to decode body");
+                $done({});
+                return;
+            }
+        }
+
+        let modified = false;
+        let newBody = body;
+
+
+        // --- 动态 CSS 注入逻辑 (使用纯字符串和正则提取 hostname) ---
+        let hostname = '';
+        // 提取 hostname: 匹配 (http:// 或 https://) 之后，到第一个 / 或 : 之前的字符串
+        // (?:https?:\/\/)? : 匹配可选的 http:// 或 https://
+        // ([^:\/\n?]+) : 捕获组，匹配非 : / ? 字符
+        const hostnameMatch = url.match(/^(?:https?:\/\/)?([^:\/\n?]+)/im);
+        if (hostnameMatch && hostnameMatch.length > 1) {
+            hostname = hostnameMatch[1];
+        }
+        // 3. 使用 getRootDomain 函数获取主域名
+        const domain = getRootDomain(hostname);
+        let domainCSS_Injection = '';
+        let domainCSS_Injection_byHand = '';
+        // 检查域名是否有效（包含 .）
+        if (domain && domain.includes('.') && !/^google[.]/i.test(domain)) {
+            const domainCSS_URL = `https://limbopro.com/CSS/${domain}.css`;
+            domainCSS_Injection = `<link rel="stylesheet" href="${domainCSS_URL}" type="text/css" />\n`;
+            const domainCSS_URLbyHand = `https://limbopro.com/CSS/limbopro.${domain}.css`;
+            domainCSS_Injection_byHand = `<link rel="stylesheet" href="${domainCSS_URLbyHand}" type="text/css" />\n`;
+            console.log(`[Adblock4limbo] Injecting domain-specific CSS: ${domainCSS_URL}`);
+        } else if (/^google[.]/i.test(domain)) {
+            console.log('[Adblock4limbo] Google cleanup uses official browser scripts; optional domain CSS skipped.');
+        } else if (hostname) {
+            console.log(`[Adblock4limbo] Ignored non-standard hostname or IP: ${hostname}`);
+        }
+        // 动态组合最终的注入内容
+        const FINAL_TITLE_INJECTION = `<head>\n${TITLE_INJECTION_BASE}${domainCSS_Injection}${domainCSS_Injection_byHand}`;
+        const FINAL_BODY_INJECTION = `\n${domainCSS_Injection}${domainCSS_Injection_byHand}${BODY_INJECTION_BASE}`;
+        // --- 动态 CSS 注入逻辑结束 ---
+
+        // 4. URL 匹配逻辑 (不变)
+        const isTargetSite = TARGET_SITES_REGEX.test(url);
+        const isJavbus = JAVBUS_REGEX.test(url);
+        const isDMM = DMM_REGEX.test(url);
+        const isMDSP = MDSP_REGEX.test(url);
+        const isHuarenlive = HUARENLIVE_REGEX.test(url);
+        if (isTargetSite) {
+            if (TITLE_REGEX.test(newBody)) {
+                newBody = newBody.replace(TITLE_REGEX, FINAL_TITLE_INJECTION);
+                modified = true;
+            }
+            newBody = newBody.replace(WINDOW_OPEN_REGEX, 'function block_open(');
+            modified = true;
+
+        } else if (isJavbus || isDMM || isMDSP) {
+            if (BODY_REGEX.test(newBody)) {
+                newBody = newBody.replace(TITLE_REGEX, privacyGate_style) // 插入样式
+                newBody = newBody.replace(BODY_REGEX, privacyGate_script) // 插入脚本
+
+                newBody = newBody.replace(BODY_REGEX, FINAL_BODY_INJECTION);
+                modified = true;
+            }
+
+        } else if (isHuarenlive) {
+            newBody = newBody
+                .replace(/"time":\s*"20"/g, '"time":"0"')
+                .replace(/"img":\s*"[^"]*"/g, '"img":""');
+            modified = true;
+        } else {
+            if (TITLE_REGEX.test(newBody)) {
+
+                newBody = newBody.replace(TITLE_REGEX, privacyGate_style) // 插入样式
+                newBody = newBody.replace(BODY_REGEX, privacyGate_script) // 插入脚本
+
+                newBody = newBody.replace(TITLE_REGEX, FINAL_TITLE_INJECTION);
+                modified = true;
+            }
+        }
+
+        // 5. 如果没有修改，直接返回
+        if (!modified) {
+            $done({});
+            return;
+        }
+        // 6. 修改响应头 (不变)
+        const newHeaders = { ...headers };
+        newHeaders["Cross-Origin-Embedder-Policy"] = "unsafe-none";
+        newHeaders["Cross-Origin-Opener-Policy"] = "unsafe-none";
+        newHeaders["Cross-Origin-Resource-Policy"] = "cross-origin";
+        delete newHeaders["Content-Security-Policy"];
+        delete newHeaders["content-security-policy"];
+        delete newHeaders["X-Frame-Options"];
+        delete newHeaders["x-frame-options"];
+        delete newHeaders["Referrer-Policy"];
+
+        // 7. 返回修改后的响应
+        $done({
+            headers: newHeaders,
+            body: newBody
+        });
+
+    } catch (error) {
+        console.log(`Adblock4limbo Error: ${error.message}`);
+        $done({});
+    }
+}
+
+// 执行
+main();
+
+}
+/* Replacement for surgeEndless in ext-google-combined-response.js.
+ * Preserve the existing surgeCleanup (Adblock4limbo) stage unchanged.
+ * Inline browser code runs only on first-party Google result pages.
+ */
+function surgeEndless($response, $done) {
+  const body = $response.body;
+  if (typeof body !== 'string' || !/<\/body\s*>/i.test(body)) {
+    $done({});
+    return;
+  }
+
+  const injection = String.raw`<script id="surge-google-endless-fixed">
+(function () {
   'use strict';
-  if (window.top !== window.self || window.__surgeGoogleNativePaging) return;
-  var initialURL = new URL(location.href);
-  var provider = /(^|\.)google\./.test(location.hostname) ? 'google' :
-    /^(?:www|cn)\.bing\.com$/.test(location.hostname) ? 'bing' :
-    /^(?:www|m)\.baidu\.com$/.test(location.hostname) ? 'baidu' : '';
-  var searchPath = provider === 'baidu' ? /^\/(?:s|from[^/]+(?:\/[^/]+)*\/s)$/ : /^\/search$/;
-  if (!provider || !searchPath.test(location.pathname)) return;
-  function queryOf(url) {
-    return provider === 'baidu' ? (url.searchParams.get('wd') || url.searchParams.get('word') || '') : (url.searchParams.get('q') || '');
-  }
-  if (!queryOf(initialURL)) return;
-  // Image Search and AI mode already have their own loading lifecycle.
-  if (provider === 'google' && (initialURL.searchParams.get('tbm') === 'isch' ||
-      /^(2|50)$/.test(initialURL.searchParams.get('udm') || ''))) return;
-  window.__surgeGoogleNativePaging = '20261014-2';
-  var contextKeys = provider === 'google' ? ['tbm', 'udm', 'tbs', 'safe', 'lr', 'cr'] :
-    provider === 'bing' ? ['filters'] : [];
-  var pageKey = provider === 'bing' ? 'first' : provider === 'baidu' ? 'pn' : 'start';
-  var lastY = window.scrollY || 0;
-  var userScrolled = false;
-  var ready = document.readyState !== 'loading';
+  if (window.top !== window.self || window.__surgeGooglePages2026) return;
+  window.__surgeGooglePages2026 = true;
+
+  var url = new URL(location.href);
+  if (!url.searchParams.get('q') ||
+      url.searchParams.get('tbm') === 'isch' ||
+      url.searchParams.get('udm') === '2') return;
+
+  var MAX_EXTRA_PAGES = 12;
+  var pageCount = 0;
+  var pageStart = Math.max(0, Number(url.searchParams.get('start')) || 0);
+  var pageSize = Math.min(100, Math.max(1, Number(url.searchParams.get('num')) || 10));
   var loading = false;
-  var navigating = false;
-  var paused = false;
-  var clicks = 0;
-  var lastAction = 0;
-  var framePending = false;
-  var observer = null;
-  var deadline = null;
-  var settleTimer = null;
-  var oldControl = null;
-  var oldHeight = 0;
-  var oldResultCount = 0;
+  var finished = false;
+  var prevY = 0;
+  var host = null;
+  var note = null;
+  var seen = new Set();
 
-  function sameSearch(url) {
-    var allowedOrigin = provider === 'baidu' ? /^https:\/\/(?:www|m)\.baidu\.com$/.test(url.origin) :
-      provider === 'bing' ? /^https:\/\/(?:www|cn)\.bing\.com$/.test(url.origin) : url.origin === initialURL.origin;
-    return allowedOrigin && searchPath.test(url.pathname) && queryOf(url) === queryOf(initialURL) &&
-      contextKeys.every(function (key) {
-        return (url.searchParams.get(key) || '') === (initialURL.searchParams.get(key) || '');
-      });
+  function makeURL(start) {
+    var next = new URL(location.href);
+    next.searchParams.set('start', String(start));
+    return next;
   }
-  function visible(element) {
-    if (!element || !element.isConnected || element.closest('[hidden], [aria-hidden="true"]')) return false;
-    var style = window.getComputedStyle(element);
-    return style.display !== 'none' && style.visibility !== 'hidden' && element.getClientRects().length > 0;
+  function absolute(raw, base) {
+    if (!raw || typeof raw !== 'string') return '';
+    raw = raw.trim();
+    try {
+      var parsed = new URL(raw, base);
+      return /^(https?:|data:image\/|blob:)/i.test(parsed.href) ? parsed.href : '';
+    } catch (e) { return ''; }
   }
-  function moreText(element) {
-    var label = element.getAttribute('aria-label') || element.textContent || '';
-    label = label.replace(/\s+/g, ' ').trim();
-    return label.length < 90 && /^(?:More results|Show more results|更多(?:搜索|搜尋|搜寻)?(?:结果|結果)|(?:显示|顯示|查看)更多(?:搜索|搜尋)?(?:结果|結果))(?:\s*\(?\d+\)?(?:\s*(?:results|条|條))?)?(?:\s*[›»→])?$/i.test(label);
-  }
-  function nativeMore() {
-    var candidates = document.querySelectorAll(
-      '#botstuff button, #botstuff [role="button"], #botstuff a, ' +
-      '#foot button, #foot [role="button"], #foot a, ' +
-      '#nav button, #nav [role="button"], #nav a, ' +
-      'nav[aria-label*="分页"] button, nav[aria-label*="分頁"] button, ' +
-      'nav[aria-label*="Page"] button, [role="navigation"] button');
-    for (var i = 0; i < candidates.length; i++) {
-      var element = candidates[i];
-      if (!visible(element) || element.disabled || element.getAttribute('aria-disabled') === 'true' || !moreText(element)) continue;
-      // A real link is normal pagination, not an AJAX button.
-      var href = element.getAttribute('href');
-      if (href && href !== '#' && !/^javascript:/i.test(href)) continue;
-      return element;
-    }
-    return null;
-  }
-  function nextLink() {
-    var links = document.querySelectorAll(
-      'a#pnnext, a[rel="next"], a[aria-label="Next page"], a[aria-label="下一页"], a[aria-label="下一頁"], ' +
-      '#botstuff a[href*="start="], #foot a[href*="start="], #nav a[href*="start="], ' +
-      '[role="navigation"] a[href*="start="], ' +
-      'a.sb_pagN, #b_results .b_pag a[href*="first="], ' +
-      'a.new-nextpage, a.new-nextpage-only, a.new-pagenav-right, .new-pagenav a[href*="pn="], #page a.n, #page a[href*="pn="]');
-    var currentStart = Number(new URL(location.href).searchParams.get(pageKey)) || (provider === 'bing' ? 1 : 0);
-    var best = null;
-    var bestStart = Infinity;
-    for (var i = 0; i < links.length; i++) {
-      if (!visible(links[i])) continue;
-      try {
-        var url = new URL(links[i].href, location.href);
-        var start = Number(url.searchParams.get(pageKey));
-        if (!sameSearch(url) || !url.searchParams.has(pageKey) || !Number.isSafeInteger(start) || start <= currentStart) continue;
-        if (start < bestStart) { best = url.href; bestStart = start; }
-      } catch (_) { /* Leave unrecognized navigation to Google. */ }
-    }
-    return best;
-  }
-  function pageHeight() {
-    return Math.max(document.documentElement.scrollHeight, document.body.scrollHeight);
-  }
-  function atBottom(margin) {
-    var y = window.scrollY || document.documentElement.scrollTop || 0;
-    return y >= 90 && y + window.innerHeight >= pageHeight() - margin;
-  }
-  function resultCount() {
-    return document.querySelectorAll('#rso h3, #search h3').length;
-  }
-  function stopWatching() {
-    if (observer) observer.disconnect();
-    observer = null;
-    window.clearTimeout(deadline);
-    window.clearTimeout(settleTimer);
-  }
-  function completed() {
-    stopWatching();
-    loading = false;
-    // A slow successful native load is not a permanent failure. Recheck once;
-    // all new results and images remain Google's original, initialized nodes.
-    window.setTimeout(schedule, Math.max(300, lastAction + 1200 - Date.now()));
-  }
-  function watchProgress() {
-    if (!loading) return;
-    var changed = resultCount() > oldResultCount || pageHeight() > oldHeight + 60;
-    if (!changed) return;
-    window.clearTimeout(settleTimer);
-    settleTimer = window.setTimeout(completed, 300);
-  }
-  function activate() {
-    if (!ready || !userScrolled || loading || paused || navigating || clicks >= 16 || !atBottom(Math.max(600, window.innerHeight))) return;
-    if (!sameSearch(new URL(location.href))) return;
-    if (Date.now() - lastAction < 1200) return;
-    var more = nativeMore();
-    if (more) {
-      lastAction = Date.now();
-      clicks++;
-      loading = true;
-      oldControl = more;
-      oldHeight = pageHeight();
-      oldResultCount = resultCount();
-      observer = new MutationObserver(watchProgress);
-      observer.observe(document.getElementById('main') || document.body, { childList: true, subtree: true });
-      deadline = window.setTimeout(function () {
-        stopWatching();
-        loading = false;
-        paused = true; // No repeated clicks/retries on a failed or blocked page.
-      }, 15000);
-      try { oldControl.click(); } catch (_) { stopWatching(); loading = false; paused = true; }
-      return;
-    }
-    // A native append can start a screen early; full navigation must wait for
-    // the actual bottom so the final visible results are not skipped.
-    if (!atBottom(48)) return;
-    var next = nextLink();
-    if (next) {
-      navigating = true;
-      // Full navigation intentionally preserves Google's complete initialization,
-      // including video thumbnails carried in its inline scripts.
-      window.location.assign(next);
-    }
-  }
-  function schedule() {
-    if (framePending) return;
-    framePending = true;
-    window.requestAnimationFrame(function () { framePending = false; activate(); });
-  }
-  function gesture() {
-    userScrolled = true;
-    paused = false; // Only a new user gesture may retry a timed-out control.
-    schedule();
-  }
-  window.addEventListener('touchstart', gesture, { passive: true });
-  window.addEventListener('wheel', gesture, { passive: true });
-  window.addEventListener('keydown', function (event) {
-    if (/^(ArrowDown|PageDown|End| |Space)$/.test(event.key)) gesture();
-  });
-  window.addEventListener('scroll', function () {
-    var y = window.scrollY || document.documentElement.scrollTop || 0;
-    if (y > lastY + 1) schedule();
-    lastY = y;
-  }, { passive: true });
-  window.addEventListener('pagehide', stopWatching, { once: true });
-  if (!ready) document.addEventListener('DOMContentLoaded', function () { ready = true; schedule(); }, { once: true });
-}
-
-// All response-side operations are synchronous string edits. No WebView-only
-// clearTimeout, DOM, URL, HTTP client or policy API is needed in Surge's JSC engine.
-var surgeGooglePatch = {};
-try {
-  var headers = $response.headers || {};
-  var contentType = Object.keys(headers).find(function (key) { return key.toLowerCase() === 'content-type'; });
-  var html = $response.body;
-  var requestURL = $request.url || '';
-  var googleDocument = /^https:\/\/www\.google\.(?:com|cat|[a-z]{2}|(?:com|co)\.[a-z]{2})\/(?:search(?:\?|$)|(?:\?|$))/.test(requestURL);
-  var otherSearch = /^https:\/\/(?:www|cn)\.bing\.com\/search(?:\?|$)/.test(requestURL) ||
-    /^https:\/\/(?:www|m)\.baidu\.com\/(?:s|from[^/?]+(?:\/[^/?]+)*\/s)(?:\?|$)/.test(requestURL);
-  if (Number($response.status) === 200 && (googleDocument || otherSearch) &&
-      (!$request.method || $request.method === 'GET') &&
-      contentType && /text\/html/i.test(headers[contentType]) && typeof html === 'string' &&
-      /<head\b[^>]*>/i.test(html) && /<\/body\s*>/i.test(html) &&
-      !/id=["']surge-google-cleanup-loader["']/.test(html)) {
-    var loader = '<script id="surge-google-cleanup-loader" data-version="20261014-2">(' + surgeGoogleCleanupLoader.toString() + ')();</script>';
-    html = html.replace(/<head\b[^>]*>/i, function (head) { return head + '\n' + loader; });
-    if (/\/search(?:\?|$)/.test(requestURL) || otherSearch) {
-      var pagination = '<script id="surge-google-native-pagination" data-version="20261014-2">(' + surgeGoogleNativePagination.toString() + ')();</script>';
-      html = html.replace(/<\/body\s*>/i, function (end) { return pagination + '\n' + end; });
-    }
-    var updatedHeaders = Object.assign({}, headers);
-    Object.keys(updatedHeaders).forEach(function (key) {
-      if (/^content-security-policy(?:-report-only)?$/i.test(key)) delete updatedHeaders[key];
+  function imageURLs(img, base) {
+    var out = [];
+    ['data-src', 'data-original-src', 'data-original', 'data-lazy-src',
+     'data-deferred-src', 'data-iurl', 'data-thumb', 'data-url', 'src'].forEach(function (key) {
+      var val = absolute(img.getAttribute(key), base);
+      if (val && out.indexOf(val) === -1) out.push(val);
     });
-    surgeGooglePatch = { body: html, headers: updatedHeaders };
+    var set = img.getAttribute('data-srcset') || img.getAttribute('srcset');
+    if (set) {
+      // Avoid parsing data: URI commas as srcset delimiters.
+      set.split(/,\s+(?=https?:|\/\/|\/)/).forEach(function (part) {
+        var candidate = part.trim().split(/\s+/)[0];
+        var val = absolute(candidate, base);
+        if (val && out.indexOf(val) === -1) out.push(val);
+      });
+    }
+    return out;
   }
-} catch (error) { console.log('[Surge Google 20261014-2] ' + error); }
-$done(surgeGooglePatch);
+  function placeholder(src) {
+    return !src || /^about:blank/i.test(src) ||
+      /^data:image\/(gif|svg\+xml)/i.test(src) ||
+      /^data:image\/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB/i.test(src);
+  }
+  function restoreMedia(root, base) {
+    if (!root || root.nodeType !== 1) return;
+    var imgs = Array.prototype.slice.call(root.querySelectorAll('img'));
+    if (root.matches && root.matches('img')) imgs.unshift(root);
+    imgs.forEach(function (img, index) {
+      if (img.dataset.sgImageFixed) return;
+      img.dataset.sgImageFixed = '1';
+      var candidates = imageURLs(img, base).filter(function (val) { return !placeholder(val); });
+      var existing = absolute(img.getAttribute('src'), base);
+      var retry = 0;
+      // Google frequently defers video thumbnails in data-* attributes.
+      if (placeholder(existing) && candidates.length) {
+        img.removeAttribute('srcset');
+        img.src = candidates[0];
+        retry = 1;
+      }
+      var deferredSet = img.getAttribute('data-srcset');
+      if (deferredSet && !img.getAttribute('srcset')) {
+        img.setAttribute('srcset', deferredSet);
+      }
+      img.loading = index < 18 ? 'eager' : 'lazy';
+      img.decoding = 'async';
+      img.addEventListener('error', function () {
+        while (retry < candidates.length) {
+          var alternative = candidates[retry++];
+          if (alternative !== img.currentSrc && alternative !== img.src) {
+            img.removeAttribute('srcset');
+            img.src = alternative;
+            return;
+          }
+        }
+      });
+    });
+    root.querySelectorAll('video').forEach(function (video) {
+      if (video.getAttribute('poster')) return;
+      var p = absolute(video.getAttribute('data-poster') || video.getAttribute('data-src'), base);
+      if (p) video.poster = p;
+    });
+    root.querySelectorAll('[data-bg], [data-background-image]').forEach(function (item) {
+      if (item.style.backgroundImage && item.style.backgroundImage !== 'none') return;
+      var bg = absolute(item.getAttribute('data-bg') || item.getAttribute('data-background-image'), base);
+      if (bg) item.style.backgroundImage = 'url("' + bg.replace(/"/g, '%22') + '")';
+    });
+  }
+  function status(value) {
+    if (!note) return;
+    note.textContent = value;
+    note.style.display = value ? 'block' : 'none';
+  }
+  function findResults(doc) {
+    return doc.querySelector('#center_col #rso') || doc.querySelector('#rso') ||
+           doc.querySelector('#center_col') || doc.querySelector('main [role="main"]');
+  }
+  function nextHrefFromDocument(doc, fallback) {
+    var el = doc.querySelector('a#pnnext, a[aria-label="Next page"], a[aria-label="下一页"]');
+    if (el) {
+      try {
+        var found = new URL(el.getAttribute('href'), location.href);
+        if (found.origin === location.origin && found.pathname === location.pathname &&
+            found.searchParams.get('q') === url.searchParams.get('q')) return found.href;
+      } catch (e) { /* fall back to start */ }
+    }
+    return fallback;
+  }
+  function showNativeLink(href, label) {
+    if (!host) return;
+    var row = document.createElement('div');
+    row.className = 'sg-open-native';
+    var link = document.createElement('a');
+    link.href = href;
+    link.textContent = label;
+    link.rel = 'noopener';
+    row.appendChild(link);
+    host.appendChild(row);
+  }
+  function renderPage(doc, address, number) {
+    var result = findResults(doc);
+    if (!result || !result.querySelector('a, h3, img')) return false;
+    var fingerprint = (result.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 800);
+    if (!fingerprint || seen.has(fingerprint)) return false;
+    seen.add(fingerprint);
+    var page = document.createElement('section');
+    page.className = 'sg-extra-page';
+    page.setAttribute('data-page', String(number));
+    var heading = document.createElement('div');
+    heading.className = 'sg-extra-heading';
+    heading.textContent = 'Google 第 ' + number + ' 页';
+    page.appendChild(heading);
+    var cloned = result.cloneNode(true);
+    // Avoid duplicate IDs from Google result DOM. Do not execute fetched inline scripts.
+    if (cloned.hasAttribute('id')) cloned.removeAttribute('id');
+    cloned.querySelectorAll('[id]').forEach(function (node) { node.removeAttribute('id'); });
+    cloned.querySelectorAll('script, noscript').forEach(function (node) { node.remove(); });
+    restoreMedia(cloned, address);
+    page.appendChild(cloned);
+    var footer = document.createElement('div');
+    footer.className = 'sg-open-native';
+    var link = document.createElement('a');
+    link.href = address;
+    link.rel = 'noopener';
+    link.textContent = '图片或视频封面异常？打开完整第 ' + number + ' 页';
+    footer.appendChild(link);
+    page.appendChild(footer);
+    host.appendChild(page);
+    // Media created after insertion is also normalized.
+    var mutation = new MutationObserver(function (changes) {
+      changes.forEach(function (change) {
+        change.addedNodes.forEach(function (child) {
+          if (child.nodeType === 1) restoreMedia(child, address);
+        });
+      });
+    });
+    mutation.observe(page, { childList: true, subtree: true });
+    return true;
+  }
+  async function fetchPage() {
+    if (loading || finished || pageCount >= MAX_EXTRA_PAGES) return;
+    loading = true;
+    var targetStart = pageStart + pageSize;
+    var targetURL = makeURL(targetStart);
+    status('正在加载第 ' + (pageCount + 2) + ' 页…');
+    try {
+      var response = await fetch(targetURL.href, { credentials: 'same-origin', redirect: 'follow' });
+      if (!response.ok || new URL(response.url).origin !== location.origin) throw new Error('HTTP ' + response.status);
+      var contentType = response.headers.get('content-type') || '';
+      if (contentType && contentType.indexOf('text/html') === -1) throw new Error('非 HTML 响应');
+      var html = await response.text();
+      var doc = new DOMParser().parseFromString(html, 'text/html');
+      if (doc.querySelector('form[action*="/sorry/"], input[name="captcha"]')) throw new Error('需要人工验证');
+      if (!renderPage(doc, response.url, pageCount + 2)) {
+        finished = true;
+        status('已到达末页，或 Google 页面结构已变化。');
+        showNativeLink(targetURL.href, '打开 Google 下一页');
+        return;
+      }
+      pageCount++;
+      pageStart = targetStart;
+      if (!doc.querySelector('a#pnnext') && !doc.querySelector('#rso')) {
+        finished = true;
+      }
+      status('');
+    } catch (e) {
+      finished = true;
+      status('自动翻页失败，可用 Google 原生下一页继续浏览。');
+      showNativeLink(targetURL.href, '打开 Google 下一页');
+      console.log('[Surge Google pages] ' + String(e));
+    } finally {
+      loading = false;
+    }
+  }
+  function onScroll() {
+    var y = window.scrollY || document.documentElement.scrollTop || 0;
+    var forward = y > prevY;
+    prevY = y;
+    if (forward && !loading && !finished &&
+        y + window.innerHeight * 1.5 >= document.documentElement.scrollHeight) {
+      fetchPage();
+    }
+  }
+  function start() {
+    var results = findResults(document);
+    if (!results || !results.parentNode) return;
+    host = document.createElement('div');
+    host.id = 'sg-endless-pages-2026';
+    if (results.id === 'rso') results.parentNode.insertBefore(host, results.nextSibling);
+    else results.appendChild(host);
+    var styles = document.createElement('style');
+    styles.textContent = '.sg-extra-page{margin:2rem 0 3rem;border-top:1px solid #dadce0;padding-top:1rem}' +
+      '.sg-extra-heading{color:#777;margin:0 0 1rem;font-size:13px}' +
+      '.sg-open-native{margin:1rem 0;font-size:13px}' +
+      '#sg-endless-status{font-size:12px;color:#666;padding:8px 0}';
+    document.head.appendChild(styles);
+    note = document.createElement('div');
+    note.id = 'sg-endless-status';
+    note.setAttribute('role', 'status');
+    host.appendChild(note);
+    prevY = window.scrollY || 0;
+    window.addEventListener('scroll', onScroll, { passive: true });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
+  else start();
+})();
+</script>`;
+  $done({ body: body.replace(/<\/body\s*>/i, injection + '\n</body>') });
+}
+(async () => {
+  if (surgeStatus() !== 200 || !surgeHTML()) return;
+  await surgeRun('web cleanup', surgeCleanup, 2000);
+  if (/\/search(?:\?|$)/.test($request.url) && /<html|<head/i.test(surgeState.body)) {
+    await surgeRun('endless results', surgeEndless, 1500);
+  }
+})().catch(e => console.log('[Surge Google chain] ' + e)).finally(() => surgeFinalDone(surgePatch));
