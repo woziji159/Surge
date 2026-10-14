@@ -1,11 +1,10 @@
 /*
- * Google search response chain for Surge. Modified 2026-10-14.
+ * Google search response chain for Surge. Pagination refresh 2026-10-14.
  * Exactly one final $done; a failed stage preserves the preceding response.
- * CAPTCHA: NobyDa/Script, Surge/JS/Google_CAPTCHA.js (GPL-3.0).
  * Cleanup: limbopro/Adblock4limbo, Adguard/Adblock4limbo.js (MIT).
- * Pagination: ddgksf2013/Scripts/endlessgoogle.js, based on tumpio/Endless Google (MIT).
+ * Pagination: revised automatic loading with image/video preview fallback (based on MIT pagination).
  * See THIRD-PARTY-NOTICES.md and the accompanying license files.
- * This combined work is distributed under GPL-3.0, retaining MIT component notices.
+ * Original combined work GPL-3.0; existing license and MIT component notices retained.
  */
 const surgeFinalDone = $done;
 let surgeState = Object.assign({}, $response);
@@ -48,150 +47,6 @@ function surgeRun(label, handler, timeout) {
     } catch (e) { finish(null, String(e)); }
   });
 }
-
-function surgeCaptcha($response, $done) {
-/********************************
-Google搜索人机验证解决方案
-搜索内容时遇到人机验证立即并发使用多个代理策略、策略组尝试搜索内容，并返回最优结果。
-
-脚本作者：@NobyDa
-更新时间：2024/05/19
-平台兼容：Surge(iOS4.9.3+/macOS4.2.3+) / QuantumultX(1.0.26+) / Loon(3.1.9[694]+)
-
-可在 BoxJs(低优先级)、Surge模块参数、Loon插件参数中填写筛选的代理策略、策略组的正则表达式。
-所有代理策略、策略组至多筛选、使用20个，可在BoxJs中测试匹配的策略，不筛选则表示随机使用。
-
-注意：Surge由于策略架构问题，正则表达式筛选的"代理策略"不包含"外部代理策略"；
-QuantumultX、Loon则无此限制，正则表达式可筛选所有"策略组"内的"代理策略"。
-
-*********************************
-Surge(iOS 5.9.0+/macOS 5.5.0+) 模块：
-https://raw.githubusercontent.com/NobyDa/Script/master/Surge/Module/GoogleCAPTCHA.sgmodule
-
-*********************************
-QuantumultX(1.0.26+) 重写资源引用：
-https://raw.githubusercontent.com/NobyDa/Script/master/QuantumultX/Snippet/GoogleCAPTCHA.snippet
-
-*********************************
-Loon(3.1.9[694]+) 插件：
-https://raw.githubusercontent.com/NobyDa/Script/master/Loon/Loon_Google_CAPTCHA.plugin
-
-*********************************
-BoxJs 订阅地址：
-https://raw.githubusercontent.com/NobyDa/Script/master/NobyDa_BoxJs.json
-
-*********************************/
-
-const $ = new NobyDa_Tools();
-$.ret = {};
-
-!(async () => {
-    if (($response.status || $response.statusCode) == 200) return;
-    const req = JSON.parse(JSON.stringify($request));
-    const policy = await $.policy();
-    const regexText = (typeof $argument == 'string' && $argument) ||
-        $.data.read('GOOGLE_CAPTCHA_REGEX') || // loon plugin args.
-        JSON.parse($.data.read('GOOGLE_CAPTCHA') || '{}').Regex || ''; // empty = all
-    const selected = [...policy.group, ...policy.proxy]
-        .filter((n) => n && new RegExp(regexText).test(n))
-        .sort(() => Math.random() - 0.5).slice(0, 20); // prevent too many TCP, filtered to random select up to 20
-    console.log(`[INFO]: Use policy ${JSON.stringify(selected, null, 2)}`);
-    await Promise.any([
-        ...selected.map(
-            (i) => new Promise((r, e) => {
-                if (req.headers['User-Agent']) req.headers.Cookie = `${Math.random()}`; // prevent set-cookie
-                if (req.headers['user-agent']) req.headers.cookie = `${Math.random()}`; // h2
-                $.http[req.method.toLowerCase()]({
-                    policy: i, node: i, opts: { policy: i }, // policy:surge, node:loon, opts:qx
-                    ...req
-                }).then((v) => {
-                    if (v.status == 200) {
-                        r({ policy: i, body: { ...v, status: $.isQuanX ? 'HTTP/1.1 200' : 200 } })
-                    } else if (v.status == 429) {
-                        e(console.log(`[INFO]: Policy "${i}" need to CAPTCHA`))
-                    } else {
-                        e(console.log(`[INFO]: Policy "${i}" unknown resp status "${v.status}"`))
-                    }
-                }).catch((err) => e(console.log(`[ERROR]: ${err}`)))
-            })
-        )
-    ]).then((data) => {
-        $.ret = data.body;
-        console.log(`[INFO]: Use data from "${data.policy}"`);
-    })
-})()
-    .catch((err) => console.log(`[ERROR]: ${(err && err.message) || err}`))
-    .finally(() => $done($.ret));
-
-
-function NobyDa_Tools() {
-    this.isLoon = typeof $loon !== "undefined";
-    this.isQuanX = typeof $configuration !== 'undefined';
-    this.isSurge = typeof $environment !== 'undefined' && $environment['surge-version'];
-    this.isNode = typeof module !== 'undefined' && !!module.exports;
-    this.http = Object.fromEntries(
-        ["GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS", "PATCH"].map(
-            (m) => [m.toLowerCase(), (opts) => {
-                if (this.isQuanX) return new Promise((resolve, reject) => {
-                    $task.fetch({ method: m, ...opts })
-                        .then((r) => resolve({
-                            status: r.statusCode, headers: r.headers, body: r.body,
-                        }), e => reject(e.error))
-                });
-                if (this.isSurge || this.isLoon || this.isNode) return new Promise((resolve, reject) => {
-                    const request = this.isNode ? require("request") : $httpClient;
-                    request[m.toLowerCase()](opts, (e, r, b) => {
-                        if (e) reject(e);
-                        else resolve({ status: r.status || r.statusCode, headers: r.headers, body: b })
-                    })
-                });
-            }]
-        )
-    );
-    this.policy = () => {
-        if (this.isSurge) return new Promise((r) => {
-            $httpAPI("GET", "v1/policies", null, (v) => r({
-                proxy: v.proxies,
-                group: v['policy-groups']
-            }))
-        });
-        if (this.isQuanX) return new Promise((r) => {
-            $configuration.sendMessage({
-                action: "get_customized_policy"
-            }).then(b => r({
-                proxy: Object.keys(b.ret)
-                    .reduce((t, i) => [...new Set([...t, ...b.ret[i].candidates || []])], [])
-                    .filter((v) => !b.ret[v] && !['direct', 'proxy', 'reject'].includes(v)),
-                group: Object.keys(b.ret)
-            }), () => r({}));
-        });
-        if (this.isLoon) return new Promise(async (r1) => {
-            const config = JSON.parse($config.getConfig());
-            const groupData = await Promise.all(config['all_policy_groups'].map((i) => new Promise((r2) => {
-                $config.getSubPolicies(i, (b) => { r2(JSON.parse(b || '[]')) })
-            })));
-            r1({
-                proxy: groupData.reduce((t, i) => [...new Set([...t, ...i.filter((v) => {
-                    return v.type == 'node' && !config['all_buildin_nodes'].includes(v.name)
-                }).map((n) => n.name)])], []),
-                group: config['all_policy_groups']
-            })
-        });
-    };
-    this.data = Object.fromEntries(['read', 'write'].map(
-        (i) => [i, (v1, v2) => {
-            if (i === 'write') {
-                if (this.isSurge || this.isLoon) return $persistentStore.write(v1, v2);
-                if (this.isQuanX) return $prefs.setValueForKey(v1, v2);
-            } else if (i === 'read') {
-                if (this.isSurge || this.isLoon) return $persistentStore.read(v1);
-                if (this.isQuanX) return $prefs.valueForKey(v1);
-            }
-        }]
-    ));
-}
-}
-
 function surgeCleanup($response, $done) {
 // limbopro stage derived from 2026-10-12 snapshot; browser assets use the author origin.
 /**
@@ -203,7 +58,6 @@ function surgeCleanup($response, $done) {
  * FAQ: https://t.me/Adblock4limbo/21
  * Github: https://github.com/limbopro/Adblock4limbo
  */
-
 /**
  * QuantumultX Configuration:
  *
@@ -213,7 +67,6 @@ function surgeCleanup($response, $done) {
  * [mitm]
  * hostname = www.example.com
  */
-
 /**
  * Modifies request headers to spoof User-Agent
  * var requestHeaders = $request.headers;
@@ -225,26 +78,23 @@ function surgeCleanup($response, $done) {
  * Author: limbopro
  * ... (其他注释不变) ...
  */
-
 //const CSS_URL = "https://limbopro.com/CSS/Adblock4limbo.user.css";
 const privacyGate_style = `
 <head>
 <style id="privacy-gate">
     /* 初始强制黑屏 */
-    html.locked body { 
-        visibility: hidden !important; 
-        background: #000 !important;  
+    html.locked body {
+        visibility: hidden !important;
+        background: #000 !important;
     }
 </style>
 `
-
 const privacyGate_script = `
 <script>
     (function() {
         const isOn = localStorage.getItem('nsfw_status') === 'on';
         const isLocked = localStorage.getItem('is_locked') === 'true';
         const hasPwd = !!localStorage.getItem('privateProtect');
-
         // 只有在“开启了保护”且“处于锁定状态或没设密码”时，才保持黑屏
         if (isOn && (isLocked || !hasPwd)) {
             document.documentElement.classList.add('locked');
@@ -258,12 +108,10 @@ const privacyGate_script = `
 </body>
 `
 
-
 const JS_URL = "https://limbopro.com/Adguard/Adblock4limbo.user.js";
 const fc_JS_URL = "https://limbopro.com/Adguard/Adblock4limbo.function.js";
 const fd_JS_URL = "https://limbopro.com/Adguard/elementBlocker.user.js";
 const autoAdDetector_JS_URL = "https://limbopro.com/Adguard/autoAdDetector.js"; // 新增插入 autoAdDetector.js
-
 // 基础注入内容
 // const TITLE_INJECTION_BASE = `<link rel="stylesheet" href="${CSS_URL}" type="text/css" />
 // 不再默认加载全局 Adgurad基础过滤器（CSS） 如需去导航-工具箱开启
@@ -273,7 +121,6 @@ const TITLE_INJECTION_BASE = `
 <script type="text/javascript" defer src="${fc_JS_URL}"></script>
 <script type="text/javascript" defer src="${fd_JS_URL}"></script>
 `;
-
 // const BODY_INJECTION_BASE = `<link rel="stylesheet" href="${CSS_URL}" type="text/css" />
 // 不再默认加载全局 Adgurad基础过滤器（CSS） 如需去导航-工具箱开启
 const BODY_INJECTION_BASE = `
@@ -283,14 +130,12 @@ const BODY_INJECTION_BASE = `
 <script type="text/javascript" defer src="${fd_JS_URL}"></script>
 </body>
 `;
-
 // 正则表达式 (不变)
 const TARGET_SITES_REGEX = /(missav|iyf|netflav|hitomi|supjav|njav|javday|91porna|lk1\.supremejav\.com|turbovidhls\.com|trailerhg\.xyz|turbovidhls\.com|turboplayers\.xyz|javggvideo\.xyz|turtleviplay\.xyz|findjav\.com|stbturbo\.xyz|emturbovid\.com)/i;
 const JAVBUS_REGEX = /(javbus)/i;
 const DMM_REGEX = /dmm\.co/i;
 const MDSP_REGEX = /d1skbu98kuldnf\.cloudfront\.net/i;
 const HUARENLIVE_REGEX = /(huaren|huavod)\.(live|top)\/player\/ec\.php/i;
-
 // const TITLE_REGEX = /<head>/i;
 const TITLE_REGEX = /<head\b[^>]*>/i;
 const BODY_REGEX = /<\/body>/i;
@@ -306,7 +151,6 @@ const WINDOW_OPEN_REGEX = /window\.open\s*\(/g;
  */
 function getRootDomain(hostname) {
     if (!hostname) return '';
-
     // 1. 预处理：移除 www. 前缀
     let siteName = hostname.toLowerCase();
     if (siteName.startsWith('www.')) {
@@ -322,7 +166,6 @@ function getRootDomain(hostname) {
 
     // 2. 将域名分解成段 (Label)
     let parts = siteName.split('.');
-
     // 3. 定义常见的复杂公共后缀 (Public Suffix List - PSL 的简化版)
     const complexTLDs = [
         'co.uk', 'com.cn', 'co.jp', 'com.au', 'com.hk', 'com.tw',
@@ -331,7 +174,7 @@ function getRootDomain(hostname) {
 
     // 4. 检查是否匹配复杂的公共后缀
     if (parts.length > 2) {
-        // 检查最后两段是否是一个复杂的 TLD (e.g., "co.uk")
+        // 检查最后两段是否是一个复杂的 TLD (e.g. "co.uk")
         const lastTwo = parts.slice(-2).join('.');
 
         if (complexTLDs.includes(lastTwo)) {
@@ -339,7 +182,6 @@ function getRootDomain(hostname) {
             return parts.slice(-3).join('.');
         }
     }
-
     // 5. 默认行为 (简单 TLD，如 .com)
     // 取最后两段作为主域名
     return parts.slice(-2).join('.');
@@ -359,7 +201,6 @@ function main() {
             $done({});
             return;
         }
-
         // 2. 确保 body 是字符串
         if (typeof body !== 'string') {
             try {
@@ -378,7 +219,6 @@ function main() {
 
         // --- 动态 CSS 注入逻辑 (使用纯字符串和正则提取 hostname) ---
         let hostname = '';
-
         // 提取 hostname: 匹配 (http:// 或 https://) 之后，到第一个 / 或 : 之前的字符串
         // (?:https?:\/\/)? : 匹配可选的 http:// 或 https://
         // ([^:\/\n?]+) : 捕获组，匹配非 : / ? 字符
@@ -386,12 +226,10 @@ function main() {
         if (hostnameMatch && hostnameMatch.length > 1) {
             hostname = hostnameMatch[1];
         }
-
         // 3. 使用 getRootDomain 函数获取主域名
         const domain = getRootDomain(hostname);
         let domainCSS_Injection = '';
         let domainCSS_Injection_byHand = '';
-
         // 检查域名是否有效（包含 .）
         if (domain && domain.includes('.') && !/^google[.]/i.test(domain)) {
             const domainCSS_URL = `https://limbopro.com/CSS/${domain}.css`;
@@ -404,12 +242,10 @@ function main() {
         } else if (hostname) {
             console.log(`[Adblock4limbo] Ignored non-standard hostname or IP: ${hostname}`);
         }
-
         // 动态组合最终的注入内容
         const FINAL_TITLE_INJECTION = `<head>\n${TITLE_INJECTION_BASE}${domainCSS_Injection}${domainCSS_Injection_byHand}`;
         const FINAL_BODY_INJECTION = `\n${domainCSS_Injection}${domainCSS_Injection_byHand}${BODY_INJECTION_BASE}`;
         // --- 动态 CSS 注入逻辑结束 ---
-
 
         // 4. URL 匹配逻辑 (不变)
         const isTargetSite = TARGET_SITES_REGEX.test(url);
@@ -417,7 +253,6 @@ function main() {
         const isDMM = DMM_REGEX.test(url);
         const isMDSP = MDSP_REGEX.test(url);
         const isHuarenlive = HUARENLIVE_REGEX.test(url);
-
         if (isTargetSite) {
             if (TITLE_REGEX.test(newBody)) {
                 newBody = newBody.replace(TITLE_REGEX, FINAL_TITLE_INJECTION);
@@ -428,7 +263,6 @@ function main() {
 
         } else if (isJavbus || isDMM || isMDSP) {
             if (BODY_REGEX.test(newBody)) {
-
                 newBody = newBody.replace(TITLE_REGEX, privacyGate_style) // 插入样式
                 newBody = newBody.replace(BODY_REGEX, privacyGate_script) // 插入脚本
 
@@ -441,13 +275,12 @@ function main() {
                 .replace(/"time":\s*"20"/g, '"time":"0"')
                 .replace(/"img":\s*"[^"]*"/g, '"img":""');
             modified = true;
-
         } else {
             if (TITLE_REGEX.test(newBody)) {
 
                 newBody = newBody.replace(TITLE_REGEX, privacyGate_style) // 插入样式
                 newBody = newBody.replace(BODY_REGEX, privacyGate_script) // 插入脚本
-                
+
                 newBody = newBody.replace(TITLE_REGEX, FINAL_TITLE_INJECTION);
                 modified = true;
             }
@@ -458,13 +291,11 @@ function main() {
             $done({});
             return;
         }
-
         // 6. 修改响应头 (不变)
         const newHeaders = { ...headers };
         newHeaders["Cross-Origin-Embedder-Policy"] = "unsafe-none";
         newHeaders["Cross-Origin-Opener-Policy"] = "unsafe-none";
         newHeaders["Cross-Origin-Resource-Policy"] = "cross-origin";
-
         delete newHeaders["Content-Security-Policy"];
         delete newHeaders["content-security-policy"];
         delete newHeaders["X-Frame-Options"];
@@ -487,173 +318,261 @@ function main() {
 main();
 
 }
-
+/* Replacement for surgeEndless in ext-google-combined-response.js.
+ * Preserve the existing surgeCleanup (Adblock4limbo) stage unchanged.
+ * Inline browser code runs only on first-party Google result pages.
+ */
 function surgeEndless($response, $done) {
-/*
-[rewrite]
-http:\/\/www\.google\..* url script-response-body Endless_Google.user.js
-
-[mitm]
-www.google.*
- 
-*/
-
-let body = $response.body
-
-if (/<\/html>|<\/body>/.test(body)) {
-  body = body.replace('</body>', `
-
-<script>
-const elecJSPack = function(){// ==UserScript==
-// @name            Endless Google
-// @description     Load more results automatically and endlessly.
-// @author          tumpio
-// @namespace       tumpio@sci.fi
-// @homepageURL     https://openuserjs.org/scripts/tumpio/Endless_Google
-// @supportURL      https://github.com/tumpio/gmscripts/issues
-// @icon            https://github.com/tumpio/gmscripts/raw/master/Endless_Google/large.png
-// @include         http://www.google.*
-// @include         https://www.google.*
-// @include         https://encrypted.google.*
-// @run-at          document-start
-// @version         0.0.6
-// @license         MIT
-// @noframes
-// ==/UserScript==
-
-if (location.href.indexOf("tbm=isch") !== -1) // NOTE: Don't run on image search
+  const body = $response.body;
+  if (typeof body !== 'string' || !/<\/body\s*>/i.test(body)) {
+    $done({});
     return;
-if (window.top !== window.self) // NOTE: Do not run on iframes
-    return;
+  }
 
-const centerElement = "#center_col";
-const loadWindowSize = 1.6;
-const filtersAll = ["#foot", "#bottomads"];
-const filtersCol = filtersAll.concat(["#extrares", "#imagebox_bigimages"]);
-let   msg = "";
+  const injection = String.raw`<script id="surge-google-endless-fixed">
+(function () {
+  'use strict';
+  if (window.top !== window.self || window.__surgeGooglePages2026) return;
+  window.__surgeGooglePages2026 = true;
 
-const css = \`
-.page-number {
-  position: relative;
-  display: flex;
-  flex-direction: row-reverse;
-  align-items: center;
-	margin-bottom: 2em;
-	color: #808080;
-}
-.page-number::before {
-  content: "";
-  background-color: #ededed;
-  height: 1px;
-  width: 100%;
-  margin: 1em 3em;
-}
-.endless-msg {
-  position:fixed;
-  bottom:0;
-  left:0;
-  padding:5px 10px;
-  background: darkred;
-  color: white;
-  font-size: 11px;
-  display: none;
-}
-.endless-msg.shown {
-  display:block;
-}
-\`;
+  var url = new URL(location.href);
+  if (!url.searchParams.get('q') ||
+      url.searchParams.get('tbm') === 'isch' ||
+      url.searchParams.get('udm') === '2') return;
 
-let pageNumber = 1;
-let prevScrollY = 0;
-let nextPageLoading = false;
+  var MAX_EXTRA_PAGES = 12;
+  var pageCount = 0;
+  var pageStart = Math.max(0, Number(url.searchParams.get('start')) || 0);
+  var pageSize = Math.min(100, Math.max(1, Number(url.searchParams.get('num')) || 10));
+  var loading = false;
+  var finished = false;
+  var prevY = 0;
+  var host = null;
+  var note = null;
+  var seen = new Set();
 
-function requestNextPage() {
-    nextPageLoading = true;
-    let nextPage = new URL(location.href);
-    if (!nextPage.searchParams.has("q")) return;
-
-    nextPage.searchParams.set("start", String(pageNumber * 10));
-    !msg.classList.contains("shown") && msg.classList.add("shown");
-    fetch(nextPage.href)
-        .then(response => response.text())
-        .then(text => {
-            let parser = new DOMParser();
-            let htmlDocument = parser.parseFromString(text, "text/html");
-            let content = htmlDocument.documentElement.querySelector(centerElement);
-
-            content.id = "col_" + pageNumber;
-            filter(content, filtersCol);
-
-            let pageMarker = document.createElement("div");
-            pageMarker.textContent = String(pageNumber + 1);
-            pageMarker.className = "page-number";
-
-            let col = document.createElement("div");
-            col.className = "next-col";
-            col.appendChild(pageMarker);
-            col.appendChild(content);
-            document.querySelector(centerElement).appendChild(col);
-
-            if (!content.querySelector("#rso")) {
-                // end of results
-                window.removeEventListener("scroll", onScrollDocumentEnd);
-                nextPageLoading = false;
-                msg.classList.contains("shown") && msg.classList.remove("shown");
-                return;
-            }
-
-            pageNumber++;
-            nextPageLoading = false;
-            msg.classList.contains("shown") && msg.classList.remove("shown");
-        });
-}
-
-function onScrollDocumentEnd() {
-    let y = window.scrollY;
-    let delta = y - prevScrollY;
-    if (!nextPageLoading && delta > 0 && isDocumentEnd(y)) {
-        requestNextPage();
+  function makeURL(start) {
+    var next = new URL(location.href);
+    next.searchParams.set('start', String(start));
+    return next;
+  }
+  function absolute(raw, base) {
+    if (!raw || typeof raw !== 'string') return '';
+    raw = raw.trim();
+    try {
+      var parsed = new URL(raw, base);
+      return /^(https?:|data:image\/|blob:)/i.test(parsed.href) ? parsed.href : '';
+    } catch (e) { return ''; }
+  }
+  function imageURLs(img, base) {
+    var out = [];
+    ['data-src', 'data-original-src', 'data-original', 'data-lazy-src',
+     'data-deferred-src', 'data-iurl', 'data-thumb', 'data-url', 'src'].forEach(function (key) {
+      var val = absolute(img.getAttribute(key), base);
+      if (val && out.indexOf(val) === -1) out.push(val);
+    });
+    var set = img.getAttribute('data-srcset') || img.getAttribute('srcset');
+    if (set) {
+      // Avoid parsing data: URI commas as srcset delimiters.
+      set.split(/,\s+(?=https?:|\/\/|\/)/).forEach(function (part) {
+        var candidate = part.trim().split(/\s+/)[0];
+        var val = absolute(candidate, base);
+        if (val && out.indexOf(val) === -1) out.push(val);
+      });
     }
-    prevScrollY = y;
-}
-
-function isDocumentEnd(y) {
-    return y + window.innerHeight * loadWindowSize >= document.body.clientHeight;
-}
-
-function filter(node, filters) {
-    for (let filter of filters) {
-        let child = node.querySelector(filter);
-        if (child) {
-            child.parentNode.removeChild(child);
+    return out;
+  }
+  function placeholder(src) {
+    return !src || /^about:blank/i.test(src) ||
+      /^data:image\/(gif|svg\+xml)/i.test(src) ||
+      /^data:image\/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB/i.test(src);
+  }
+  function restoreMedia(root, base) {
+    if (!root || root.nodeType !== 1) return;
+    var imgs = Array.prototype.slice.call(root.querySelectorAll('img'));
+    if (root.matches && root.matches('img')) imgs.unshift(root);
+    imgs.forEach(function (img, index) {
+      if (img.dataset.sgImageFixed) return;
+      img.dataset.sgImageFixed = '1';
+      var candidates = imageURLs(img, base).filter(function (val) { return !placeholder(val); });
+      var existing = absolute(img.getAttribute('src'), base);
+      var retry = 0;
+      // Google frequently defers video thumbnails in data-* attributes.
+      if (placeholder(existing) && candidates.length) {
+        img.removeAttribute('srcset');
+        img.src = candidates[0];
+        retry = 1;
+      }
+      var deferredSet = img.getAttribute('data-srcset');
+      if (deferredSet && !img.getAttribute('srcset')) {
+        img.setAttribute('srcset', deferredSet);
+      }
+      img.loading = index < 18 ? 'eager' : 'lazy';
+      img.decoding = 'async';
+      img.addEventListener('error', function () {
+        while (retry < candidates.length) {
+          var alternative = candidates[retry++];
+          if (alternative !== img.currentSrc && alternative !== img.src) {
+            img.removeAttribute('srcset');
+            img.src = alternative;
+            return;
+          }
         }
+      });
+    });
+    root.querySelectorAll('video').forEach(function (video) {
+      if (video.getAttribute('poster')) return;
+      var p = absolute(video.getAttribute('data-poster') || video.getAttribute('data-src'), base);
+      if (p) video.poster = p;
+    });
+    root.querySelectorAll('[data-bg], [data-background-image]').forEach(function (item) {
+      if (item.style.backgroundImage && item.style.backgroundImage !== 'none') return;
+      var bg = absolute(item.getAttribute('data-bg') || item.getAttribute('data-background-image'), base);
+      if (bg) item.style.backgroundImage = 'url("' + bg.replace(/"/g, '%22') + '")';
+    });
+  }
+  function status(value) {
+    if (!note) return;
+    note.textContent = value;
+    note.style.display = value ? 'block' : 'none';
+  }
+  function findResults(doc) {
+    return doc.querySelector('#center_col #rso') || doc.querySelector('#rso') ||
+           doc.querySelector('#center_col') || doc.querySelector('main [role="main"]');
+  }
+  function nextHrefFromDocument(doc, fallback) {
+    var el = doc.querySelector('a#pnnext, a[aria-label="Next page"], a[aria-label="下一页"]');
+    if (el) {
+      try {
+        var found = new URL(el.getAttribute('href'), location.href);
+        if (found.origin === location.origin && found.pathname === location.pathname &&
+            found.searchParams.get('q') === url.searchParams.get('q')) return found.href;
+      } catch (e) { /* fall back to start */ }
     }
+    return fallback;
+  }
+  function showNativeLink(href, label) {
+    if (!host) return;
+    var row = document.createElement('div');
+    row.className = 'sg-open-native';
+    var link = document.createElement('a');
+    link.href = href;
+    link.textContent = label;
+    link.rel = 'noopener';
+    row.appendChild(link);
+    host.appendChild(row);
+  }
+  function renderPage(doc, address, number) {
+    var result = findResults(doc);
+    if (!result || !result.querySelector('a, h3, img')) return false;
+    var fingerprint = (result.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 800);
+    if (!fingerprint || seen.has(fingerprint)) return false;
+    seen.add(fingerprint);
+    var page = document.createElement('section');
+    page.className = 'sg-extra-page';
+    page.setAttribute('data-page', String(number));
+    var heading = document.createElement('div');
+    heading.className = 'sg-extra-heading';
+    heading.textContent = 'Google 第 ' + number + ' 页';
+    page.appendChild(heading);
+    var cloned = result.cloneNode(true);
+    // Avoid duplicate IDs from Google result DOM. Do not execute fetched inline scripts.
+    if (cloned.hasAttribute('id')) cloned.removeAttribute('id');
+    cloned.querySelectorAll('[id]').forEach(function (node) { node.removeAttribute('id'); });
+    cloned.querySelectorAll('script, noscript').forEach(function (node) { node.remove(); });
+    restoreMedia(cloned, address);
+    page.appendChild(cloned);
+    var footer = document.createElement('div');
+    footer.className = 'sg-open-native';
+    var link = document.createElement('a');
+    link.href = address;
+    link.rel = 'noopener';
+    link.textContent = '图片或视频封面异常？打开完整第 ' + number + ' 页';
+    footer.appendChild(link);
+    page.appendChild(footer);
+    host.appendChild(page);
+    // Media created after insertion is also normalized.
+    var mutation = new MutationObserver(function (changes) {
+      changes.forEach(function (change) {
+        change.addedNodes.forEach(function (child) {
+          if (child.nodeType === 1) restoreMedia(child, address);
+        });
+      });
+    });
+    mutation.observe(page, { childList: true, subtree: true });
+    return true;
+  }
+  async function fetchPage() {
+    if (loading || finished || pageCount >= MAX_EXTRA_PAGES) return;
+    loading = true;
+    var targetStart = pageStart + pageSize;
+    var targetURL = makeURL(targetStart);
+    status('正在加载第 ' + (pageCount + 2) + ' 页…');
+    try {
+      var response = await fetch(targetURL.href, { credentials: 'same-origin', redirect: 'follow' });
+      if (!response.ok || new URL(response.url).origin !== location.origin) throw new Error('HTTP ' + response.status);
+      var contentType = response.headers.get('content-type') || '';
+      if (contentType && contentType.indexOf('text/html') === -1) throw new Error('非 HTML 响应');
+      var html = await response.text();
+      var doc = new DOMParser().parseFromString(html, 'text/html');
+      if (doc.querySelector('form[action*="/sorry/"], input[name="captcha"]')) throw new Error('需要人工验证');
+      if (!renderPage(doc, response.url, pageCount + 2)) {
+        finished = true;
+        status('已到达末页，或 Google 页面结构已变化。');
+        showNativeLink(targetURL.href, '打开 Google 下一页');
+        return;
+      }
+      pageCount++;
+      pageStart = targetStart;
+      if (!doc.querySelector('a#pnnext') && !doc.querySelector('#rso')) {
+        finished = true;
+      }
+      status('');
+    } catch (e) {
+      finished = true;
+      status('自动翻页失败，可用 Google 原生下一页继续浏览。');
+      showNativeLink(targetURL.href, '打开 Google 下一页');
+      console.log('[Surge Google pages] ' + String(e));
+    } finally {
+      loading = false;
+    }
+  }
+  function onScroll() {
+    var y = window.scrollY || document.documentElement.scrollTop || 0;
+    var forward = y > prevY;
+    prevY = y;
+    if (forward && !loading && !finished &&
+        y + window.innerHeight * 1.5 >= document.documentElement.scrollHeight) {
+      fetchPage();
+    }
+  }
+  function start() {
+    var results = findResults(document);
+    if (!results || !results.parentNode) return;
+    host = document.createElement('div');
+    host.id = 'sg-endless-pages-2026';
+    if (results.id === 'rso') results.parentNode.insertBefore(host, results.nextSibling);
+    else results.appendChild(host);
+    var styles = document.createElement('style');
+    styles.textContent = '.sg-extra-page{margin:2rem 0 3rem;border-top:1px solid #dadce0;padding-top:1rem}' +
+      '.sg-extra-heading{color:#777;margin:0 0 1rem;font-size:13px}' +
+      '.sg-open-native{margin:1rem 0;font-size:13px}' +
+      '#sg-endless-status{font-size:12px;color:#666;padding:8px 0}';
+    document.head.appendChild(styles);
+    note = document.createElement('div');
+    note.id = 'sg-endless-status';
+    note.setAttribute('role', 'status');
+    host.appendChild(note);
+    prevY = window.scrollY || 0;
+    window.addEventListener('scroll', onScroll, { passive: true });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
+  else start();
+})();
+</script>`;
+  $done({ body: body.replace(/<\/body\s*>/i, injection + '\n</body>') });
 }
-
-function init() {
-    prevScrollY = window.scrollY;
-    window.addEventListener("scroll", onScrollDocumentEnd);
-    filter(document, filtersAll);
-    let style = document.createElement("style");
-    style.type = "text/css";
-    style.appendChild(document.createTextNode(css));
-    document.head.appendChild(style);
-    msg = document.createElement("div");
-    msg.setAttribute("class", "endless-msg");
-    msg.innerText = "       Loading next page...";
-    document.body.appendChild(msg);
-}
-
-document.addEventListener("DOMContentLoaded", init);
-}()</script></body>`)
-
-}
-$done({ body })
-
-}
-
 (async () => {
-  if (surgeStatus() !== 200) await surgeRun('CAPTCHA', surgeCaptcha, 5500);
   if (surgeStatus() !== 200 || !surgeHTML()) return;
   await surgeRun('web cleanup', surgeCleanup, 2000);
   if (/\/search(?:\?|$)/.test($request.url) && /<html|<head/i.test(surgeState.body)) {
