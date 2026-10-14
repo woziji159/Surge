@@ -1,0 +1,29 @@
+{
+  "date": "2026-10-14",
+  "passed": true,
+  "rewriteRules": 100,
+  "miniapps": 16,
+  "miniappAliases": 34,
+  "miniappCases": 204,
+  "shortcutKeywords": 37,
+  "shortcutCases": 444,
+  "otherRewriteCases": 15,
+  "responseScenarios": [
+    "200 HTML: cleanup + pagination; no CAPTCHA API/network calls; injected JavaScript parses",
+    "429 to 200: Surge policy retry + cleanup + pagination; numeric status 200",
+    "429 remains 429: unchanged response; no cleanup or pagination injected",
+    "Surge status 429 overrides legacy statusCode 200; no false successful HTML injection",
+    "No available policies: unchanged response",
+    "200 JSON: unchanged response",
+    "Missing Surge status: never assumes success",
+    "Google homepage: cleanup only",
+    "CAPTCHA timeout: unchanged response; one final completion",
+    "Missing body: unchanged response",
+    "503 to JSON 200: preserves retry response without HTML injection"
+  ],
+  "limitations": [
+    "Node VM 模拟 Surge API；未在真实 iPhone Surge 内执行网络重写。",
+    "自动翻页验证注入和脚本语法；未验证 Google 当前页面 DOM 与滚动行为。",
+    "微信短链保持原目标；没有逐个启动微信小程序。"
+  ]
+}

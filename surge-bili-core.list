@@ -1,0 +1,9 @@
+# Surge bili-core — 2026-10-14
+# Policy: DIRECT; rules: 6
+# 仅六个核心app/api/grpc主机，保留官方Bili模块请求/响应处理机会。
+DOMAIN,app.bilibili.com
+DOMAIN,api.bilibili.com
+DOMAIN,grpc.bilibili.com
+DOMAIN,app.biliapi.net
+DOMAIN,api.biliapi.net
+DOMAIN,grpc.biliapi.net

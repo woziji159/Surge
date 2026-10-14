@@ -1,0 +1,7 @@
+# Surge ios-update — 2026-10-14
+# Policy: iOS系统更新; rules: 4
+# Sources: BlockiOSUpdate
+DOMAIN,gdmf.apple.com
+DOMAIN,mesu.apple.com
+DOMAIN,updates-http.cdn-apple.com
+DOMAIN,xp.apple.com

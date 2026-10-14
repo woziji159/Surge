@@ -1,0 +1,7 @@
+# Surge cursor — 2026-10-14
+# Policy: Cursor编程; rules: 4
+# Sources: Cursor
+DOMAIN-SUFFIX,cursor-cdn.com
+DOMAIN-SUFFIX,cursor.com
+DOMAIN-SUFFIX,cursor.sh
+DOMAIN-SUFFIX,cursorapi.com

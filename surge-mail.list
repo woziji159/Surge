@@ -1,0 +1,23 @@
+# Surge mail — 2026-10-14
+# Policy: 国外邮箱; rules: 20
+# Sources: Mail, AppleMail
+DOMAIN,apple.imap.mail.yahoo.com
+DOMAIN,apple.smtp.mail.yahoo.com
+DOMAIN,imap-mail.outlook.com
+DOMAIN,imap.gmail.com
+DOMAIN,outlook.office365.com
+DOMAIN,pop.gmail.com
+DOMAIN,smtp-mail.outlook.com
+DOMAIN,smtp.gmail.com
+DOMAIN,smtp.office365.com
+DOMAIN-SUFFIX,imap.yandex.com
+DOMAIN-SUFFIX,m.hotmail.com
+DOMAIN-SUFFIX,smtp.yandex.com
+DOMAIN-SUFFIX,mail.icloud.com.cn
+DOMAIN-SUFFIX,mail.me.com
+DOMAIN,mail.google.com
+DOMAIN,outlook.live.com
+DOMAIN,outlook.office.com
+DOMAIN,mail.yahoo.com
+DOMAIN,imap.mail.me.com
+DOMAIN,smtp.mail.me.com

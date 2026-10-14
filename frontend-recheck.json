@@ -1,0 +1,33 @@
+{
+  "checked_at": "2026-10-13T22:51:28.032336+00:00",
+  "results": [
+    {
+      "url": "https://limbopro.com/Adguard/Adblock4limbo.user.js",
+      "status": 200,
+      "bytes": 253674,
+      "content_type": "application/javascript; charset=utf-8",
+      "first_60_chars": "// ==UserScript==\n// @name         Adblock4limbo.[github]\n//"
+    },
+    {
+      "url": "https://limbopro.com/Adguard/Adblock4limbo.function.js",
+      "status": 200,
+      "bytes": 183794,
+      "content_type": "application/javascript; charset=utf-8",
+      "first_60_chars": "// ==UserScript==\n// @name         Adblock4limbo——导航"
+    },
+    {
+      "url": "https://limbopro.com/Adguard/elementBlocker.user.js",
+      "status": 200,
+      "bytes": 234244,
+      "content_type": "application/javascript; charset=utf-8",
+      "first_60_chars": "// ==UserScript==\n// @name         元素调试与屏蔽工�"
+    },
+    {
+      "url": "https://limbopro.com/Adguard/autoAdDetector.js",
+      "status": 200,
+      "bytes": 24488,
+      "content_type": "application/javascript; charset=utf-8",
+      "first_60_chars": "//alert('test')\n\n// 检查当前 URL 或 页面标题 是否"
+    }
+  ]
+}

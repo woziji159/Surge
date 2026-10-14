@@ -1,0 +1,6 @@
+# Surge custom-proxy — 2026-10-14
+# Policy: 节点选择; rules: 2
+# 手动代理最高优先级；策略由主配置统一指定。
+# Example (disabled): DOMAIN-SUFFIX,example.com
+DOMAIN-KEYWORD,exitgames.com
+DOMAIN-SUFFIX,bnbstatic.com

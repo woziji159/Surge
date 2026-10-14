@@ -1,0 +1,5 @@
+# Surge custom-direct — 2026-10-14
+# Policy: DIRECT; rules: 1
+# 手动直连最高优先级；新增完整Surge规则但不要填写策略。
+# Example (disabled): DOMAIN-SUFFIX,example.com
+DOMAIN-SUFFIX,pomo.mom

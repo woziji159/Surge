@@ -1,0 +1,8 @@
+# Surge apple-intelligence — 2026-10-14
+# Policy: 苹果智能; rules: 4
+# Sources: AppleIntelligence
+# 仅保留分流，无设备资格、区域或启用功能修改。
+DOMAIN,apple-relay.apple.com
+DOMAIN,apple-relay.cloudflare.com
+DOMAIN,apple-relay.fastly-edge.com
+DOMAIN,cp4.cloudflare.com

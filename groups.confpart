@@ -1,0 +1,47 @@
+# Surge iPhone 策略组；公开配置没有私人节点。
+# 在 Surge 的代理页面添加节点后，PROXY及各地区组会列出全部本地节点。
+# 地区名称仅用于手动选择，不自动推断节点地区；自动选择单独测速。
+[Proxy Group]
+PROXY = select, include-all-proxies=true
+广告拦截 = select, REJECT
+苹果服务 = select, DIRECT
+iOS系统更新 = select, REJECT, DIRECT
+节点选择 = select, PROXY, 自动选择, 香港, 台湾, 日本, 韩国, 新加坡, 美国, DIRECT, include-all-proxies=true
+自动选择 = url-test, include-all-proxies=true, interval=600, tolerance=20
+香港 = select, PROXY, DIRECT, include-all-proxies=true
+台湾 = select, PROXY, DIRECT, include-all-proxies=true
+日本 = select, PROXY, DIRECT, include-all-proxies=true
+韩国 = select, PROXY, DIRECT, include-all-proxies=true
+新加坡 = select, PROXY, DIRECT, include-all-proxies=true
+美国 = select, PROXY, DIRECT, include-all-proxies=true
+TikTok国际版 = select, 节点选择, DIRECT, 香港, 台湾, 日本, 韩国, 新加坡, 美国
+人工智能 = select, 节点选择, DIRECT, 香港, 台湾, 日本, 韩国, 新加坡, 美国
+奈飞视频 = select, 节点选择, include-all-proxies=true, policy-regex-filter=(nf|解锁NF|NF|奈|Netflix)
+谷歌服务 = select, 节点选择, 自动选择, 香港, 台湾, 日本, 韩国, 新加坡, 美国, PROXY, DIRECT
+电报 = select, 节点选择, 自动选择, 香港, 台湾, 日本, 韩国, 新加坡, 美国, PROXY, DIRECT
+加密货币 = select, 节点选择, 自动选择, 香港, 台湾, 日本, 韩国, 新加坡, 美国, PROXY, DIRECT
+漏网之鱼 = select, 节点选择, 自动选择, 香港, 台湾, 日本, 韩国, 新加坡, 美国, PROXY, DIRECT
+GitHub = select, 节点选择, PROXY, 美国, 香港, 台湾, 日本, 韩国, 新加坡, DIRECT, include-all-proxies=true
+X推特 = select, 节点选择, 香港, 台湾, 日本, 韩国, 新加坡, 美国, include-all-proxies=true
+国外邮箱 = select, 节点选择, PROXY, include-all-proxies=true
+苹果智能 = select, DIRECT, 节点选择, 美国, 香港, 台湾, 日本, 韩国, 新加坡, include-all-proxies=true
+Grok人工智能 = select, 节点选择, DIRECT, 美国, 香港, 台湾, 日本, 韩国, 新加坡, include-all-proxies=true
+Perplexity搜索 = select, 节点选择, DIRECT, 美国, 香港, 台湾, 日本, 韩国, 新加坡, include-all-proxies=true
+Cursor编程 = select, 节点选择, DIRECT, 美国, 香港, 台湾, 日本, 韩国, 新加坡, include-all-proxies=true
+游戏下载 = select, DIRECT, 节点选择, 美国, 香港, 台湾, 日本, 韩国, 新加坡, include-all-proxies=true
+文件下载 = select, DIRECT, 节点选择, 美国, 香港, 台湾, 日本, 韩国, 新加坡, include-all-proxies=true
+PT下载 = select, DIRECT, 节点选择, 美国, 香港, 台湾, 日本, 韩国, 新加坡, include-all-proxies=true
+网络测速 = select, DIRECT, 节点选择, 美国, 香港, 台湾, 日本, 韩国, 新加坡, include-all-proxies=true
+Emby影院 = select, 节点选择, DIRECT, 美国, 香港, 台湾, 日本, 韩国, 新加坡, include-all-proxies=true
+微软网盘 = select, 节点选择, DIRECT, 美国, 香港, 台湾, 日本, 韩国, 新加坡, include-all-proxies=true
+谷歌网盘 = select, 节点选择, DIRECT, 美国, 香港, 台湾, 日本, 韩国, 新加坡, include-all-proxies=true
+贝宝支付 = select, PROXY, include-all-proxies=true
+Discord社群 = select, 节点选择, DIRECT, 美国, 香港, 台湾, 日本, 韩国, 新加坡, include-all-proxies=true
+Reddit论坛 = select, 节点选择, DIRECT, 美国, 香港, 台湾, 日本, 韩国, 新加坡, include-all-proxies=true
+Twitch直播 = select, 节点选择, DIRECT, 美国, 香港, 台湾, 日本, 韩国, 新加坡, include-all-proxies=true
+学术论文 = select, 节点选择, DIRECT, 美国, 香港, 台湾, 日本, 韩国, 新加坡, include-all-proxies=true
+Steam游戏 = select, 节点选择, DIRECT, 美国, 香港, 台湾, 日本, 韩国, 新加坡, include-all-proxies=true
+游戏平台 = select, 节点选择, DIRECT, 美国, 香港, 台湾, 日本, 韩国, 新加坡, include-all-proxies=true
+微软AI = select, 节点选择, DIRECT, 美国, 香港, 台湾, 日本, 韩国, 新加坡, include-all-proxies=true
+微软服务 = select, DIRECT, 节点选择, 美国, 香港, 台湾, 日本, 韩国, 新加坡, include-all-proxies=true
+HTTPDNS控制 = select, DIRECT, REJECT

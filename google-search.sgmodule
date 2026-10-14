@@ -1,0 +1,8 @@
+#!name=Google 综合增强
+#!desc=在单一响应脚本内串行完成验证码重试、网页净化、自动翻页。
+[Script]
+# 唯一 Google response 处理器：验证码重试 → 网页净化 → 自动翻页。
+Google 综合增强 = type=http-response, pattern=^https://www[.]google[.][a-z.]+/(?:search[?]|[?](?:sa|FORM)=|$), requires-body=true, max-size=-1, timeout=10, ability=http-client-policy, engine=auto, script-path=https://raw.githubusercontent.com/woziji159/Surge/main/ext-google-combined-response.js
+
+[MITM]
+hostname = %APPEND% www.google.*

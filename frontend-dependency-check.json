@@ -1,0 +1,38 @@
+[
+  {
+    "url": "https://limbopro.com/Adguard/Adblock4limbo.user.js",
+    "status": 200,
+    "content_type": "application/javascript; charset=utf-8",
+    "bytes": 253674,
+    "sha256": "4f84ffd8c80d3a6fe0052f591d02bf899becf2beb791cc2f8bc9f540c1d4bf20"
+  },
+  {
+    "url": "https://limbopro.com/Adguard/Adblock4limbo.function.js",
+    "status": 200,
+    "content_type": "application/javascript; charset=utf-8",
+    "bytes": 183794,
+    "sha256": "430e2941964d9dd7221482d91c7bd1757f99007d86fc3f62db28b5b1de16e247"
+  },
+  {
+    "url": "https://limbopro.com/Adguard/elementBlocker.user.js",
+    "status": 200,
+    "content_type": "application/javascript; charset=utf-8",
+    "bytes": 234244,
+    "sha256": "40724b4e700f48f69e0bc2e553604b81d2e2ae84645b6acab5c8f17feb1af6cf"
+  },
+  {
+    "url": "https://limbopro.com/Adguard/autoAdDetector.js",
+    "status": 200,
+    "content_type": "application/javascript; charset=utf-8",
+    "bytes": 24488,
+    "sha256": "161257bcb1c39749db5b6c8dcbcf950224a679567e89d7ee0fdf683513511f8c"
+  },
+  {
+    "url": "https://limbopro.com/CSS/google.com.css",
+    "error": "HTTP Error 404: Not Found"
+  },
+  {
+    "url": "https://limbopro.com/CSS/limbopro.google.com.css",
+    "error": "HTTP Error 404: Not Found"
+  }
+]

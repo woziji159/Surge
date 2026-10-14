@@ -1,0 +1,6 @@
+# Surge subtitle-content — 2026-10-14
+# Policy: 谷歌服务; rules: 3
+# 仅DualSubs内容清单/字幕URL例外；需要对应MITM，不放行pubads全域。
+URL-REGEX,^https?://pubads\.g\.doubleclick\.net/ondemand/hls/content/.+/master\.m3u8(?:\?.*)?$
+URL-REGEX,^https?://pubads\.g\.doubleclick\.net/ondemand/hls/content/.+/media/tt-[^/?]+\.m3u8\?[^#]*subtype=
+URL-REGEX,^https?://pubads\.g\.doubleclick\.net/ondemand/hls/content/.+/(?:hls-webvtt|vtt|ttml)/.+\.(?:vtt|ttml)(?:\?.*)?$

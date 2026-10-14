@@ -1,0 +1,10 @@
+# Surge service-ai-exceptions — 2026-10-14
+# Policy: 人工智能; rules: 8
+DOMAIN-SUFFIX,oaistatsig.com
+DOMAIN,cdn.openaimerge.com
+DOMAIN,cdn.workos.com
+DOMAIN,forwarder.workos.com
+DOMAIN,images.workoscdn.com
+DOMAIN,setup.workos.com
+DOMAIN,workos.imgix.net
+DOMAIN,challenges.cloudflare.com
