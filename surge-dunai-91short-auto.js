@@ -1,5 +1,5 @@
 /*
- * Surge — 91short 毒奶定制脚本：原文件原位修复 v4 (2026-10-15)
+ * Surge — 91short 毒奶定制脚本：原文件原位修复 v5 (2026-10-15)
  * 原始仓库: https://github.com/woziji159/Surge
  * 保留原版导航、反馈、元素屏蔽器及原生撤销功能；不新增悬浮按钮。
  * 仅用于 Surge [Script] http-response 的 HTML 响应，不是直接网页用户脚本。
@@ -7,28 +7,30 @@
 (function () {
   'use strict';
   try {
-    var u = new URL($request.url);
+    var match = /^https:\/\/([^\/?#]+)(\/[^?#]*)?/i.exec(String($request.url || ''));
+    var hostname = match ? match[1].toLowerCase().split(':')[0] : '';
+    var pathname = match && match[2] ? match[2] : '/';
     var domain = /^(?:[a-z0-9-]+\.)*x-91short\.com$/i;
-    if (u.protocol !== 'https:' || !domain.test(u.hostname)) return $done({});
-    if (/\.(?:json|js|css|jpg|jpeg|png|webp|gif|svg|ico|woff2?|ttf|mp4|m4s|mp3|m3u8|ts|pdf|zip)(?:$|\?)/i.test(u.pathname) ||
-        /(?:\/api(?:\/|$)|home_recommend_list|\/cdn-cgi\/|\/verify|\/captcha)/i.test(u.pathname)) return $done({});
+    if (!match || !domain.test(hostname)) return $done({});
+    if (/\.(?:json|js|css|jpg|jpeg|png|webp|gif|svg|ico|woff2?|ttf|mp4|m4s|mp3|m3u8|ts|pdf|zip)(?:$|\?)/i.test(pathname) ||
+        /(?:\/api(?:\/|$)|home_recommend_list|\/cdn-cgi\/|\/verify|\/captcha)/i.test(pathname)) return $done({});
 
     var headers = $response.headers || {};
     var contentKey = Object.keys(headers).find(function (k) { return k.toLowerCase() === 'content-type'; });
-    if (!contentKey || !/\b(?:text\/html|application\/xhtml\+xml)\b/i.test(String(headers[contentKey]))) return $done({});
+    if (contentKey && !/\b(?:text\/html|application\/xhtml\+xml)\b/i.test(String(headers[contentKey]))) return $done({});
     var body = $response.body;
     if (typeof body !== 'string' || !/<head\b[^>]*>/i.test(body)) return $done({});
     if (/您的域名并未添加白名单导致无法访问/.test(body)) return $done({});
-    if (/id=["']limbo-91-custom-v4["']/.test(body)) return $done({});
+    if (/id=["']limbo-91-custom-v5["']/.test(body)) return $done({});
 
     // GitHub Raw 适合 Surge 的 script-path，但作为网页 <script src> 可能被浏览器以 nosniff 拦截。
     // 这两份定制 JS 仍来自用户自己的仓库，只将网页加载地址换成 JS CDN。
     var base = 'https://cdn.jsdelivr.net/gh/woziji159/Surge@main/';
-    var customFn = base + 'limbo-function-auto.js?v=20261015-repair4';
-    var customElement = base + 'limbo-elementBlocker-auto.js?v=20261015-repair4';
+    var customFn = base + 'limbo-function-auto.js?v=20261015-repair5';
+    var customElement = base + 'limbo-elementBlocker-auto.js?v=20261015-repair5';
 
     // 保留原版仅针对陌生弹窗和已知广告域名的拦截；不创建或移除工具箱按钮。
-    var guard = `<script id="limbo-91-custom-v4">
+    var guard = `<script id="limbo-91-custom-v5">
 (function () {
   'use strict';
   if (window.__limbo91PopupGuard) return;
@@ -77,7 +79,7 @@
     // 兜底扫描：原仓库的 limbo-elementBlocker-auto.js 只对 cn8.x-91short.com 启动
     // startLimboPassiveAdScan()。其它 x-91short.com 子域名额外使用这段安静的扫描，
     // 不弹 v12.6 面板，也不添加浮窗；原本的「反馈/导航」由 limbo-function-auto.js 创建。
-    var passiveScan = `<script id="limbo-91-passive-v4">
+    var passiveScan = `<script id="limbo-91-passive-v5">
 (function () {
   'use strict';
   var selectors = [
@@ -94,7 +96,7 @@
     var timer = null;
     function hide(el) {
       if (!(el instanceof HTMLElement) || el.hasAttribute('data-limbo-91-hidden')) return;
-      if (el.closest('#dh_pageContainer,#gemini-main-container,#limbo-ad-notice,#limbo-91-custom-v4')) return;
+      if (el.closest('#dh_pageContainer,#gemini-main-container,#limbo-ad-notice,#limbo-91-custom-v5')) return;
       if (el.matches('body,main,header,footer,nav,video,audio,form,button')) return;
       hidden.push({el:el, value:el.style.getPropertyValue('display'), priority:el.style.getPropertyPriority('display')});
       el.setAttribute('data-limbo-91-hidden', '1');
@@ -115,6 +117,7 @@
         timer = null;
         var count = 0;
         for (var i = 0; i < records.length && count < 80; i++) {
+          if (records[i].type === 'attributes') { scan(records[i].target); count++; continue; }
           for (var j = 0; j < records[i].addedNodes.length && count < 80; j++) {
             var n = records[i].addedNodes[j];
             if (n.nodeType === 1) { scan(n); count++; }
@@ -123,7 +126,7 @@
       }, 250);
     });
     scanAll();
-    observer.observe(document.body, {childList:true, subtree:true});
+    observer.observe(document.body, {childList:true, subtree:true, attributes:true, attributeFilter:['src','class','id']});
     var periodic = setInterval(scanAll, 10000);
     window.surge91UndoAutoHidden = function () {
       observer.disconnect(); clearInterval(periodic); clearTimeout(timer);
@@ -144,9 +147,36 @@
 })();
 </script>`;
 
+    var feedbackRecovery = `<script id="limbo-91-feedback-recovery-v5">
+(function(){
+  'use strict';
+  function hasFeedback(){
+    var els = document.querySelectorAll('[id*="feedback" i], [class*="feedback" i], a[href*="limbopro.com/feedback"], a[href*="limbopro.com/6.html"]');
+    for(var i=0;i<els.length;i++){
+      var el=els[i];
+      if(!el || el.getBoundingClientRect().width<1) continue;
+      var p=el; while(p && p!==document.body){ if(getComputedStyle(p).position==='fixed') return true; p=p.parentElement; }
+    }
+    return false;
+  }
+  function run(){
+    if(hasFeedback() || document.getElementById('limbo-91-recover-original-feedback-js-v5')) return;
+    var s=document.createElement('script');
+    s.id='limbo-91-recover-original-feedback-js-v5';
+    s.src='https://limbopro.com/Adguard/feedBackLinkMake.user.js';
+    s.async=true;
+    (document.head || document.documentElement).appendChild(s);
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){setTimeout(run,4500);},{once:true});
+  else setTimeout(run,4500);
+})();
+</script>`;
+
     var injection = [
+      '<!-- SURGE-LIMBO-91: v5 response-rewrite-injected -->',
       guard,
       passiveScan,
+      feedbackRecovery,
       '<script defer src="https://limbopro.com/Adguard/autoAdDetector.js"></script>',
       '<script defer src="https://limbopro.com/Adguard/Adblock4limbo.user.js"></script>',
       '<script defer src="' + customFn + '"></script>',
@@ -161,9 +191,10 @@
     Object.keys(h).forEach(function (k) {
       if (/^(?:content-length|content-security-policy|content-security-policy-report-only)$/i.test(k)) delete h[k];
     });
+    console.log('[limbo-91-v5] HTML 注入成功: ' + hostname + ' / ' + pathname);
     return $done({body:body, headers:h});
   } catch (e) {
-    console.log('[limbo-91-v4] ' + e.message);
+    console.log('[limbo-91-v5] ' + e.message);
     $done({});
   }
 })();
