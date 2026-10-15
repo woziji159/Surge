@@ -274,22 +274,25 @@ html:not([data-limbo91-autoblock-off]) body #tablist > a[href^="https://"] {
 })();
 </script>`;
 
-    var autoControls = String.raw`<script id="limbo-91-original-controls-autorun-v9">
+    var autoControls = String.raw`<script id="limbo-original-controls-autorun-v12">
 /* 91short 自动调用原有扫描面板的交互控制器，运行于网页，不新增 UI。 */
 (function () {
   'use strict';
   if (!/^(?:[a-z0-9-]+\.)*(?:x\-91short\.com)$/i.test(location.hostname)) return; // LIMBO_SITES_CONTROL_PATTERN (auto-generated)
-  if (window.__limbo91AutoV9) return;
+  if (window.__limbo91AutoV9) return; // Keep legacy state name for compatibility
   var state = window.__limbo91AutoV9 = {
-    version: 'v9', started: false, busy: false, paused: false,
+    version: 'v12', started: false, busy: false, paused: false,
     scanClicks: 0, blockClicks: 0, adguardClicks: 0, protectionClicks: 0,
     lastRun: 0, attempts: 0, lastResult: '', lastError: ''
   };
   var stopped = false, scheduled = 0, rerun = false, openedPanel = false;
+  // v12: The original detector stays alive off-screen for automation. Only a REAL user
+  // click on the scanner entry may show its panel; programmatic clicks never do.
+  var userPanelOpen = false, panelProbeQueued = false, lastPanelProbe = 0;
   var adguardTouched = false, toggleTouched = {};
   var minRunGap = 2500;
-  var panelHidden = null, manualOpenUntil = 0;
-  function log(msg) { state.lastResult = msg; console.log('[limbo-91-v9]', msg); }
+  var panelHidden = null;
+  function log(msg) { state.lastResult = msg; console.log('[limbo-auto-v12]', msg); }
   function norm(value) {
     return String(value || '').replace(/[\s\u200b-\u200d\ufeff]/g, '').trim().toLowerCase();
   }
@@ -399,7 +402,7 @@ html:not([data-limbo91-autoblock-off]) body #tablist > a[href^="https://"] {
   function findScanner() { return pick(['重新扫描'], {contains:true, maxLen:32}); }
   async function ensureScanner() {
     var btn = findScanner();
-    if (btn) return btn;
+    if (btn) { hidePanel(btn.el); return btn; }
     var open = pick(['可疑广告元素扫描'], {contains:true, maxLen:45});
     if (!open) {
       var box = pick(['工具箱','工具箱//'], {contains:true, maxLen:16});
@@ -408,44 +411,85 @@ html:not([data-limbo91-autoblock-off]) body #tablist > a[href^="https://"] {
     }
     if (open && clickHit(open, '可疑广告元素扫描')) {
       openedPanel = true;
-      await delay(600);
-      return findScanner();
+      // A MutationObserver hides the new panel before its first paint where possible.
+      await delay(90);
+      probePanel(true);
+      await delay(510);
+      var button=findScanner();
+      if (button) hidePanel(button.el);
+      return button;
     }
     return null;
   }
   function getPanelRoot(scanButton) {
     if (!scanButton) return null;
     var e = scanButton, depth = 0;
-    while (e && depth++ < 12 && e !== document.body) {
+    while (e && depth++ < 18 && e !== document.body) {
       if (e.nodeType !== 1) break;
-      var txt = norm(e.innerText || '');
-      if (txt.length < 2500 && txt.indexOf('重新扫描')!==-1 &&
-          txt.indexOf('一键屏蔽')!==-1 && txt.indexOf('v12.6')!==-1) {
-        var style = getComputedStyle(e);
-        if (style.position === 'fixed' || style.position === 'absolute') return e;
+      // Long scan result lists can exceed 2500 characters; do not reject the panel.
+      var txt = norm(e.innerText || e.textContent || '');
+      if (txt.indexOf('重新扫描') !== -1 && txt.indexOf('一键屏蔽') !== -1 &&
+          (txt.indexOf('v12.6') !== -1 || txt.indexOf('未处理') !== -1)) {
+        var pos = '';
+        try { pos = (e.ownerDocument.defaultView || window).getComputedStyle(e).position; } catch (_) {}
+        if (pos === 'fixed' || pos === 'absolute' || pos === 'sticky') return e;
       }
       e = e.parentElement;
     }
     return null;
   }
+  var hiddenProps = ['transform','opacity','pointer-events','transition','animation'];
+  function applyHidden(panel) {
+    if (!panel || !panel.isConnected) return;
+    panel.style.setProperty('transform','translate(-300vw,-300vh)','important');
+    panel.style.setProperty('opacity','0','important');
+    panel.style.setProperty('pointer-events','none','important');
+    panel.style.setProperty('transition','none','important');
+    panel.style.setProperty('animation','none','important');
+    panel.setAttribute('data-limbo-autohidden-v12','1');
+  }
   function restorePanel() {
     if (!panelHidden) return;
-    var el = panelHidden.el;
-    if (el && el.isConnected) {
-      el.style.transform = panelHidden.transform;
-      el.style.pointerEvents = panelHidden.pointerEvents;
-    }
+    var saved = panelHidden;
     panelHidden = null;
+    var el = saved.el;
+    if (!el || !el.isConnected) return;
+    for (var i=0;i<hiddenProps.length;i++) {
+      var prop=hiddenProps[i], v=saved.styles[prop];
+      el.style.removeProperty(prop);
+      if (v.value) el.style.setProperty(prop,v.value,v.priority);
+    }
+    el.removeAttribute('data-limbo-autohidden-v12');
   }
   function hidePanel(scanButton) {
-    if (!openedPanel || Date.now() < manualOpenUntil) return;
+    if (userPanelOpen) return;
     var panel = getPanelRoot(scanButton);
     if (!panel) return;
-    if (panelHidden && panelHidden.el === panel) return;
-    restorePanel();
-    panelHidden = {el:panel, transform:panel.style.transform, pointerEvents:panel.style.pointerEvents};
-    panel.style.transform = 'translateX(-300vw)';
-    panel.style.pointerEvents = 'none';
+    if (panelHidden && panelHidden.el === panel) { applyHidden(panel); return; }
+    // If a scanner was destroyed and recreated, NEVER restore the previous panel.
+    var styles={};
+    for (var i=0;i<hiddenProps.length;i++) {
+      var prop=hiddenProps[i];
+      styles[prop]={value:panel.style.getPropertyValue(prop),priority:panel.style.getPropertyPriority(prop)};
+    }
+    panelHidden={el:panel,styles:styles};
+    applyHidden(panel);
+  }
+  function probePanel(force) {
+    if (userPanelOpen || state.paused) return;
+    if (!force && Date.now()-lastPanelProbe<230) return;
+    lastPanelProbe=Date.now();
+    if (panelHidden && panelHidden.el && panelHidden.el.isConnected) {
+      applyHidden(panelHidden.el);
+      return;
+    }
+    var scan=findScanner();
+    if (scan) hidePanel(scan.el);
+  }
+  function queuePanelProbe() {
+    if (panelProbeQueued || userPanelOpen) return;
+    panelProbeQueued=true;
+    Promise.resolve().then(function(){panelProbeQueued=false;probePanel();});
   }
   function countUnprocessed() {
     var roots=docRoots();
@@ -464,9 +508,11 @@ html:not([data-limbo91-autoblock-off]) body #tablist > a[href^="https://"] {
     var scan = await ensureScanner();
     if (!scan) { log('原扫描按钮未出现（等待网页工具箱完成加载）'); return false; }
     if (state.paused) return false;
+    hidePanel(scan.el);
     if (!clickHit(scan, '重新扫描')) return false;
     state.scanClicks++;
     await delay(950);
+    probePanel(true);
     if (state.paused) return false;
     var block = pick(['一键屏蔽'], {contains:true, maxLen:32});
     if (!block) { log('原一键屏蔽按钮未出现'); return false; }
@@ -490,7 +536,7 @@ html:not([data-limbo91-autoblock-off]) body #tablist > a[href^="https://"] {
     try {
       ensureSwitches();
       await scanAndBlock();
-    } catch (e) { state.lastError=String(e.message || e); console.warn('[limbo-91-v9]',e); }
+    } catch (e) { state.lastError=String(e.message || e); console.warn('[limbo-auto-v12]',e); }
     finally {
       state.busy=false;
       if (rerun) { rerun=false; schedule(1400); }
@@ -543,6 +589,13 @@ html:not([data-limbo91-autoblock-off]) body #tablist > a[href^="https://"] {
       });
       observer.observe(document.body,{childList:true,subtree:true});
     }
+    // v12: scanner control remains available for background .click(), but the
+    // overlay must not be visible. Handle re-created panels after infinite scroll.
+    if (typeof MutationObserver === 'function') {
+      var panelObserver = new MutationObserver(function(){ queuePanelProbe(); });
+      panelObserver.observe(document.body,{childList:true,subtree:true});
+    }
+    setInterval(function(){ probePanel(true); },1200);
     // 每次页面重新打开重新自动开启；手动撤回后暂停本页自动屏蔽，直到刷新。
     document.addEventListener('click',function(event){
       if(!event.isTrusted) return;
@@ -550,8 +603,24 @@ html:not([data-limbo91-autoblock-off]) body #tablist > a[href^="https://"] {
       if(!b) return;
       var s=norm(b.innerText || b.textContent);
       if (s.indexOf('可疑广告元素扫描') !== -1 && s.length < 28) {
-        manualOpenUntil = Date.now() + 30000;
-        restorePanel();
+        if (userPanelOpen) {
+          // The user tapped the scanner entry a second time to close it.
+          userPanelOpen=false;
+        } else if (panelHidden && panelHidden.el && panelHidden.el.isConnected) {
+          // The scanner is ALREADY open, only visually moved off-screen.
+          // Intercept this trusted tap to reveal it instead of toggling it off.
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          userPanelOpen=true;
+          restorePanel();
+        } else {
+          userPanelOpen=true; // Let the original script open it normally.
+        }
+      }
+      // Closing by the original X/close control must not cause auto re-opening.
+      if (userPanelOpen && s.length <= 12 && /^(?:×|✕|✖|x|关闭|收起)$/.test(s)) {
+        userPanelOpen=false;
+        setTimeout(function(){probePanel(true);},60);
       }
       if (s.length <= 16 && (/^撤回$/.test(s) || /^一键重置$/.test(s))) {
         state.paused=true;
