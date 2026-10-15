@@ -1,256 +1,331 @@
-/* Surge Google Search - smoother native pagination (2026-10-15).
- * Prefetches through Google native More results; no HTML cloning or cleanup scripts.
- * Plain numbered pages retain real next-page navigation for media stability.
+/*
+ * Surge Google Search — seamless, early-prefetch pagination (2026-10-15 v3)
+ * Only Google web search; no Adblock4limbo and no automatic page navigation.
+ * Keeps Google's native page intact, appends validated later results below it.
+ * Appended Google dynamic widgets may not fully initialize; users can open their native page.
  */
-function surgeEndless($response, $done) {
-  const body = $response.body;
-  if (typeof body !== 'string' || !/<\/body\s*>/i.test(body) ||
-      /id=["']surge-google-native-pagination["']/.test(body)) {
-    $done({});
-    return;
-  }
-  const injection = String.raw`<script id="surge-google-native-pagination">
 (function () {
   'use strict';
-  if (window.top !== window.self || window.__surgeGoogleNativePaging) return;
+  function finish(result) { $done(result || {}); }
+  try {
+    if (Number($response.status) !== 200 || typeof $response.body !== 'string') return finish();
+    var requestURL = new URL($request.url);
+    if (!/^www\.google\.[a-z.]+$/i.test(requestURL.hostname) ||
+        requestURL.pathname !== '/search' || !requestURL.searchParams.get('q')) return finish();
+    if (['isch', 'vid'].indexOf(requestURL.searchParams.get('tbm')) >= 0 ||
+        ['2', '50'].indexOf(requestURL.searchParams.get('udm')) >= 0) return finish();
+    var headers = $response.headers || {};
+    var contentTypeName = Object.keys(headers).find(function (k) { return k.toLowerCase() === 'content-type'; });
+    if (contentTypeName && !/text\/html/i.test(String(headers[contentTypeName]))) return finish();
+    var html = $response.body;
+    if (!/<\/body\s*>/i.test(html) || /id=["']surge-google-seamless-v3["']/.test(html)) return finish();
+
+    var injected = String.raw`<script id="surge-google-seamless-v3">
+(function () {
+  'use strict';
+  if (window.top !== window.self || window.__surgeGoogleSeamlessV3) return;
   if (location.pathname !== '/search') return;
-  var searchURL = new URL(location.href);
-  var query = searchURL.searchParams.get('q');
-  if (!query) return;
-  // Image Search and AI mode manage their own loading UI; leave them alone.
-  if (searchURL.searchParams.get('tbm') === 'isch' ||
-      searchURL.searchParams.get('udm') === '2' ||
-      searchURL.searchParams.get('udm') === '50') return;
-  window.__surgeGoogleNativePaging = true;
+  var rootURL = new URL(location.href);
+  var query = rootURL.searchParams.get('q');
+  if (!query || ['isch', 'vid'].indexOf(rootURL.searchParams.get('tbm')) >= 0 ||
+      ['2', '50'].indexOf(rootURL.searchParams.get('udm')) >= 0) return;
+  window.__surgeGoogleSeamlessV3 = true;
 
-  // Smooth native pagination: load Google's own next batch ahead of the viewport.
-  // Never clone Google HTML. That previously broke thumbnail initialization.
-  var gestureSeen = false;
-  var scrollingDown = false;
-  var scrollBaseline = window.scrollY || document.documentElement.scrollTop || 0;
-  var lastActionTime = 0;
-  var lastClickScrollY = -10000;
+  var MAX_EXTRA_PAGES = 12;
+  var PREFETCH_AHEAD = 3500;
+  var APPEND_AHEAD = 1700;
+  var currentStart = Math.max(0, Number(rootURL.searchParams.get('start')) || 0);
+  var step = Math.max(1, Math.min(100, Number(rootURL.searchParams.get('num')) || 10));
+  var nextURL = null;
+  var prefetched = null;
   var loading = false;
-  var loadingTimeout = null;
-  var loadingObserver = null;
-  var stopped = false;
-  var navigationStarted = false;
-  var MAX_CLICKS = 16;
-  var clicks = 0;
-  var scheduled = null;
-  var retryAfter = 0;
+  var ended = false;
+  var appendedCount = 0;
+  var lastAppendY = -10000;
+  var lastPageKey = '';
+  var visitedURLs = new Set();
+  var nextIsGuess = false;
+  var seenPageKeys = new Set();
+  var host, sentinel, message;
+  var moved = false;
+  var ticking = false;
+  var requestTimer = 0;
+  var failureCount = 0;
+  var bootAttempts = 0;
 
-  function isVisible(element) {
-    if (!element || !element.isConnected) return false;
-    if (element.closest('[hidden], [aria-hidden="true"]')) return false;
-    var style = window.getComputedStyle(element);
-    return style.display !== 'none' && style.visibility !== 'hidden' &&
-           element.getClientRects().length > 0;
-  }
-  function isMoreResultsText(element) {
-    var text = (element.textContent || '').replace(/\s+/g, ' ').trim();
-    return text.length < 65 && /^(?:More results|Show more results|Show more|更多结果|更多搜索结果|显示更多结果|查看更多结果|更多結果|更多搜尋結果|顯示更多結果|查看更多結果)(?:\s*[›»→])?$/i.test(text);
-  }
-  function isNativeMore(el) {
-    if (!isVisible(el) || !isMoreResultsText(el)) return false;
-    if (el.disabled || el.getAttribute('aria-disabled') === 'true') return false;
-    // An actual 'next page' anchor navigates rather than extending results.
-    if (el.tagName === 'A' && el.getAttribute('href')) {
-      try {
-        var next = new URL(el.getAttribute('href'), location.href);
-        if (next.pathname === '/search' && next.searchParams.has('start')) return false;
-      } catch (e) { }
+  function getResults(doc) {
+    var nodes = ['#rso', '#search #rso', '#center_col #rso', '#center_col .s6JM6d'];
+    for (var i = 0; i < nodes.length; i++) {
+      var node = doc.querySelector(nodes[i]);
+      if (node && (node.querySelector('h3') || node.querySelector('.MjjYud, .g'))) return node;
     }
-    return true;
-  }
-  function findNativeMore() {
-    var selectors = [
-      '#botstuff button', '#botstuff [role="button"]', '#botstuff a',
-      '#foot button', '#foot [role="button"]', '#foot a',
-      '#nav button', '#nav [role="button"]', '#nav a',
-      'nav[aria-label*="分页"] button', 'nav[aria-label*="Page"] button',
-      '[role="navigation"] button', 'main button', 'main [role="button"]'
-    ];
-    var candidates = document.querySelectorAll(selectors.join(','));
-    for (var i = 0; i < candidates.length; i++) {
-      if (isNativeMore(candidates[i])) return candidates[i];
-    }
-    // Fallback only for a visible pagination control well below the search results.
-    var fallback = document.querySelectorAll('button, [role="button"], a');
-    for (var k = 0; k < fallback.length && k < 900; k++) {
-      var el = fallback[k];
-      if (!isNativeMore(el)) continue;
-      var at = el.getBoundingClientRect().top + (window.scrollY || 0);
-      if (at > document.documentElement.scrollHeight * 0.45) return el;
-    }
+    // Some Google layouts don't have #rso; only use the main result column if it has real results.
+    var center = doc.querySelector('#center_col');
+    if (center && center.querySelectorAll('h3').length >= 2) return center;
     return null;
   }
-  function goodNextLink(link, requireStep) {
-    if (!link || !link.href) return null;
+  function candidatePageLink(doc, current) {
+    var selected = null;
+    var smallest = Infinity;
+    var all = doc.querySelectorAll('a[href*="start="], a#pnnext, a[rel="next"], a[aria-label="下一页"], a[aria-label="下一頁"], a[aria-label="Next page"]');
+    for (var i = 0; i < all.length; i++) {
+      var raw = all[i].getAttribute('href');
+      if (!raw) continue;
+      try {
+        var u = new URL(raw, location.origin);
+        var start = Number(u.searchParams.get('start'));
+        if (u.origin !== location.origin || u.pathname !== '/search' ||
+            u.searchParams.get('q') !== query || !u.searchParams.has('start') ||
+            !Number.isFinite(start) || start <= current || start >= smallest) continue;
+        smallest = start;
+        selected = u.href;
+      } catch (e) { /* Ignore malformed page links. */ }
+    }
+    if (selected && smallest - current <= 100) step = smallest - current;
+    return selected;
+  }
+  function pageURL(start) {
+    var u = new URL(rootURL.href);
+    u.searchParams.set('start', String(start));
+    return u.href;
+  }
+  function status(text) {
+    if (!message) return;
+    message.textContent = text || '';
+    message.style.display = text ? 'block' : 'none';
+  }
+  function manualLink(url) {
+    if (!host || host.querySelector('.sg-google-manual-link')) return;
+    var wrap = document.createElement('div');
+    wrap.className = 'sg-google-manual-link';
+    var a = document.createElement('a');
+    a.href = url;
+    a.textContent = '无法自动追加？打开 Google 原生下一页';
+    a.rel = 'noopener';
+    wrap.appendChild(a);
+    host.insertBefore(wrap, sentinel);
+  }
+  function safeAbsolute(raw, base) {
+    if (!raw || /^(javascript:|about:)/i.test(raw)) return '';
     try {
-      var u = new URL(link.href, location.href);
-      if (u.origin !== location.origin || u.pathname !== '/search' ||
-          u.searchParams.get('q') !== query) return null;
-      var now = Number(searchURL.searchParams.get('start')) || 0;
-      var next = Number(u.searchParams.get('start'));
-      if (u.searchParams.has('start') && (!Number.isFinite(next) || next <= now)) return null;
-      if (requireStep && !u.searchParams.has('start')) return null;
-      if (u.href === location.href) return null;
-      return u.href;
-    } catch (e) { return null; }
+      var u = new URL(raw, base);
+      if (/^https?:$/.test(u.protocol) || /^(?:data:image\/|blob:)/i.test(raw)) return u.href;
+    } catch (e) { }
+    return '';
   }
-  function findNextLink() {
-    var direct = document.querySelectorAll(
-      'a#pnnext, a[rel="next"], a[aria-label="Next page"], a[aria-label="下一页"], a[aria-label="下一頁"]');
-    for (var i = 0; i < direct.length; i++) {
-      var found = goodNextLink(direct[i], false);
-      if (found && isVisible(direct[i])) return found;
-    }
-    var pages = document.querySelectorAll(
-      '#botstuff a[href*="start="], #foot a[href*="start="], #nav a[href*="start="], ' +
-      '[role="navigation"] a[href*="start="]');
-    var bestURL = null;
-    var bestStart = Infinity;
-    for (var j = 0; j < pages.length; j++) {
-      var href = goodNextLink(pages[j], true);
-      if (!href || !isVisible(pages[j])) continue;
-      var s = Number(new URL(href).searchParams.get('start'));
-      if (s < bestStart) { bestStart = s; bestURL = href; }
-    }
-    return bestURL; // Never invent a page number that might lead to an empty page.
+  function isPlaceholder(src, img) {
+    if (!src || /^(?:about:blank|data:image\/gif;base64,R0lGODlhAQAB)/i.test(src)) return true;
+    return /^data:image\//i.test(src) &&
+      (Number(img.getAttribute('width')) <= 1 && Number(img.getAttribute('width')) > 0 &&
+       Number(img.getAttribute('height')) <= 1 && Number(img.getAttribute('height')) > 0);
   }
-  function scheduleCheck() {
-    if (scheduled !== null) return;
-    // Throttle DOM scans: don't rescan hundreds of pagination controls on every pixel.
-    scheduled = window.setTimeout(function () {
-      scheduled = null;
-      check();
-    }, 120);
-  }
-  function releaseLoading() {
-    if (loadingObserver) { loadingObserver.disconnect(); loadingObserver = null; }
-    if (loadingTimeout) { window.clearTimeout(loadingTimeout); loadingTimeout = null; }
-    loading = false;
-    scheduleCheck();
-  }
-  function activate(more, y) {
-    if (loading || stopped || navigationStarted || Date.now() < retryAfter) return;
-    if (clicks >= MAX_CLICKS) return;
-    var now = Date.now();
-    if (now - lastActionTime < 550) return;
-    if (clicks && y - lastClickScrollY < 140) return;
-    lastActionTime = now;
-    lastClickScrollY = y;
-    clicks++;
-    loading = true;
-    var oldHeight = document.documentElement.scrollHeight;
-    var oldButton = more;
-    var resultRoot = document.querySelector('#rso, #search');
-    var resultCount = resultRoot ? resultRoot.querySelectorAll('.MjjYud, .g').length : 0;
-    function resultsAdded() {
-      if (!oldButton.isConnected) return true;
-      if (resultRoot && resultRoot.querySelectorAll('.MjjYud, .g').length > resultCount) return true;
-      return document.documentElement.scrollHeight > oldHeight + 260;
+  function normalizeImage(img, base, priority) {
+    var picks = [];
+    ['data-src', 'data-iurl', 'data-original-src', 'data-original',
+     'data-lazy-src', 'data-deferred-src', 'data-thumb', 'src'].forEach(function (attr) {
+      var val = safeAbsolute(img.getAttribute(attr), base);
+      if (val && picks.indexOf(val) < 0 && !isPlaceholder(val, img)) picks.push(val);
+    });
+    var rawSrc = img.getAttribute('src');
+    if (isPlaceholder(rawSrc, img) && picks.length) {
+      img.removeAttribute('srcset');
+      img.setAttribute('src', picks[0]);
+    } else if (rawSrc && safeAbsolute(rawSrc, base) && !rawSrc.startsWith('data:')) {
+      img.setAttribute('src', safeAbsolute(rawSrc, base));
     }
-    if (typeof MutationObserver !== 'undefined') {
-      var pending = false;
-      loadingObserver = new MutationObserver(function () {
-        if (pending) return;
-        pending = true;
-        window.requestAnimationFrame(function () {
-          pending = false;
-          if (loading && resultsAdded()) releaseLoading();
-        });
-      });
-      loadingObserver.observe(document.body, {childList: true, subtree: true});
-    }
-    try {
-      // Let Google itself create all dynamic cards, images and video thumbnails.
-      more.click();
-    } catch (e) {
-      console.log('[Google smooth pagination] Native click failed:', String(e));
-      retryAfter = Date.now() + 2400;
-      releaseLoading();
-      return;
-    }
-    if (resultsAdded()) { releaseLoading(); return; }
-    loadingTimeout = window.setTimeout(function () {
-      if (!resultsAdded()) {
-        // No redirect here: a slow native request must not suddenly refresh the page.
-        retryAfter = Date.now() + 3500;
-        clicks = Math.max(0, clicks - 1);
+    var srcset = img.getAttribute('data-srcset') || img.getAttribute('srcset');
+    if (srcset && !img.getAttribute('srcset')) img.setAttribute('srcset', srcset);
+    img.loading = priority ? 'eager' : 'lazy';
+    img.decoding = 'async';
+    var tries = 0;
+    img.addEventListener('error', function () {
+      while (tries < picks.length) {
+        var next = picks[tries++];
+        if (next !== img.src) { img.removeAttribute('srcset'); img.src = next; break; }
       }
-      releaseLoading();
-    }, 6500);
+    });
+  }
+  function fixMedia(fragment, base) {
+    Array.prototype.forEach.call(fragment.querySelectorAll('img'), function (img, index) {
+      normalizeImage(img, base, index < 12);
+    });
+    Array.prototype.forEach.call(fragment.querySelectorAll('video'), function (video) {
+      if (video.getAttribute('poster')) return;
+      var img = safeAbsolute(video.getAttribute('data-poster'), base);
+      if (img) video.poster = img;
+    });
+    Array.prototype.forEach.call(fragment.querySelectorAll('[data-bg], [data-background-image]'), function (elem) {
+      var bg = safeAbsolute(elem.getAttribute('data-bg') || elem.getAttribute('data-background-image'), base);
+      if (bg && !elem.style.backgroundImage) elem.style.backgroundImage = 'url("' + bg.replace(/"/g, '%22') + '")';
+    });
+  }
+  function getKey(root) {
+    var links = root.querySelectorAll('a:has(h3)');
+    var vals = [];
+    for (var i = 0; i < links.length && vals.length < 12; i++) {
+      var s = (links[i].href || '') + ' ' + (links[i].textContent || '').trim();
+      if (s) vals.push(s.slice(0, 160));
+    }
+    if (!vals.length) {
+      var headings = root.querySelectorAll('h3');
+      for (var j = 0; j < headings.length && vals.length < 12; j++) vals.push(headings[j].textContent.trim());
+    }
+    return vals.join('|');
+  }
+  function buildPage(doc, url, start) {
+    if (doc.querySelector('form[action*="/sorry/"], input[name="captcha"]')) throw new Error('Google 验证页');
+    var result = getResults(doc);
+    if (!result || !result.querySelector('h3, .g, .MjjYud')) throw new Error('下一页没有可识别的搜索结果');
+    var key = getKey(result);
+    if (!key || seenPageKeys.has(key) || key === lastPageKey) throw new Error('下一页结果重复或未加载');
+    var container = document.createElement('section');
+    container.className = 'sg-google-added-page';
+    container.setAttribute('data-start', String(start));
+    var copy = document.importNode(result, true);
+    if (copy.id) copy.removeAttribute('id');
+    Array.prototype.forEach.call(copy.querySelectorAll('[id]'), function (e) { e.removeAttribute('id'); });
+    Array.prototype.forEach.call(copy.querySelectorAll('script, noscript'), function (e) { e.remove(); });
+    // Keep links working even if Google provides relative URLs in the copied result.
+    Array.prototype.forEach.call(copy.querySelectorAll('a[href]'), function (a) {
+      var href = safeAbsolute(a.getAttribute('href'), url);
+      if (href) a.href = href;
+    });
+    fixMedia(copy, url);
+    container.appendChild(copy);
+    return { element: container, key: key, pageStart: start,
+             next: candidatePageLink(doc, start) };
+  }
+  function endWithError(error, href) {
+    console.log('[Surge Google seamless] ' + String(error));
+    ended = true;
+    status('自动加载暂时不可用。');
+    manualLink(href);
+  }
+  function prefetch() {
+    if (!nextURL || loading || prefetched || ended || appendedCount >= MAX_EXTRA_PAGES) return;
+    var address = nextURL;
+    if (visitedURLs.has(address)) { ended = true; return; }
+    visitedURLs.add(address);
+    loading = true;
+    var controller = new AbortController();
+    clearTimeout(requestTimer);
+    requestTimer = setTimeout(function () { controller.abort(); }, 14000);
+    fetch(address, { credentials: 'same-origin', redirect: 'follow', cache: 'no-store', signal: controller.signal })
+      .then(function (response) {
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        var dest = new URL(response.url);
+        if (dest.origin !== location.origin || dest.pathname !== '/search' ||
+            dest.searchParams.get('q') !== query) throw new Error('Google 重定向到其他页面');
+        if ((response.headers.get('content-type') || 'text/html').indexOf('text/html') < 0) throw new Error('非 HTML 页面');
+        return response.text().then(function (html) { return { html: html, url: response.url }; });
+      }).then(function (r) {
+        var doc = new DOMParser().parseFromString(r.html, 'text/html');
+        var page = buildPage(doc, r.url, Number(new URL(address).searchParams.get('start')));
+        prefetched = page;
+        failureCount = 0;
+        check();
+      }).catch(function (error) {
+        if (nextIsGuess && /HTTP 404|HTTP 410/.test(String(error))) {
+          ended = true;
+          status('');
+          return;
+        }
+        failureCount++;
+        // One brief retry covers an intermittent mobile network hiccup.
+        if (failureCount < 2 && !ended) {
+          visitedURLs.delete(address);
+          setTimeout(prefetch, 1700);
+        } else { endWithError(error, address); }
+      }).finally(function () {
+        clearTimeout(requestTimer);
+        loading = false;
+        if (prefetched) check();
+      });
+  }
+  function gapToTail() {
+    return sentinel.getBoundingClientRect().top - window.innerHeight;
+  }
+  function appendReady() {
+    if (!prefetched || !moved || ended || appendedCount >= MAX_EXTRA_PAGES) return;
+    var y = window.scrollY || document.documentElement.scrollTop || 0;
+    if (y - lastAppendY < 160) return;
+    if (gapToTail() > APPEND_AHEAD) return;
+    var page = prefetched;
+    prefetched = null;
+    host.insertBefore(page.element, sentinel);
+    seenPageKeys.add(page.key);
+    lastPageKey = page.key;
+    currentStart = page.pageStart;
+    appendedCount++;
+    lastAppendY = y;
+    nextIsGuess = !page.next;
+    nextURL = page.next || pageURL(currentStart + step);
+    status('');
+    if (appendedCount < MAX_EXTRA_PAGES) setTimeout(prefetch, 300);
   }
   function check() {
-    if (!gestureSeen || !scrollingDown || loading || stopped || navigationStarted) return;
-    var y = window.scrollY || document.documentElement.scrollTop || 0;
-    if (y < 60) return;
-    var more = findNativeMore();
-    if (more) {
-      // Load up to roughly three screenfuls ahead, measured from Google's own button.
-      var gap = more.getBoundingClientRect().top - window.innerHeight;
-      var lead = Math.max(1900, Math.min(3100, window.innerHeight * 2.8));
-      if (gap <= lead) activate(more, y);
+    if (!host || ended) return;
+    if (prefetched) { appendReady(); return; }
+    if (!loading && nextURL && (moved || gapToTail() < PREFETCH_AHEAD)) prefetch();
+    if (loading && moved && gapToTail() < 550) status('正在准备下一页…');
+  }
+  function scrollCheck() {
+    if (!moved && (window.scrollY || document.documentElement.scrollTop || 0) > 40) moved = true;
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(function () { ticking = false; check(); });
+  }
+  function boot() {
+    var result = getResults(document);
+    if (!result || !result.parentNode) {
+      if (++bootAttempts <= 14) setTimeout(boot, 300);
       return;
     }
-    // Ordinary numbered pages cannot be appended without cloning Google HTML.
-    // Preserve stable images: only auto-navigate if actually near a real next-page link.
-    var remaining = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight) - y - window.innerHeight;
-    if (remaining > Math.max(250, window.innerHeight * 0.4)) return;
-    var nextURL = findNextLink();
-    if (nextURL) { navigationStarted = true; window.location.assign(nextURL); }
-  }
-  function onScroll() {
-    var y = window.scrollY || document.documentElement.scrollTop || 0;
-    if (gestureSeen && y > scrollBaseline + 7) scrollingDown = true;
-    scrollBaseline = y;
-    if (scrollingDown) scheduleCheck();
-  }
-  function install() {
-    if (!document.body) return;
-    // Requiring genuine motion avoids loops on Safari restored scroll position.
-    window.addEventListener('touchstart', function () { gestureSeen = true; }, { passive: true });
-    window.addEventListener('touchmove', function () { gestureSeen = true; }, { passive: true });
-    window.addEventListener('wheel', function () { gestureSeen = true; }, { passive: true });
+    host = document.createElement('div');
+    host.id = 'sg-google-endless-host';
+    result.parentNode.insertBefore(host, result.nextSibling);
+    message = document.createElement('div');
+    message.className = 'sg-google-status';
+    message.setAttribute('role', 'status');
+    message.style.display = 'none';
+    host.appendChild(message);
+    sentinel = document.createElement('div');
+    sentinel.className = 'sg-google-sentinel';
+    host.appendChild(sentinel);
+    var style = document.createElement('style');
+    style.textContent = '.sg-google-added-page{padding-top:16px;margin-top:18px;border-top:1px solid #dadce0}' +
+      '.sg-google-status,.sg-google-manual-link{font-size:13px;color:#666;padding:8px 0}' +
+      '.sg-google-sentinel{height:1px;pointer-events:none}';
+    document.head.appendChild(style);
+    var ownKey = getKey(result);
+    if (ownKey) seenPageKeys.add(ownKey);
+    nextURL = candidatePageLink(document, currentStart);
+    nextIsGuess = !nextURL;
+    if (!nextURL) nextURL = pageURL(currentStart + step);
+    window.addEventListener('scroll', scrollCheck, { passive: true });
+    window.addEventListener('touchmove', function () { moved = true; scrollCheck(); }, { passive: true });
+    window.addEventListener('wheel', function () { moved = true; scrollCheck(); }, { passive: true });
     window.addEventListener('keydown', function (e) {
-      if (/^(ArrowDown|PageDown|End| |Space)$/.test(e.key)) gestureSeen = true;
+      if (/^(?:ArrowDown|PageDown|End| )$/.test(e.key)) { moved = true; scrollCheck(); }
     });
-    window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('touchend', function () { if (scrollingDown) scheduleCheck(); }, { passive: true });
-    window.addEventListener('resize', scheduleCheck, { passive: true });
+    if (typeof IntersectionObserver !== 'undefined') {
+      var observer = new IntersectionObserver(check, { rootMargin: PREFETCH_AHEAD + 'px 0px' });
+      observer.observe(sentinel);
+    }
+    // Warm one page asynchronously; do not block search page onload or append until scrolling.
+    setTimeout(prefetch, 900);
   }
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', install, { once: true });
-  } else { install(); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, {once:true});
+  else boot();
 })();
 </script>`;
-  $done({ body: body.replace(/<\/body\s*>/i, injection + '\n</body>') });
-}
-
-(function main() {
-  try {
-    if (Number($response.status) !== 200 || typeof $response.body !== 'string') { $done({}); return; }
-    var req = new URL($request.url);
-    if (!/^www\.google\.[a-z.]+$/i.test(req.hostname) || req.pathname !== '/search' ||
-        !req.searchParams.has('q')) { $done({}); return; }
-    var headers = $response.headers || {};
-    var contentType = Object.entries(headers).find(function (entry) { return entry[0].toLowerCase() === 'content-type'; });
-    if (contentType && !/text\/html/i.test(String(contentType[1]))) { $done({}); return; }
-    if (!/<\/body\s*>/i.test($response.body) ||
-        /id=["']surge-google-native-pagination["']/.test($response.body)) { $done({}); return; }
-    surgeEndless($response, function (result) {
-      if (!result || typeof result.body !== 'string' || result.body === $response.body) { $done({}); return; }
-      var patchedHeaders = Object.assign({}, headers);
-      // Remove only restrictions that would block the inline pagination script.
-      Object.keys(patchedHeaders).forEach(function (key) {
-        if (/^(?:content-security-policy|content-length)$/i.test(key)) delete patchedHeaders[key];
-      });
-      $done({body:result.body, headers:patchedHeaders});
+    var patchedHeaders = Object.assign({}, headers);
+    Object.keys(patchedHeaders).forEach(function (key) {
+      if (/^(?:content-security-policy|content-length)$/i.test(key)) delete patchedHeaders[key];
     });
+    finish({ body: html.replace(/<\/body\s*>/i, injected + '\n</body>'), headers: patchedHeaders });
   } catch (error) {
-    console.log('[Surge Google pagination] ' + error.message);
-    $done({});
+    console.log('[Surge Google seamless] ' + String(error));
+    finish();
   }
 })();
