@@ -1,6 +1,6 @@
-/* Surge Google Search - pagination only, no cleanup stage.
- * Native Google More results / next page logic copied from the working version.
- * No additional CSS/JS and no Google content cleanup.
+/* Surge Google Search - smoother native pagination (2026-10-15).
+ * Prefetches through Google native More results; no HTML cloning or cleanup scripts.
+ * Plain numbered pages retain real next-page navigation for media stability.
  */
 function surgeEndless($response, $done) {
   const body = $response.body;
@@ -23,8 +23,13 @@ function surgeEndless($response, $done) {
       searchURL.searchParams.get('udm') === '50') return;
   window.__surgeGoogleNativePaging = true;
 
-  var userScrolled = false;
+  // Smooth native pagination: load Google's own next batch ahead of the viewport.
+  // Never clone Google HTML. That previously broke thumbnail initialization.
+  var gestureSeen = false;
+  var scrollingDown = false;
+  var scrollBaseline = window.scrollY || document.documentElement.scrollTop || 0;
   var lastActionTime = 0;
+  var lastClickScrollY = -10000;
   var loading = false;
   var loadingTimeout = null;
   var loadingObserver = null;
@@ -32,6 +37,8 @@ function surgeEndless($response, $done) {
   var navigationStarted = false;
   var MAX_CLICKS = 16;
   var clicks = 0;
+  var scheduled = null;
+  var retryAfter = 0;
 
   function isVisible(element) {
     if (!element || !element.isConnected) return false;
@@ -44,28 +51,36 @@ function surgeEndless($response, $done) {
     var text = (element.textContent || '').replace(/\s+/g, ' ').trim();
     return text.length < 65 && /^(?:More results|Show more results|Show more|更多结果|更多搜索结果|显示更多结果|查看更多结果|更多結果|更多搜尋結果|顯示更多結果|查看更多結果)(?:\s*[›»→])?$/i.test(text);
   }
-  // Only scan Google pagination regions to avoid clicking unrelated "more" controls.
+  function isNativeMore(el) {
+    if (!isVisible(el) || !isMoreResultsText(el)) return false;
+    if (el.disabled || el.getAttribute('aria-disabled') === 'true') return false;
+    // An actual 'next page' anchor navigates rather than extending results.
+    if (el.tagName === 'A' && el.getAttribute('href')) {
+      try {
+        var next = new URL(el.getAttribute('href'), location.href);
+        if (next.pathname === '/search' && next.searchParams.has('start')) return false;
+      } catch (e) { }
+    }
+    return true;
+  }
   function findNativeMore() {
     var selectors = [
       '#botstuff button', '#botstuff [role="button"]', '#botstuff a',
       '#foot button', '#foot [role="button"]', '#foot a',
       '#nav button', '#nav [role="button"]', '#nav a',
       'nav[aria-label*="分页"] button', 'nav[aria-label*="Page"] button',
-      '[role="navigation"] button', '#botstuff [role="button"]', 'main button', 'main [role="button"]'
+      '[role="navigation"] button', 'main button', 'main [role="button"]'
     ];
     var candidates = document.querySelectorAll(selectors.join(','));
     for (var i = 0; i < candidates.length; i++) {
-      var candidate = candidates[i];
-      if (isVisible(candidate) && isMoreResultsText(candidate)) return candidate;
+      if (isNativeMore(candidates[i])) return candidates[i];
     }
-    // Google sometimes moves its pagination outside #botstuff/#foot.
-    // Only consider short visible controls in the lower half of the document.
+    // Fallback only for a visible pagination control well below the search results.
     var fallback = document.querySelectorAll('button, [role="button"], a');
     for (var k = 0; k < fallback.length && k < 900; k++) {
       var el = fallback[k];
-      if (!isVisible(el) || !isMoreResultsText(el)) continue;
-      var box = el.getBoundingClientRect();
-      var at = box.top + (window.scrollY || document.documentElement.scrollTop || 0);
+      if (!isNativeMore(el)) continue;
+      var at = el.getBoundingClientRect().top + (window.scrollY || 0);
       if (at > document.documentElement.scrollHeight * 0.45) return el;
     }
     return null;
@@ -86,8 +101,7 @@ function surgeEndless($response, $done) {
   }
   function findNextLink() {
     var direct = document.querySelectorAll(
-      'a#pnnext, a[rel="next"], a[aria-label="Next page"], a[aria-label="下一页"], a[aria-label="下一頁"], ' +
-      'a[aria-label="More results"], a[aria-label="更多结果"], a[aria-label="更多結果"]');
+      'a#pnnext, a[rel="next"], a[aria-label="Next page"], a[aria-label="下一页"], a[aria-label="下一頁"]');
     for (var i = 0; i < direct.length; i++) {
       var found = goodNextLink(direct[i], false);
       if (found && isVisible(direct[i])) return found;
@@ -103,94 +117,109 @@ function surgeEndless($response, $done) {
       var s = Number(new URL(href).searchParams.get('start'));
       if (s < bestStart) { bestStart = s; bestURL = href; }
     }
-    if (bestURL) return bestURL;
-    // Last resort: Google's mobile layout occasionally omits visible pagination anchors.
-    // Only navigate when an ordinary result list exists, and cap the synthetic page number.
-    var start = Number(searchURL.searchParams.get('start')) || 0;
-    var results = document.querySelectorAll('#search .MjjYud, #rso .MjjYud, #search .g, #rso .g');
-    if (results.length >= 5 && start >= 0 && start < 90 && start % 10 === 0) {
-      var fallbackURL = new URL(location.href);
-      fallbackURL.searchParams.set('start', String(start + 10));
-      return fallbackURL.href;
-    }
-    return null;
+    return bestURL; // Never invent a page number that might lead to an empty page.
   }
-  function activate() {
-    if (loading || stopped || navigationStarted) return;
+  function scheduleCheck() {
+    if (scheduled !== null) return;
+    // Throttle DOM scans: don't rescan hundreds of pagination controls on every pixel.
+    scheduled = window.setTimeout(function () {
+      scheduled = null;
+      check();
+    }, 120);
+  }
+  function releaseLoading() {
+    if (loadingObserver) { loadingObserver.disconnect(); loadingObserver = null; }
+    if (loadingTimeout) { window.clearTimeout(loadingTimeout); loadingTimeout = null; }
+    loading = false;
+    scheduleCheck();
+  }
+  function activate(more, y) {
+    if (loading || stopped || navigationStarted || Date.now() < retryAfter) return;
+    if (clicks >= MAX_CLICKS) return;
     var now = Date.now();
-    if (now - lastActionTime < 1400) return;
+    if (now - lastActionTime < 550) return;
+    if (clicks && y - lastClickScrollY < 140) return;
     lastActionTime = now;
-    var more = findNativeMore();
-    if (more && clicks < MAX_CLICKS) {
-      clicks++;
-      userScrolled = false; // Require another user gesture before auto-loading again.
-      loading = true;
-      var oldHeight = document.documentElement.scrollHeight;
-      var oldMore = more;
-      function releaseLoading() {
-        if (loadingObserver) { loadingObserver.disconnect(); loadingObserver = null; }
-        if (loadingTimeout) { window.clearTimeout(loadingTimeout); loadingTimeout = null; }
-        loading = false;
-      }
-      function resultsAdded() {
-        // A new native result block usually increases page height or replaces the button.
-        return document.documentElement.scrollHeight > oldHeight + 100 ||
-          !oldMore.isConnected;
-      }
-      // Watch only during a native click. End the wait once Google appends results.
-      // This does not fetch, copy, or run scripts inside Google's result cards.
-      if (typeof MutationObserver !== 'undefined') {
-        loadingObserver = new MutationObserver(function () {
-          if (resultsAdded()) releaseLoading();
+    lastClickScrollY = y;
+    clicks++;
+    loading = true;
+    var oldHeight = document.documentElement.scrollHeight;
+    var oldButton = more;
+    var resultRoot = document.querySelector('#rso, #search');
+    var resultCount = resultRoot ? resultRoot.querySelectorAll('.MjjYud, .g').length : 0;
+    function resultsAdded() {
+      if (!oldButton.isConnected) return true;
+      if (resultRoot && resultRoot.querySelectorAll('.MjjYud, .g').length > resultCount) return true;
+      return document.documentElement.scrollHeight > oldHeight + 260;
+    }
+    if (typeof MutationObserver !== 'undefined') {
+      var pending = false;
+      loadingObserver = new MutationObserver(function () {
+        if (pending) return;
+        pending = true;
+        window.requestAnimationFrame(function () {
+          pending = false;
+          if (loading && resultsAdded()) releaseLoading();
         });
-        loadingObserver.observe(document.body, { childList: true, subtree: true });
-      }
-      try {
-        // Keep Google's own initialization for images and video thumbnails.
-        more.click();
-      } catch (e) { releaseLoading(); return; }
-      // Fallback for slow requests or Google layouts that do not append immediately.
-      loadingTimeout = window.setTimeout(function () {
-        if (!resultsAdded() && oldMore.isConnected && isVisible(oldMore)) {
-          // Native click failed; fall back to the next page only when a link exists.
-          var nextURL = findNextLink();
-          if (nextURL) { navigationStarted = true; window.location.assign(nextURL); }
-          else stopped = true;
-        }
-        releaseLoading();
-      }, 3800);
+      });
+      loadingObserver.observe(document.body, {childList: true, subtree: true});
+    }
+    try {
+      // Let Google itself create all dynamic cards, images and video thumbnails.
+      more.click();
+    } catch (e) {
+      console.log('[Google smooth pagination] Native click failed:', String(e));
+      retryAfter = Date.now() + 2400;
+      releaseLoading();
       return;
     }
-    // Google's traditional pagination does a normal navigation: media initialize normally.
+    if (resultsAdded()) { releaseLoading(); return; }
+    loadingTimeout = window.setTimeout(function () {
+      if (!resultsAdded()) {
+        // No redirect here: a slow native request must not suddenly refresh the page.
+        retryAfter = Date.now() + 3500;
+        clicks = Math.max(0, clicks - 1);
+      }
+      releaseLoading();
+    }, 6500);
+  }
+  function check() {
+    if (!gestureSeen || !scrollingDown || loading || stopped || navigationStarted) return;
+    var y = window.scrollY || document.documentElement.scrollTop || 0;
+    if (y < 60) return;
+    var more = findNativeMore();
+    if (more) {
+      // Load up to roughly three screenfuls ahead, measured from Google's own button.
+      var gap = more.getBoundingClientRect().top - window.innerHeight;
+      var lead = Math.max(1900, Math.min(3100, window.innerHeight * 2.8));
+      if (gap <= lead) activate(more, y);
+      return;
+    }
+    // Ordinary numbered pages cannot be appended without cloning Google HTML.
+    // Preserve stable images: only auto-navigate if actually near a real next-page link.
+    var remaining = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight) - y - window.innerHeight;
+    if (remaining > Math.max(250, window.innerHeight * 0.4)) return;
     var nextURL = findNextLink();
-    if (!nextURL) return;
-    navigationStarted = true;
-    window.location.assign(nextURL);
+    if (nextURL) { navigationStarted = true; window.location.assign(nextURL); }
   }
   function onScroll() {
-    if (!userScrolled) return;
     var y = window.scrollY || document.documentElement.scrollTop || 0;
-    if (y < 70) return;
-    var maxHeight = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight);
-    // Trigger ~1.4 screen heights before the bottom (not only the last 300px).
-    // Avoid Safari's small/rounded scroll deltas dropping the trigger entirely.
-    var advance = Math.max(950, Math.min(1600, Math.round(window.innerHeight * 1.4)));
-    if (y + window.innerHeight >= maxHeight - advance) activate();
+    if (gestureSeen && y > scrollBaseline + 7) scrollingDown = true;
+    scrollBaseline = y;
+    if (scrollingDown) scheduleCheck();
   }
   function install() {
     if (!document.body) return;
-    // Prevent automatic next-page loops caused by restored scroll positions.
-    window.addEventListener('touchstart', function () { userScrolled = true; }, { passive: true });
-    window.addEventListener('touchmove', function () { userScrolled = true; }, { passive: true });
-    window.addEventListener('wheel', function () { userScrolled = true; }, { passive: true });
+    // Requiring genuine motion avoids loops on Safari restored scroll position.
+    window.addEventListener('touchstart', function () { gestureSeen = true; }, { passive: true });
+    window.addEventListener('touchmove', function () { gestureSeen = true; }, { passive: true });
+    window.addEventListener('wheel', function () { gestureSeen = true; }, { passive: true });
     window.addEventListener('keydown', function (e) {
-      if (/^(ArrowDown|PageDown|End| |Space)$/.test(e.key)) userScrolled = true;
+      if (/^(ArrowDown|PageDown|End| |Space)$/.test(e.key)) gestureSeen = true;
     });
     window.addEventListener('scroll', onScroll, { passive: true });
-    // iOS can finish a short inertial swipe without a final scroll event.
-    window.addEventListener('touchend', function () {
-      if (userScrolled) window.requestAnimationFrame(onScroll);
-    }, { passive: true });
+    window.addEventListener('touchend', function () { if (scrollingDown) scheduleCheck(); }, { passive: true });
+    window.addEventListener('resize', scheduleCheck, { passive: true });
   }
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', install, { once: true });
