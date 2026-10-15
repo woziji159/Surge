@@ -1,0 +1,35 @@
+name: 毒奶去广告网站清单自动同步
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '毒奶网站清单.txt'
+      - 'tools/sync_limbo_sites.py'
+      - '.github/workflows/sync-limbo-sites.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 按网站清单更新 Surge.conf 与自动脚本
+        run: python3 tools/sync_limbo_sites.py
+      - name: 验证脚本语法
+        run: node --check surge-dunai-91short-auto.js
+      - name: 自动提交生成文件
+        run: |
+          git add -- Surge.conf surge-dunai-91short-auto.js
+          if git diff --cached --quiet; then
+            echo '网站清单未发生有效变化。'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'chore: update Limbo auto-sites from list'
+          git push
