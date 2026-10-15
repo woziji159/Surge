@@ -1854,9 +1854,9 @@ rewrite-193 = type=http-response, pattern=^https?:\/\/(zhidao)\.baidu\.com\/(que
 # limbopro.sgmodule — 搜索首页广告(www.baidu.com)
 rewrite-194 = type=http-response, pattern=https?:\/\/(www|m)\.baidu\.com(/$|\/\?ref.*), requires-body=1, max-size=-1, script-path=https://raw.githubusercontent.com/limbopro/Adblock4limbo/main/Adguard/Adblock4limbo.js, script-update-interval=0, timeout=30
 # limbopro.sgmodule — 搜索结果广告(www.baidu.com)
-rewrite-195 = type=http-response, pattern=https?:\/\/(www|m)\.baidu\.com\/(from=|s\?), requires-body=1, max-size=-1, script-path=https://raw.githubusercontent.com/woziji159/Surge/main/ext-baidu-search-response.js?v=20261015-bd1, script-update-interval=86400, timeout=10
+rewrite-195 = type=http-response, pattern=https?:\/\/(www|m)\.baidu\.com\/(from=|s\?), requires-body=true, max-size=-1, script-path=https://raw.githubusercontent.com/woziji159/Surge/main/ext-baidu-search-response.js?v=20261015-bd2, script-update-interval=86400, timeout=20
 # limbopro.sgmodule — 内容农场(www.bing.com)
-rewrite-196 = type=http-response, pattern="^https?:\\/\\/((www|cn)\\.bing)(\\.\\w{2,4}){1,2}\\/(search\\?.*|\\?sa=|\\?FORM)(?!.*?(apps=))", requires-body=1, max-size=-1, script-path=https://raw.githubusercontent.com/woziji159/Surge/main/ext-bing-search-response.js?v=20261015-by1, script-update-interval=86400, timeout=10
+rewrite-196 = type=http-response, pattern="^https?:\\/\\/((www|cn)\\.bing)(\\.\\w{2,4}){1,2}\\/(search\\?.*|\\?sa=|\\?FORM)(?!.*?(apps=))", requires-body=true, max-size=-1, script-path=https://raw.githubusercontent.com/woziji159/Surge/main/ext-bing-search-response.js?v=20261015-by2, script-update-interval=86400, timeout=20
 # limbopro.sgmodule — 禁漫天堂(18comic.org|vip)
 rewrite-197 = type=http-response, pattern=^https?:\/\/18comic\.(vip|org)\/(?!(.*(onclick|cdn-cgi|verify|auth|captch|\.))).*, requires-body=1, max-size=1048576, script-path=https://raw.githubusercontent.com/limbopro/Adblock4limbo/main/Adguard/Adblock4limbo.js, script-update-interval=0, timeout=30
 # limbopro.sgmodule — 华人直播(play.huaren.live)

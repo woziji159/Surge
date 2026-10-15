@@ -1,0 +1,27 @@
+百度＋必应自动翻页｜配置入口同步修复（2026-10-15）
+
+可以直接上传至仓库 woziji159/Surge 的根目录：
+  Surge.conf
+  rewrites.confpart
+
+本补丁的基线是前一轮为你制作的“Surge_百度必应自动翻页_仅需上传4文件_20261015.zip”。
+本次只更新上述两个文件中各自的 rewrite-195 和 rewrite-196 共四行：
+  - 百度：ext-baidu-search-response.js?v=20261015-bd2
+  - 必应：ext-bing-search-response.js?v=20261015-by2
+  - requires-body=true，max-size=-1，timeout=20，script-update-interval=86400
+  - 保持原来的 URL 匹配范围、Google 脚本和其它规则不变。
+
+重要：仓库当前公开 Surge.conf 与本补丁基线不完全一致（公开主配置的 [MITM] 可能为空）；
+上传此完整 Surge.conf 会用前一轮修复包的整份配置替换当前主配置。
+如果这期间你自行改过 Surge.conf，请不要直接覆盖，先比较差异再合并这两条规则。
+
+两个 JS 文件必须已经在 GitHub 仓库 main 分支根目录：
+  ext-baidu-search-response.js
+  ext-bing-search-response.js
+（检查时两个文件都能在仓库中打开。）
+
+GitHub 上传步骤：Code → Add file → Upload files → 选解压后的两份文件 → Commit changes。
+手机使用远程 GitHub 配置，完成后在 Surge 更新远程配置 + 脚本资源、重新加载，然后重新打开 Safari 测试。
+
+注意：这次解决的是配置未调用新脚本的问题，真实百度／必应页面的翻页效果仍需 Safari 实测。
+如无法翻页，先查看 Surge 的脚本日志确认 rewrite-195 / rewrite-196 是否命中，以及 MitM 是否解密对应域名。
