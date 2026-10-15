@@ -21,7 +21,7 @@
     var body = $response.body;
     if (typeof body !== 'string' || !/<head\b[^>]*>/i.test(body)) return $done({});
     if (/您的域名并未添加白名单导致无法访问/.test(body)) return $done({});
-    if (/SURGE-LIMBO-91:\s*(?:v17|v18|v19)|id=["']limbo-unified-autoscan-v17["']/.test(body)) return $done({});
+    if (/SURGE-LIMBO-91:\s*(?:v17|v18|v19|v20)|id=["']limbo-unified-autoscan-v17["']/.test(body)) return $done({});
 
     // GitHub Raw 适合 Surge 的 script-path，但作为网页 <script src> 可能被浏览器以 nosniff 拦截。
     // 这两份定制 JS 仍来自用户自己的仓库，只将网页加载地址换成 JS CDN。
@@ -95,90 +95,110 @@
 })();
 </script>`;
 
-    // v18: 局部拦截器，实际注册事件；不伪造毒奶原版开关状态或弹出提示。
-    var guard = String.raw`<script id="limbo-91-protection-v18">
-(function(){
+    // v20: real page-event guard; no synthetic success notifications and no fake original toggles.
+    // This is a separately testable local fallback; the author's native switches are untouched.
+    var guard = String.raw`<script id="limbo-91-protection-v20">
+(function () {
   'use strict';
-  if (window.__limboProtectionV18) return;
-  var st=window.__limboProtectionV18={
-    version:'v18', captureInstalled:false, popupInstalled:false,
-    blockedClicks:0,blockedPopups:0,allowedNavigations:0,
-    lastReason:'',lastBlockedURL:'', type:'local protection (not original author toggles)'
+  if (window.__limboProtectionV20) return;
+  var state = window.__limboProtectionV20 = {
+    version: 'v20', clickInstalled: false, popupInstalled: false,
+    blockedClicks: 0, blockedPopups: 0, lastReason: '', lastURL: '',
+    originalSwitchStatus: 'unverified'
   };
-  var known=/(?:^|\.)(?:doubleclick\.net|googlesyndication\.com|googleadservices\.com|adsterra\.com|wpadmngr\.com|twinrdengine\.com|tsyndicate\.com|magsrv\.com|jads\.co|popads\.net)$/i;
-  var feedback=/(?:^|\.)(?:limbopro\.com|github\.com|t\.me)$/i;
-  var adNodes='[data-ad-client],[data-ad-slot],ins.adsbygoogle,.adsbygoogle,.msop100,.popup-ad,.floating-ad,.ad-banner,.popunder,[class*="popunder"],[id*="popunder"],img[data-id^="ad"],img[class^="imgad"],a:has(> img[data-id^="ad"])';
-  var lastGesture={time:0,href:'',anchor:null,kind:''};
-  function targetURL(s){try{return new URL(String(s||''),location.href);}catch(_){return null;}}
-  function firstParty(host){var h=location.hostname.toLowerCase();return host===h||host.endsWith('.'+h)||h.endsWith('.'+host);}
-  function ip(host){return /^(?:\d{1,3}\.){3}\d{1,3}$/.test(host);}
-  function danger(u){return !!u && /^https?:$/.test(u.protocol) && (known.test(u.hostname)||ip(u.hostname));}
-  function isTool(el){return !!(el&&el.closest&&el.closest('#dh_pageContainer,#dh_buttonContainer,[id*="ad-detector" i],[class*="ad-detector" i],[id*="limbo" i],[class*="limbo" i]'));}
-  function adNode(el){
-    if(!el||!el.closest||isTool(el))return false;
-    try{return !!el.closest(adNodes);}catch(_){return false;}
+  var adHost = /(?:^|\.)(?:doubleclick\.net|googlesyndication\.com|googleadservices\.com|adsterra\.com|wpadmngr\.com|twinrdengine\.com|tsyndicate\.com|magsrv\.com|jads\.co|popads\.net)$/i;
+  var toolsUI = '#dh_pageContainer,#dh_buttonContainer,#gemini-main-container,#gemini-AdDetector,[id*="ad-detector" i],[class*="ad-detector" i]';
+  var adElement = 'ins.adsbygoogle,[data-ad-client],[data-ad-slot],.msop100,.popup-ad,.floating-ad,.ad-banner,[class*="popunder"],[id*="popunder"],img[data-id^="ad"],img[class*="imgad"]';
+  var lastGesture = {time:0, href:'', anchor:null, tool:false, ad:false};
+  var originalOpen = window.open;
+  function urlOf(value) {
+    if (typeof value !== 'string' || !value.trim()) return null;
+    try {return new URL(value, location.href);} catch (_) {return null;}
   }
-  function recordBlock(why,url,popup){
-    st.lastReason=why;st.lastBlockedURL=String(url||'').slice(0,350);
-    if(popup)st.blockedPopups++;else st.blockedClicks++;
-    // No popups, fake confirmations, or noisy console logs.
+  function sameSite(host) {
+    var h = location.hostname.toLowerCase();
+    return host === h || host.endsWith('.' + h) || h.endsWith('.' + host);
   }
-  function resolveAnchor(el){return el&&el.closest?el.closest('a[href],area[href]'):null;}
-  function handleUserEvent(e){
-    var el=e.target;if(!el||!el.closest||isTool(el))return;
-    var a=resolveAnchor(el), u=a?targetURL(a.getAttribute('href')):null;
-    var bad=adNode(el)||danger(u);
-    if(bad){
-      if(e.cancelable)e.preventDefault();
-      e.stopImmediatePropagation();
-      recordBlock(adNode(el)?'marked-ad-click':'known-ad-destination',u&&u.href,false);
-      lastGesture={time:0,href:'',anchor:null,kind:''};
+  function isIPv4(host) {return /^(?:\d{1,3}\.){3}\d{1,3}$/.test(host);}
+  function harmfulURL(url) {return !!(url && /^https?:$/.test(url.protocol) && adHost.test(url.hostname));}
+  function originalFeedback(url) {return !!(url && /(?:^|\.)(?:limbopro\.com|github\.com|t\.me)$/.test(url.hostname));}
+  function isTool(node) {try {return !!(node && node.closest && node.closest(toolsUI));} catch(_) {return false;}}
+  function isMarkedAd(node) {try {return !!(node && node.closest && node.closest(adElement) && !isTool(node));} catch(_) {return false;}}
+  function note(reason, url, popup) {
+    if (popup) state.blockedPopups++; else state.blockedClicks++;
+    state.lastReason = reason;
+    state.lastURL = url ? String(url).slice(0,260) : '';
+  }
+  function getAnchor(node) {return node && node.closest ? node.closest('a[href],area[href]') : null;}
+  function recordAndBlock(event, why, url) {
+    if (event.cancelable) event.preventDefault();
+    event.stopImmediatePropagation();
+    note(why,url,false);
+    lastGesture.time=0;
+  }
+  function inspect(event) {
+    var target=event.target;
+    if (!target || !target.closest) return;
+    if (isTool(target)) {
+      if (event.isTrusted && (event.type==='click' || event.type==='touchend')) {
+        var toolAnchor=getAnchor(target); var toolURL=toolAnchor ? urlOf(toolAnchor.getAttribute('href')) : null;
+        lastGesture={time:Date.now(),href:toolURL ? toolURL.href : '',anchor:toolAnchor,tool:true,ad:false};
+      }
       return;
     }
-    // Only trusted gestures can authorise new windows, not script-generated clicks.
-    if(e.isTrusted){
-      lastGesture={time:Date.now(),href:u?u.href:'',anchor:a,kind:e.type};
-      st.allowedNavigations++;
+    var anchor=getAnchor(target);
+    var url=anchor ? urlOf(anchor.getAttribute('href')) : null;
+    var marked=isMarkedAd(target);
+    // Known advertising hosts are blocked, whether reached by real or synthetic clicks.
+    if (harmfulURL(url)) return recordAndBlock(event,'ad-host',url.href);
+    // Only 91short-specific marked ads get IP-link restrictions; don't block ordinary IP links elsewhere.
+    if (marked) return recordAndBlock(event,'marked-ad',url && url.href);
+    // Synthetic third-party anchor clicks are a common redirect mechanism;
+    // allow synthetic first-party application routing, but not synthetic cross-site navigation.
+    if (event.type==='click' && !event.isTrusted && url && !sameSite(url.hostname) && !originalFeedback(url))
+      return recordAndBlock(event,'synthetic-external-click',url.href);
+    // A gesture may authorise window.open only for its matching link or author feedback.
+    if (event.isTrusted && (event.type==='click' || event.type==='touchend')) {
+      lastGesture = {time:Date.now(), href:url ? url.href : '', anchor:anchor, tool:false, ad:false};
     }
   }
-  function add(type){
-    window.addEventListener(type,handleUserEvent,{capture:true,passive:false});
-  }
-  try{
-    add('touchstart');add('touchend');add('click');
-    st.captureInstalled=true;
-  }catch(e){st.captureError=String(e);}
-  var nextOpen=window.open;
-  function interceptOpen(url){
-    var u=targetURL(url),age=Date.now()-lastGesture.time;
-    // A user-requested blank tab with no URL is allowed only following a gesture.
-    var hasGesture=age>=0&&age<1300;
-    var explicitSameAnchor=!!(u && lastGesture.href && u.href===lastGesture.href);
-    var ownSite=!!(u && firstParty(u.hostname));
-    var isFeedback=!!(u && feedback.test(u.hostname));
-    var safe=!!u && /^https?:$/.test(u.protocol) && !danger(u) &&
-      hasGesture && (explicitSameAnchor || isFeedback || (ownSite && !!lastGesture.anchor));
-    if(!safe){recordBlock('unexpected-popup',u&&u.href,true);return null;}
-    return nextOpen.apply(this,arguments);
-  }
-  interceptOpen.__limboProtectionV18=true;
-  function installPopup(){
-    if(window.open!==interceptOpen){
-      // Avoid recursive wrapping when someone copies this wrapper back.
-      if(window.open!==nextOpen && window.open && !window.open.__limboProtectionV18)
-        nextOpen=window.open;
-      try{window.open=interceptOpen;}catch(e){st.popupError=String(e);}
+  try {
+    ['touchstart','touchend','click'].forEach(function (type) {
+      window.addEventListener(type,inspect,{capture:true,passive:false});
+    });
+    state.clickInstalled=true;
+  } catch (e) {state.clickError=String(e);}
+  function interceptOpen(url) {
+    var u=urlOf(url), age=Date.now()-lastGesture.time;
+    var trusted=age>=0 && age<1300;
+    var allowExplicit=!!(u && lastGesture.anchor && lastGesture.href && u.href===lastGesture.href);
+    var allowFeedback=!!(u && originalFeedback(u) && trusted);
+    var allowFirstParty=!!(u && sameSite(u.hostname) && trusted);
+    // Don't block a genuine user-requested blank tab, but never authorise a third-party ad URL.
+    var allowEmpty=typeof url==='undefined' && trusted;
+    if (u && (harmfulURL(u) || isIPv4(u.hostname))) {
+      note('known-ad-popup',u.href,true);return null;
     }
-    st.popupInstalled=window.open===interceptOpen;
+    if (!allowEmpty && !allowFeedback && !allowFirstParty && !(trusted && allowExplicit)) {
+      note('unauthorised-popup',u && u.href,true);return null;
+    }
+    return originalOpen.apply(this,arguments);
+  }
+  interceptOpen.__limboGuardV20=true;
+  function installPopup() {
+    if (window.open===interceptOpen) {state.popupInstalled=true;return;}
+    // If the site replaced window.open, wrap its replacement, without wrapping ourselves.
+    if (typeof window.open==='function' && !window.open.__limboGuardV20) originalOpen=window.open;
+    try {window.open=interceptOpen;} catch(e){state.popupError=String(e);}
+    state.popupInstalled=window.open===interceptOpen;
   }
   installPopup();
-  // Only re-install if another page script actually replaces window.open.
-  setInterval(function(){if(window.open!==interceptOpen)installPopup();},2500);
-  st.snapshot=function(){return {
-    click:st.captureInstalled,popup:st.popupInstalled,
-    blockedClicks:st.blockedClicks,blockedPopups:st.blockedPopups,
-    lastReason:st.lastReason,lastBlockedURL:st.lastBlockedURL,
-    originalAuthorSwitches:'not verified'
+  setInterval(function(){if(window.open!==interceptOpen)installPopup();},3000);
+  state.snapshot=function(){return {
+    click:state.clickInstalled, popup:state.popupInstalled,
+    blockedClicks:state.blockedClicks, blockedPopups:state.blockedPopups,
+    reason:state.lastReason, url:state.lastURL,
+    originalAuthorSwitches:'not checked: these are independent protections'
   };};
 })();
 </script>`;
@@ -394,7 +414,7 @@
 </script>`;
 
     var injection = [
-      '<!-- SURGE-LIMBO-91: v19 response-rewrite-injected -->',
+      '<!-- SURGE-LIMBO-91: v20 response-rewrite-injected -->',
       adguardNotice,
       guard,
       quietNotices,
@@ -414,10 +434,10 @@
     Object.keys(h).forEach(function (k) {
       if (/^(?:content-length|content-security-policy|content-security-policy-report-only)$/i.test(k)) delete h[k];
     });
-    console.log('[limbo-91-v18] HTML 注入成功: ' + hostname + ' / ' + pathname);
+    console.log('[limbo-91-v20] HTML 注入成功: ' + hostname + ' / ' + pathname);
     return $done({body:body, headers:h});
   } catch (e) {
-    console.log('[limbo-91-v18] ' + e.message);
+    console.log('[limbo-91-v20] ' + e.message);
     $done({});
   }
 })();
