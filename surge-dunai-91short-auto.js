@@ -442,8 +442,14 @@
 })();
 </script>`;
 
+    // v21.1: Hide ONLY the original v12.6 Event Listener log floating button.
+    // Original viewer is in the light DOM (not Shadow DOM), so this CSS is enough.
+    // Preserve logging, the two native interceptors, and the native auto ad blocker.
+    var hideEventLogFab = '<style id="limbo-hide-eventlog-fab-v21-1">#event-log-viewer-v3 .ev-fab{display:none !important}</style>';
+
     var injection = [
       '<!-- SURGE-LIMBO-91: v21 response-rewrite-injected -->',
+      hideEventLogFab,
       unifiedScanner,
       adguardNotice,
       guard,
