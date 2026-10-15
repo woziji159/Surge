@@ -92,87 +92,78 @@
 })();
 </script>`;
 
-    // v14: 本地独立的两层拦截。能够检查拦截钩子本身是否安装。
-    // 保留作者原版逻辑和反馈按钮；不隐藏作者的“已开启”提示。
-    var guard = String.raw`<script id="limbo-91-protection-v14">
+    // v15: 只做静默的实际点击拦截，不创建任何“已开启”通知；不接管原版工具箱。
+    var guard = String.raw`<script id="limbo-91-protection-v15">
 (function(){
   'use strict';
-  if(window.__limbo91ProtectionV14)return;
-  var st=window.__limbo91ProtectionV14={version:'v14',clickRedirect:'installing',popup:'installing',clicksBlocked:0,popupsBlocked:0};
-  var blockedHost=/(?:^|\.)(?:doubleclick\.net|googlesyndication\.com|adsterra\.com|wpadmngr\.com|twinrdengine\.com)$/i;
-  function isIp(host){return /^(?:\d{1,3}\.){3}\d{1,3}$/.test(host);}
-  function inThisSite(host){return host===location.hostname || host.endsWith('.'+location.hostname) || location.hostname.endsWith('.'+host);}
-  var feedbackHost=/(?:^|\.)(?:limbopro\.com|github\.com|t\.me)$/i;
-  var recentGesture=0;
-  document.addEventListener('pointerdown',function(e){if(e.isTrusted)recentGesture=Date.now();},true);
-  document.addEventListener('keydown',function(e){if(e.isTrusted)recentGesture=Date.now();},true);
-  function badDestination(dest){
-    if(!dest||!/^https?:$/.test(dest.protocol))return true;
-    return blockedHost.test(dest.hostname)||isIp(dest.hostname);
+  if(window.__limbo91ProtectionV15)return;
+  var st=window.__limbo91ProtectionV15={version:'v15',clickRedirect:'on',popup:'pending',blockedClicks:0,blockedPopups:0};
+  var knownAd=/(?:^|\.)(?:doubleclick\.net|googlesyndication\.com|adsterra\.com|wpadmngr\.com|twinrdengine\.com|tsyndicate\.com|magsrv\.com|jads\.co)$/i;
+  var feedback=/(?:^|\.)(?:limbopro\.com|github\.com|t\.me)$/i;
+  var adMarkers='.msop100,.popup-ad,.floating-ad,.ad-banner,.popunder,[class*="popunder"],[id*="popunder"],a:has(> img[data-id^="ad"]),img[data-id^="ad"],img[class*="imgad"],[data-ad-slot],[data-ad-client]';
+  var lastTrusted=0,lastSafeTarget=null;
+  function ip(host){return /^(?:\d{1,3}\.){3}\d{1,3}$/.test(host);}
+  function site(host){return host===location.hostname || host.endsWith('.'+location.hostname) || location.hostname.endsWith('.'+host);}
+  function dest(url){try{return new URL(String(url),location.href);}catch(_){return null;}}
+  function suspicious(u){return !!u&&(/^https?:$/.test(u.protocol))&&(ip(u.hostname)||knownAd.test(u.hostname));}
+  function mark(el){
+    if(!el||!el.closest)return false;
+    var found=el.closest(adMarkers);
+    // Only blocks obvious ad markers, not parent video cards.
+    return !!found;
   }
-  function clickHandler(e){
+  function inspectTarget(e){
     if(e.defaultPrevented)return;
-    var a=e.target&&e.target.closest&&e.target.closest('a[href],area[href]');
-    if(!a)return;
-    var href=a.getAttribute('href');
-    if(!href||href[0]==='#')return;
-    var dest;
-    try{dest=new URL(href,location.href);}catch(_){return;}
-    // 对已知广告站、可疑 IP 外链拦截点击跳转；
-    // 对非当前站的 target=_blank 拦截弹窗。普通同标签合法外链不扩大拦截。
-    var popup=a.target==='_blank'&&!inThisSite(dest.hostname)&&!(e.isTrusted&&feedbackHost.test(dest.hostname));
-    if(badDestination(dest)||popup){
-      e.preventDefault();e.stopImmediatePropagation();
-      st.clicksBlocked++;
-      console.log('[limbo-v14] blocked suspicious redirect:',dest.hostname);
+    var el=e.target;
+    if(!el||!el.closest)return;
+    var anchor=el.closest('a[href],area[href]');
+    var suspiciousAd=mark(el);
+    var uri=anchor?dest(anchor.getAttribute('href')):null;
+    var badHref=suspicious(uri);
+    var externalPopup=!!(anchor && uri && anchor.target==='_blank' && !site(uri.hostname) && !feedback.test(uri.hostname));
+    if(suspiciousAd || badHref || externalPopup){
+      if(e.cancelable)e.preventDefault();
+      e.stopImmediatePropagation();
+      st.blockedClicks++;
+      if(e.isTrusted)lastSafeTarget=null;
+      console.debug('[limbo-v15] 已拦截广告点击');
+      return;
+    }
+    if(e.isTrusted){
+      lastTrusted=Date.now();
+      lastSafeTarget=anchor;
     }
   }
-  document.addEventListener('click',clickHandler,true);
-  st.clickRedirect='on';
-  var nativeOpen=window.open;
-  function safeOpen(url){
-    var dest;
-    try{dest=new URL(String(url||''),location.href);}catch(_){
-      st.popupsBlocked++;return null;
+  // Capture before most site listeners; also handles ad overlays implemented as DIV/IMG.
+  window.addEventListener('click',inspectTarget,true);
+  // Capture the initial touch to prevent ads listening to touchstart instead of click.
+  window.addEventListener('touchstart',function(e){
+    if(mark(e.target)){
+      if(e.cancelable)e.preventDefault();e.stopImmediatePropagation();st.blockedClicks++;
     }
-    // 拦截站外 popup，保留同站弹窗；同标签正常导航不受影响。
-    var feedback=feedbackHost.test(dest.hostname)&&(Date.now()-recentGesture<2000);
-    if(badDestination(dest)||(!inThisSite(dest.hostname)&&!feedback)){
-      st.popupsBlocked++;
-      console.log('[limbo-v14] blocked popup:',dest.hostname);
-      return null;
+  },{capture:true,passive:false});
+  var priorOpen=window.open;
+  function guardedOpen(url){
+    var target=dest(url);
+    var accepted=target && (/^https?:$/.test(target.protocol)) &&
+      !suspicious(target) &&
+      // Legitimate feedback links are allowed only immediately after a real user click.
+      ((feedback.test(target.hostname) && Date.now()-lastTrusted<2500) ||
+       (site(target.hostname) && Date.now()-lastTrusted<2500 && lastSafeTarget));
+    if(!accepted){st.blockedPopups++;console.debug('[limbo-v15] 已拦截弹窗');return null;}
+    return priorOpen.apply(this,arguments);
+  }
+  guardedOpen.__limboV15=true;
+  function install(){
+    if(window.open!==guardedOpen){
+      priorOpen=window.open;
+      // Avoid circular wrappers if another script reinstalls a previous wrapper.
+      if(priorOpen===guardedOpen)return;
+      window.open=guardedOpen;
     }
-    return nativeOpen.apply(this,arguments);
+    st.popup=window.open===guardedOpen?'on':'unverified';
   }
-  safeOpen.__limboV14=true;
-  window.open=safeOpen;
-  st.popup=window.open===safeOpen?'on':'unverified';
-  function verify(){
-    if(window.open!==safeOpen){
-      // 其他脚本可能后加载覆盖 window.open；再次装载以保证本地保护优先。
-      nativeOpen=window.open;window.open=safeOpen;
-    }
-    st.popup=window.open===safeOpen?'on':'unverified';
-  }
-  setInterval(verify,5000);
-  function banner(text){
-    if(!document.body)return;
-    var el=document.createElement('div');
-    el.setAttribute('data-limbo-v14-status','');
-    el.textContent='✅ '+text+'：已开启（本地增强）';
-    el.style.cssText='position:fixed;z-index:2147483646;top:0;left:50%;transform:translateX(-50%);max-width:95vw;min-width:200px;padding:8px 12px;margin:6px 0;border-radius:8px;background:#181823;color:white;text-align:center;font-size:13px;line-height:1.5;box-shadow:0 2px 9px #0007;pointer-events:none;';
-    var others=document.querySelectorAll('[data-limbo-v14-status]').length;
-    el.style.top=(6+others*44)+'px';
-    document.body.appendChild(el);
-    setTimeout(function(){el.remove();},4200);
-  }
-  function showOnce(){
-    if(st.notified||!document.body)return;
-    st.notified=true;
-    if(st.clickRedirect==='on')banner('拦截恶意点击跳转');
-    if(st.popup==='on')banner('拦截点击弹窗广告');
-  }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',showOnce,{once:true});else showOnce();
+  install();setInterval(install,2500);
 })();
 </script>`;
 
@@ -300,6 +291,7 @@ html:not([data-limbo91-autoblock-off]) body #tablist > a[href^="https://"] {
     changed.length=0;
     console.log('[limbo-91-v8] auto blocked elements restored');
   }
+  state.scan=scan; state.schedule=schedule;
   window.surge91UndoAutoHidden = undo;
   document.addEventListener('click',function(e){
     var btn=e.target && e.target.closest ? e.target.closest('button,[role="button"],a,input[type="button"]') : null;
@@ -359,6 +351,7 @@ html:not([data-limbo91-autoblock-off]) body #tablist > a[href^="https://"] {
     changed=[];
   }
   function schedule(){if(scheduled || state.paused)return; scheduled=setTimeout(run,600);}
+  state.scan=run;
   function init(){
     run();
     if(window.MutationObserver)new MutationObserver(schedule).observe(document.body,{childList:true,subtree:true});
@@ -373,349 +366,81 @@ html:not([data-limbo91-autoblock-off]) body #tablist > a[href^="https://"] {
 })();
 </script>`;
 
-    var autoControls = String.raw`<script id="limbo-original-controls-autorun-v14">
-/* 91short 自动调用原有扫描面板的交互控制器，运行于网页，不新增 UI。 */
-(function () {
+    // v15: 后台扫描独立运行，绝不点击/隐藏/覆盖原作者的 v12.6 检测面板。
+    var autoControls = String.raw`<script id="limbo-background-coordinator-v15">
+(function(){
   'use strict';
   if (!/^(?:[a-z0-9-]+\.)*(?:x\-91short\.com)$/i.test(location.hostname)) return; // LIMBO_SITES_CONTROL_PATTERN (auto-generated)
-  if (window.__limbo91AutoV9) return; // Keep legacy state name for compatibility
-  var state = window.__limbo91AutoV9 = {
-    version: 'v14', started: false, busy: false, paused: false,
-    scanClicks: 0, blockClicks: 0, adguardClicks: 0, protectionClicks: 0,
-    lastRun: 0, attempts: 0, lastResult: '', lastError: '',
-    adguardStatus: 'unknown', protectionStatus: {}
-  };
-  var stopped = false, scheduled = 0, rerun = false, openedPanel = false;
-  // v12: The original detector stays alive off-screen for automation. Only a REAL user
-  // click on the scanner entry may show its panel; programmatic clicks never do.
-  var userPanelOpen = false, panelProbeQueued = false, lastPanelProbe = 0;
-  var minRunGap = 2500;
-  var panelHidden = null;
-  function log(msg) { state.lastResult = msg; console.log('[limbo-auto-v12]', msg); }
-  function norm(value) {
-    return String(value || '').replace(/[\s\u200b-\u200d\ufeff]/g, '').trim().toLowerCase();
+  if(window.__limbo91AutoV9)return;
+  var st=window.__limbo91AutoV9={version:'v15',started:true,paused:false,backgroundRuns:0};
+  var timer=0;
+  function run(){
+    timer=0;
+    if(st.paused)return;
+    st.backgroundRuns++;
+    var main=window.__limbo91AutoBlockV8;
+    if(main && main.enabled && typeof main.scan==='function')main.scan();
+    var gen=window.__limboGenericAutoV11;
+    if(gen && !gen.paused && typeof gen.scan==='function')gen.scan();
   }
-  function delay(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
-  // 搜寻原面板的可点击文本；保留用户脚本自身的 click 监听器。
-  function docRoots() {
-    var roots = [document], seen = new Set(), index = 0;
-    while (index < roots.length && roots.length < 30) {
-      var root = roots[index++];
-      if (seen.has(root)) continue;
-      seen.add(root);
-      var all;
-      try { all = root.querySelectorAll('*'); } catch (_) { continue; }
-      for (var i = 0; i < all.length && i < 9000; i++) {
-        var el = all[i];
-        if (el.shadowRoot && roots.indexOf(el.shadowRoot) === -1) roots.push(el.shadowRoot);
-        if (el.tagName === 'IFRAME') {
-          try {
-            if (el.contentDocument && el.contentDocument.body) roots.push(el.contentDocument);
-          } catch (_) { /* 跨域 iframe 不可操作 */ }
-        }
-      }
-    }
-    return roots;
-  }
-  function actionable(el) {
-    if (!el || el.nodeType !== 1) return null;
-    var tag = el.tagName || '';
-    if (/^(BUTTON|A|INPUT|LABEL|SUMMARY)$/.test(tag)) return el;
-    if (el.hasAttribute('onclick') || el.hasAttribute('role') && /button|switch|menuitem/.test(el.getAttribute('role')) || el.hasAttribute('tabindex')) return el;
-    for (var up = 0, p = el.parentElement; p && up < 4; up++, p = p.parentElement) {
-      tag = p.tagName || '';
-      if (/^(BUTTON|A|INPUT|LABEL|SUMMARY)$/.test(tag)) return p;
-      if (p.hasAttribute('onclick') || p.getAttribute('role') === 'button') return p;
-    }
-    // 部分第三方脚本把 click 绑定在 div 上，子元素的 click 会冒泡。
-    return el;
-  }
-  function visible(el) {
-    if (!el || !el.isConnected) return false;
-    try {
-      var style = (el.ownerDocument.defaultView || window).getComputedStyle(el);
-      return style.display !== 'none' && style.visibility !== 'hidden' && el.getClientRects().length > 0;
-    } catch (_) { return true; }
-  }
-  function pick(keys, opts) {
-    opts = opts || {};
-    var candidates = [];
-    var roots = docRoots();
-    for (var r = 0; r < roots.length; r++) {
-      var root = roots[r], nodes;
-      try { nodes = root.querySelectorAll('button,a,input,[role="button"],[role="switch"],[onclick],[tabindex],label,div,span'); }
-      catch (_) { continue; }
-      for (var i = 0; i < nodes.length && i < 10000; i++) {
-        var el = nodes[i];
-        if (!visible(el)) continue;
-        var tag = el.tagName || '';
-        var text = norm((tag === 'INPUT' ? el.value : el.innerText || el.textContent) || el.getAttribute('aria-label') || el.getAttribute('title'));
-        if (!text || text.length > (opts.maxLen || 48)) continue;
-        for (var k = 0; k < keys.length; k++) {
-          if (text === keys[k] || (opts.contains && text.indexOf(keys[k]) !== -1)) {
-            var button = actionable(el);
-            if (button && visible(button)) candidates.push({el:button, text:text, rank:(text===keys[k]?0:10)+text.length});
-            break;
-          }
-        }
-      }
-    }
-    candidates.sort(function (a,b) { return a.rank-b.rank; });
-    return candidates.length ? candidates[0] : null;
-  }
-  function clickHit(hit, label) {
-    if (!hit || !hit.el) return false;
-    try { hit.el.click(); log('已点击 '+label); return true; }
-    catch (e) {state.lastError = label+': '+e.message; return false;}
-  }
-  function ensureSwitches(){
-    var ad=window.__limboAdguardV14;
-    state.adguardStatus=ad?ad.status:'waiting-for-adguard-css';
-    var prot=window.__limbo91ProtectionV14;
-    state.protectionStatus['拦截恶意点击跳转']=prot?prot.clickRedirect:'waiting-for-guard';
-    state.protectionStatus['拦截点击弹窗广告']=prot?prot.popup:'waiting-for-guard';
-    // 绝不模拟点击会弹原生对话框的 AdGuard 原按钮；
-    // 也不靠读两个提示条的文字冒充开关状态。
-  }
-  function findScanner() { return pick(['重新扫描'], {contains:true, maxLen:32}); }
-  async function ensureScanner() {
-    var btn = findScanner();
-    if (btn) { hidePanel(btn.el); return btn; }
-    var open = pick(['可疑广告元素扫描'], {contains:true, maxLen:45});
-    if (!open) {
-      var box = pick(['工具箱','工具箱//'], {contains:true, maxLen:16});
-      if (box) { clickHit(box, '工具箱'); await delay(500); }
-      open = pick(['可疑广告元素扫描'], {contains:true, maxLen:45});
-    }
-    if (open && clickHit(open, '可疑广告元素扫描')) {
-      openedPanel = true;
-      // A MutationObserver hides the new panel before its first paint where possible.
-      await delay(90);
-      probePanel(true);
-      await delay(510);
-      var button=findScanner();
-      if (button) hidePanel(button.el);
-      return button;
-    }
-    return null;
-  }
-  function getPanelRoot(scanButton) {
-    if (!scanButton) return null;
-    var e = scanButton, depth = 0;
-    while (e && depth++ < 18 && e !== document.body) {
-      if (e.nodeType !== 1) break;
-      // Long scan result lists can exceed 2500 characters; do not reject the panel.
-      var txt = norm(e.innerText || e.textContent || '');
-      if (txt.indexOf('重新扫描') !== -1 && txt.indexOf('一键屏蔽') !== -1) {
-        var pos = '';
-        try { pos = (e.ownerDocument.defaultView || window).getComputedStyle(e).position; } catch (_) {}
-        if (pos === 'fixed' || pos === 'absolute' || pos === 'sticky') return e;
-      }
-      e = e.parentElement;
-    }
-    return null;
-  }
-  var hiddenProps = ['transform','opacity','pointer-events','transition','animation'];
-  function applyHidden(panel) {
-    if (!panel || !panel.isConnected) return;
-    panel.style.setProperty('transform','translate(-300vw,-300vh)','important');
-    panel.style.setProperty('opacity','0','important');
-    panel.style.setProperty('pointer-events','none','important');
-    panel.style.setProperty('transition','none','important');
-    panel.style.setProperty('animation','none','important');
-    panel.setAttribute('data-limbo-autohidden-v12','1');
-  }
-  function restorePanel() {
-    if (!panelHidden) return;
-    var saved = panelHidden;
-    panelHidden = null;
-    var el = saved.el;
-    if (!el || !el.isConnected) return;
-    for (var i=0;i<hiddenProps.length;i++) {
-      var prop=hiddenProps[i], v=saved.styles[prop];
-      el.style.removeProperty(prop);
-      if (v.value) el.style.setProperty(prop,v.value,v.priority);
-    }
-    el.removeAttribute('data-limbo-autohidden-v12');
-  }
-  function hidePanel(scanButton) {
-    if (userPanelOpen) return;
-    var panel = getPanelRoot(scanButton);
-    if (!panel) return;
-    if (panelHidden && panelHidden.el === panel) { applyHidden(panel); return; }
-    // If a scanner was destroyed and recreated, NEVER restore the previous panel.
-    var styles={};
-    for (var i=0;i<hiddenProps.length;i++) {
-      var prop=hiddenProps[i];
-      styles[prop]={value:panel.style.getPropertyValue(prop),priority:panel.style.getPropertyPriority(prop)};
-    }
-    panelHidden={el:panel,styles:styles};
-    applyHidden(panel);
-  }
-  function probePanel(force) {
-    if (userPanelOpen || state.paused) return;
-    if (!force && Date.now()-lastPanelProbe<230) return;
-    lastPanelProbe=Date.now();
-    if (panelHidden && panelHidden.el && panelHidden.el.isConnected) {
-      applyHidden(panelHidden.el);
-      return;
-    }
-    var scan=findScanner();
-    if (scan) hidePanel(scan.el);
-  }
-  function queuePanelProbe() {
-    if (panelProbeQueued || userPanelOpen) return;
-    panelProbeQueued=true;
-    Promise.resolve().then(function(){panelProbeQueued=false;probePanel();});
-  }
-  function countUnprocessed() {
-    var roots=docRoots();
-    for (var i=0; i<roots.length; i++) {
-      var nodes = roots[i].querySelectorAll('div,span,button,strong');
-      for(var j=0;j<nodes.length && j<7000;j++) {
-        var txt=norm(nodes[j].innerText || nodes[j].textContent || '');
-        if(txt.length > 35) continue;
-        var m=txt.match(/^(\d+)未处理\/?共(\d+)/);
-        if(m) return Number(m[1]);
-      }
-    }
-    return null;
-  }
-  async function scanAndBlock() {
-    var scan = await ensureScanner();
-    if (!scan) { log('原扫描按钮未出现（等待网页工具箱完成加载）'); return false; }
-    if (state.paused) return false;
-    hidePanel(scan.el);
-    if (!clickHit(scan, '重新扫描')) return false;
-    state.scanClicks++;
-    await delay(950);
-    probePanel(true);
-    if (state.paused) return false;
-    var block = pick(['一键屏蔽'], {contains:true, maxLen:32});
-    if (!block) { log('原一键屏蔽按钮未出现'); return false; }
-    var count = countUnprocessed();
-    if (count === 0) { log('扫描完成：0 条未处理'); hidePanel(scan.el); return true; }
-    if (clickHit(block, '一键屏蔽')) {
-      state.blockClicks++;
-      await delay(350);
-      log('已调用原版重新扫描和一键屏蔽' + (count===null?'':'；待处理 '+count+' 条'));
-      hidePanel(scan.el);
-      return true;
-    }
-    return false;
-  }
-  async function work() {
-    if (state.paused || stopped) return;
-    if (state.busy) { rerun=true; return; }
-    var now=Date.now();
-    if (now - state.lastRun < minRunGap) return;
-    state.lastRun=now; state.busy=true; state.attempts++;
-    try {
-      ensureSwitches();
-      await scanAndBlock();
-    } catch (e) { state.lastError=String(e.message || e); console.warn('[limbo-auto-v12]',e); }
-    finally {
-      state.busy=false;
-      if (rerun) { rerun=false; schedule(1400); }
-    }
-  }
-  function schedule(ms) {
-    if (state.paused || stopped) return;
-    clearTimeout(scheduled);
-    scheduled=setTimeout(function(){ scheduled=0; work(); }, ms || 650);
-  }
-  function boot() {
-    if (state.started || !document.body) return;
-    state.started=true;
-    log('原版功能自动化已启动（等待面板加载）');
-    schedule(1800);
-    setTimeout(function(){schedule(0);}, 5000);
-    setTimeout(function(){schedule(0);}, 10000);
-    window.addEventListener('scroll',function(){schedule(900);},{passive:true,capture:true});
-    // /film/home_recommend_list 页面内路由切换：不需要重新注入或手动点扫描按钮。
-    // Safari 中 SPA 通过 pushState 改地址时通常不触发 popstate，轻量轮询做兜底。
-    var lastRoute = location.href;
-    function onRouteChange() {
-      if (state.paused) return;
-      if (location.href !== lastRoute) {
-        lastRoute = location.href;
-        // 页面换路由时重新识别原开关，避免把旧面板的状态误当作新面板。
-        schedule(650);
-      }
-    }
-    window.addEventListener('popstate', function () { onRouteChange(); schedule(900); });
-    window.addEventListener('hashchange', function () { onRouteChange(); schedule(900); });
-    window.addEventListener('pageshow', function () { schedule(900); });
-    document.addEventListener('visibilitychange', function () { if (!document.hidden) schedule(900); });
-    setInterval(onRouteChange, 1200);
-    // 无限下拉和 SPA 异步追加卡片时触发，不因扫描面板自己的更新形成重入循环。
-    if (typeof MutationObserver === 'function') {
-      var observer = new MutationObserver(function (records) {
-        for (var i=0;i<records.length;i++) {
-          var r=records[i];
-          if (r.type!=='childList') continue;
-          for(var j=0;j<r.addedNodes.length;j++) {
-            var el=r.addedNodes[j];
-            if(el.nodeType!==1) continue;
-            var text=(el.className && typeof el.className==='string')?el.className:'';
-            if (/ad|video|list|card|msop/i.test(text) || el.matches && el.matches('img,a,iframe') || el.querySelector && el.querySelector('img,a[href],video')) { schedule(1000); return; }
-          }
-        }
-      });
-      observer.observe(document.body,{childList:true,subtree:true});
-    }
-    // v12: scanner control remains available for background .click(), but the
-    // overlay must not be visible. Handle re-created panels after infinite scroll.
-    if (typeof MutationObserver === 'function') {
-      var panelObserver = new MutationObserver(function(){ queuePanelProbe(); });
-      panelObserver.observe(document.body,{childList:true,subtree:true});
-    }
-    setInterval(function(){ probePanel(true); },1200);
-    // 每次页面重新打开重新自动开启；手动撤回后暂停本页自动屏蔽，直到刷新。
-    document.addEventListener('click',function(event){
-      if(!event.isTrusted) return;
-      var b=event.target && event.target.closest && event.target.closest('button,a,[role="button"],div,span');
-      if(!b) return;
-      var s=norm(b.innerText || b.textContent);
-      if ((b.id === 'gemini-AdDetector' || s.indexOf('可疑广告元素扫描') !== -1) && s.length < 55) {
-        if (userPanelOpen) {
-          userPanelOpen=false; // 真人再次按入口，交给作者原按钮处理关闭。
-        } else {
-          var existing=findScanner();
-          var hidden=panelHidden && panelHidden.el && panelHidden.el.isConnected;
-          if (hidden) {
-            // 后台扫描器已经开启，只是被移到屏幕外：直接恢复，
-            // 不再调用作者原按钮导致它把面板反而关掉。
-            event.preventDefault();event.stopImmediatePropagation();
-            restorePanel();
-            userPanelOpen=true;
-          } else {
-            // 先允许原按钮完整执行，再恢复可能遗留的隐藏样式。
-            userPanelOpen=true;
-            setTimeout(function(){restorePanel();},80);
-            setTimeout(function(){restorePanel();},350);
-          }
-        }
-        state.manualPanel=userPanelOpen?'open':'closed';
-      }
-      // Closing by the original X/close control must not cause auto re-opening.
-      if (userPanelOpen && s.length <= 12 && /^(?:×|✕|✖|x|关闭|收起)$/.test(s)) {
-        userPanelOpen=false;
-        setTimeout(function(){probePanel(true);},60);
-      }
-      if (s.length <= 16 && (/^撤回$/.test(s) || /^一键重置$/.test(s))) {
-        state.paused=true;
-        restorePanel();
-        clearTimeout(scheduled);
-        log('用户手动撤回，本页暂停自动屏蔽（刷新后恢复）');
-      }
+  function schedule(){if(timer||st.paused)return;timer=setTimeout(run,700);}
+  function boot(){
+    run();setTimeout(run,1500);setTimeout(run,4000);
+    window.addEventListener('scroll',schedule,{passive:true});
+    window.addEventListener('pageshow',schedule);
+    window.addEventListener('popstate',schedule);
+    if(typeof MutationObserver==='function')new MutationObserver(schedule).observe(document.body,{childList:true,subtree:true});
+    document.addEventListener('click',function(e){
+      if(!e.isTrusted)return;
+      var t=e.target&&e.target.closest&&e.target.closest('button,a,[role="button"]');
+      var s=t?(t.innerText||t.textContent||'').replace(/\s+/g,'').trim():'';
+      if(/^(?:撤回|一键重置)$/.test(s))st.paused=true;
     },true);
-    setInterval(function(){ if (!state.paused && Date.now()-state.lastRun > 6500) schedule(100); },7000);
   }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot,{once:true});
-  else boot();
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
+</script>`;
 
+    // v15: 仅隐藏这两种诊断性提示；保留原作者脚本和可疑广告检测按钮。
+    var quietNotices = String.raw`<script id="limbo-quiet-diagnostic-v15">
+(function(){
+  'use strict';
+  if(window.__limboQuietV15)return;
+  window.__limboQuietV15=true;
+  var hints=['若扫描结果不及预期','页面诊断完成'];
+  var queued=false;
+  function matches(text){
+    var s=String(text||'').replace(/\s+/g,'');
+    if(!s||s.length>125)return false;
+    return hints.some(function(p){return s.indexOf(p)!==-1;});
+  }
+  function hide(){
+    queued=false;
+    if(!document.body)return;
+    var list=document.body.querySelectorAll('div,span,p,strong,small');
+    for(var i=0;i<list.length&&i<12000;i++){
+      var el=list[i];
+      if(!el.isConnected || !matches(el.innerText||el.textContent))continue;
+      // Never hide the original toolbox, feedback button, or detector panel.
+      if(el.closest('#dh_pageContainer,#dh_buttonContainer,[id*="Detector"],[class*="AdDetector"],#gemini-AdDetector'))continue;
+      var target=el;
+      for(var j=0;j<4 && target.parentElement && target.parentElement!==document.body;j++){
+        var p=target.parentElement;
+        if(p.querySelectorAll('*').length>18 || String(p.innerText||p.textContent).length>140)break;
+        target=p;
+        var style=getComputedStyle(target);
+        if(style.position==='fixed'||style.position==='sticky')break;
+      }
+      if(target!==document.body && !target.hasAttribute('data-limbo-quiet-v15')){
+        target.setAttribute('data-limbo-quiet-v15','');
+        target.style.setProperty('display','none','important');
+      }
+    }
+  }
+  function schedule(){if(queued)return;queued=true;setTimeout(hide,80);}
+  function boot(){schedule();if(window.MutationObserver)new MutationObserver(schedule).observe(document.body,{childList:true,subtree:true});}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+})();
 </script>`;
 
     var feedbackRecovery = `<script id="limbo-91-feedback-recovery-v8">
@@ -744,9 +469,10 @@ html:not([data-limbo91-autoblock-off]) body #tablist > a[href^="https://"] {
 </script>`;
 
     var injection = [
-      '<!-- SURGE-LIMBO-91: v14 response-rewrite-injected -->',
+      '<!-- SURGE-LIMBO-91: v15 response-rewrite-injected -->',
       adguardNotice,
       guard,
+      quietNotices,
       isOriginal91short ? passiveScan : genericScan,
       feedbackRecovery,
       autoControls,
