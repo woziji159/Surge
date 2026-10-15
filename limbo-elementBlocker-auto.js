@@ -5711,7 +5711,9 @@
 
     // ---------- 定制：91short 被动广告扫描（不创建按钮，不伪造原 AdDetector v12.6 的状态） ----------
     function startLimboPassiveAdScan() {
-        if (location.hostname !== 'cn8.x-91short.com' || window.__limboPassiveAdScanActive) return;
+        // 入口脚本已注册统一扫描器时，禁用本文件里的第二套被动扫描。
+        // 这样撤回、暂停只需要作用于一个自动屏蔽器，原手动工具不受影响。
+        if (window.__limboUnifiedV17 || location.hostname !== 'cn8.x-91short.com' || window.__limboPassiveAdScanActive) return;
         window.__limboPassiveAdScanActive = true;
         const css = [
             'ins.adsbygoogle',

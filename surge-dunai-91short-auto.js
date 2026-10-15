@@ -1,5 +1,5 @@
 /*
- * Surge — 毒奶站点增强 v18：统一扫描器 / 无 150 总量上限 / 撤回暂停 / 收紧链接误判
+ * Surge — 毒奶站点增强 v19（检测器加载与双扫描冲突修复）：统一扫描器 / 无 150 总量上限 / 撤回暂停 / 收紧链接误判
  * 原始仓库: https://github.com/woziji159/Surge
  * 保留原版导航、反馈、元素屏蔽器及原生撤销功能；不新增悬浮按钮。
  * 仅用于 Surge [Script] http-response 的 HTML 响应，不是直接网页用户脚本。
@@ -21,15 +21,15 @@
     var body = $response.body;
     if (typeof body !== 'string' || !/<head\b[^>]*>/i.test(body)) return $done({});
     if (/您的域名并未添加白名单导致无法访问/.test(body)) return $done({});
-    if (/SURGE-LIMBO-91:\s*(?:v17|v18)|id=["']limbo-unified-autoscan-v17["']/.test(body)) return $done({});
+    if (/SURGE-LIMBO-91:\s*(?:v17|v18|v19)|id=["']limbo-unified-autoscan-v17["']/.test(body)) return $done({});
 
     // GitHub Raw 适合 Surge 的 script-path，但作为网页 <script src> 可能被浏览器以 nosniff 拦截。
     // 这两份定制 JS 仍来自用户自己的仓库，只将网页加载地址换成 JS CDN。
     var isOriginal91short = /(?:^|\.)x-91short\.com$/i.test(hostname);
     var isAny91short = hostname.indexOf('91short') !== -1;
     var base = 'https://cdn.jsdelivr.net/gh/woziji159/Surge@main/';
-    var customFn = base + 'limbo-function-auto.js?v=20261015-repair5';
-    var customElement = base + 'limbo-elementBlocker-auto.js?v=20261015-repair5';
+    var customFn = base + 'limbo-function-auto.js?v=fix19-7ab1517d593a';
+    var customElement = base + 'limbo-elementBlocker-auto.js?v=fix19-cea6685a742c';
 
     // v14: 加载作者实际的远程 CSS，不再点击作者的弹窗按钮。
     // 仅拦截 #loadCSS 的真人点击来手动关闭/开启本页已加载的样式；绝不改写全局 confirm。
@@ -394,7 +394,7 @@
 </script>`;
 
     var injection = [
-      '<!-- SURGE-LIMBO-91: v18 response-rewrite-injected -->',
+      '<!-- SURGE-LIMBO-91: v19 response-rewrite-injected -->',
       adguardNotice,
       guard,
       quietNotices,

@@ -758,7 +758,7 @@ function getNavigationHTML() {
         <li class="li_global"><button class="a_global special yellow" onclick="window.geminiElementBlockerOpenPanel()"
                 id="gemini-element-blocker" style="border-radius:4px;background:#c53f3f">⚡️元素调试与屏蔽</button></li>
         
-        <li class="li_global"><button class="a_global special yellow" onclick="window.showAdDetectorUI();body_build('false');"
+        <li class="li_global"><button class="a_global special yellow" onclick="window.limboOpenNativeDetector();body_build('false');"
                 id="gemini-AdDetector" style="border-radius:4px;background:#c53f3f">🧑‍⚕️可疑广告元素扫描</button></li>
         <li class="li_global">
             <button class="a_global special yellow" id="carolPanel" style="border-radius:4px;background:#c53f3f"
@@ -2597,8 +2597,43 @@ loadExternalResourceFireAndForget('script', 'https://limbopro.com/Adguard/little
 
 
 // 广告元素检测小脚本 Start
-loadExternalResourceFireAndForget('script', 'https://limbopro.com/Adguard/AdDetector.js', 'head', 'littleCode')
+loadExternalResourceFireAndForget('script', 'https://limbopro.com/Adguard/AdDetector.js', 'head', 'limbo-AdDetector-native')
 // 广告元素检测小脚本 END
+
+// 本地兼容层：用户手动打开原作者的检测器；不模拟扫描按钮、不接管原作者窗口。
+// 外部 AdDetector.js 可能比导航按钮晚加载，因此仅在用户点击时等待它。
+window.limboOpenNativeDetector = function limboOpenNativeDetector() {
+    var opened = false; // 一个手动点击只允许打开一次，避免加载事件与轮询同时触发。
+    function openIfReady() {
+        if (opened) return true;
+        if (typeof window.showAdDetectorUI !== 'function') return false;
+        opened = true;
+        try { window.showAdDetectorUI(); return true; }
+        catch (e) { opened = false; console.error('[Limbo] 原版检测面板打开失败：', e); return false; }
+    }
+    if (openIfReady()) return;
+    var id = 'limbo-AdDetector-native';
+    var script = document.getElementById(id);
+    if (!script) {
+        script = document.createElement('script');
+        script.id = id;
+        script.src = 'https://limbopro.com/Adguard/AdDetector.js';
+        script.async = true;
+        (document.head || document.documentElement).appendChild(script);
+    }
+    var done = false;
+    function loaded() { if (!done) { done = true; if (!openIfReady()) console.warn('[Limbo] AdDetector.js 已下载，但未提供 showAdDetectorUI'); } }
+    function failed() { if (!done) { done = true; console.warn('[Limbo] AdDetector.js 加载失败，请检查 Surge 请求记录'); } }
+    script.addEventListener('load', loaded, {once: true});
+    script.addEventListener('error', failed, {once: true});
+    // 处理现有 script 已加载、函数却还在初始化的情况。
+    var tries = 0;
+    var poll = setInterval(function () {
+        if (done || ++tries > 50) { clearInterval(poll); return; }
+        if (typeof window.showAdDetectorUI === 'function') { clearInterval(poll); loaded(); }
+    }, 200);
+};
+
 
 /**
  * WebDebugger.js 开始 START
