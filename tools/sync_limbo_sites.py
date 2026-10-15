@@ -67,7 +67,7 @@ def replace_controlled_line(text, prefix, new_line):
     return ''.join(lines)
 
 
-def update_config(conf, hosts):
+def update_config(conf, hosts, script_content):
     # Preserve all old rule attributes and the exact path exclusions from v10.
     entries = conf.splitlines(keepends=True)
     index = [i for i, row in enumerate(entries) if row.startswith('rewrite-001 = ')]
@@ -88,9 +88,10 @@ def update_config(conf, hosts):
     new_pattern = r'^https:\/\/(?:[a-z0-9-]+\.)*(?:' + group + r')' + after
     line = line[:m.start(2)] + new_pattern + line[m.end(2):]
     # Changing the site list also changes the script URL so Surge cannot reuse an old version.
-    version = hashlib.sha256('\n'.join(hosts).encode('utf-8')).hexdigest()[:10]
+    # New JS features must bust the Surge cache even if the website list is unchanged.
+    version = hashlib.sha256(('\n'.join(hosts) + '\n' + script_content).encode('utf-8')).hexdigest()[:12]
     resource = r'(script-path=https://raw\.githubusercontent\.com/woziji159/Surge/main/surge-dunai-91short-auto\.js)(?:\?v=[^,\s]+)?'
-    line, replaced = re.subn(resource, lambda m: m.group(1) + '?v=sites11-' + version, line)
+    line, replaced = re.subn(resource, lambda m: m.group(1) + '?v=sites12-' + version, line)
     if replaced != 1:
         raise ValueError('没有找到原始脚本更新地址，拒绝修改')
     entries[index[0]] = line
@@ -221,8 +222,8 @@ def main():
     hosts = read_hosts()
     conf_old = CONFIG.read_text(encoding='utf-8')
     js_old = JS.read_text(encoding='utf-8')
-    conf_new = update_config(conf_old, hosts)
     js_new = update_js(js_old, hosts)
+    conf_new = update_config(conf_old, hosts, js_new)
     CONFIG.write_text(conf_new, encoding='utf-8')
     JS.write_text(js_new, encoding='utf-8')
     print('网站清单同步完成（' + ', '.join(hosts) + '）')
