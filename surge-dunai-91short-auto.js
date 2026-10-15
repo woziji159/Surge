@@ -1,5 +1,5 @@
 /*
- * Surge — 91short 毒奶定制脚本：v9 保持 + 电影页路径/SPA 修复 v10 (2026-10-15)
+ * Surge — 毒奶站点增强 v17：统一扫描器 / 无 150 总量上限 / 撤回暂停 / 收紧链接误判
  * 原始仓库: https://github.com/woziji159/Surge
  * 保留原版导航、反馈、元素屏蔽器及原生撤销功能；不新增悬浮按钮。
  * 仅用于 Surge [Script] http-response 的 HTML 响应，不是直接网页用户脚本。
@@ -21,7 +21,7 @@
     var body = $response.body;
     if (typeof body !== 'string' || !/<head\b[^>]*>/i.test(body)) return $done({});
     if (/您的域名并未添加白名单导致无法访问/.test(body)) return $done({});
-    if (/id=["']limbo-91-custom-v8["']/.test(body)) return $done({});
+    if (/SURGE-LIMBO-91:\s*v17|id=["']limbo-unified-autoscan-v17["']/.test(body)) return $done({});
 
     // GitHub Raw 适合 Surge 的 script-path，但作为网页 <script src> 可能被浏览器以 nosniff 拦截。
     // 这两份定制 JS 仍来自用户自己的仓库，只将网页加载地址换成 JS CDN。
@@ -168,237 +168,146 @@
 })();
 </script>`;
 
-    // v8 针对 2026-10-15 用户提供的真实 91short 首页 HTML：
-    // .msop100 -> imgad31/imgad32/imgad33/imgad35、data-id=adNN、跨站外链；
-    // 直接 CSS 可即时隐藏，JS 在 DOM 动态更新时二次确认并同步支持“撤回”。
-    // 不调用 v12.6 的内部私有 API，也不弹面板或新建反馈按钮。
-    var passiveScan = `<style id="limbo-91-autoblock-css-v8">
-/* 基于用户实际网页 HTML 的确定性广告结构，独立于扫描器评分逻辑 */
-html:not([data-limbo91-autoblock-off]) body div.msop100,
-html:not([data-limbo91-autoblock-off]) body a:has(> img[data-id^="ad"][class*="imgad"]),
-html:not([data-limbo91-autoblock-off]) body img[data-id^="ad"][class*="imgad"],
-html:not([data-limbo91-autoblock-off]) body .nav-menu-item > a[title="领彩金"],
-html:not([data-limbo91-autoblock-off]) body #tablist > a[href^="https://"] {
-  display: none !important;
-}
-</style>
-<script id="limbo-91-autoblock-v8">
-(function () {
+    // v17: 一个后台扫描器；分批处理无终身数量上限；统一的暂停/撤回。
+    // 只处理明确的广告标记和已知广告主机，避免拦截一般站内链接。
+    var unifiedScanner = String.raw`<script id="limbo-unified-autoscan-v17">
+(function(){
   'use strict';
-  if (window.__limbo91AutoBlockV8) return;
-  var state = window.__limbo91AutoBlockV8 = {started:false, scans:0, autoHidden:0, enabled:true, version:'v8'};
-  var changed = [];
-  var tracker = typeof WeakSet === 'function' ? new WeakSet() : null;
-  var observer = null, timer = 0, periodic = 0;
-  var maximum = 150;
-  var cssAdContainer = '.msop100';
-  var candidates = [
-    '.msop100',
-    'a[href]',
-    'img[data-id^="ad"]',
-    'img[class*="imgad"]',
-    'iframe[src]',
-    '[data-ad-client]', '[data-ad-slot]',
-    '.popup-ad', '.floating-ad', '.ad-banner',
-    '[class*="popunder"]', '[id*="popunder"]'
-  ].join(',');
-  var knownAdHosts = /(?:^|\\.)(?:doubleclick\\.net|googlesyndication\\.com|adsterra\\.com|wpadmngr\\.com|twinrdengine\\.com)$/i;
-  var protectedSelectors = '[id*="feedback" i],[class*="feedback" i],[id*="ad-detector" i],[class*="ad-detector" i],[id*="limbo" i],[class*="limbo" i]';
-  function protect(node) {
-    try {return !!node.closest(protectedSelectors);} catch (_) {return false;}
+  if (window.__limboUnifiedV17) return;
+  var host = location.hostname.toLowerCase();
+  var is91 = host.indexOf('91short') !== -1;
+  var known = /(?:^|\.)(?:doubleclick\.net|googlesyndication\.com|adsterra\.com|wpadmngr\.com|twinrdengine\.com|magsrv\.com|jads\.co)$/i;
+  var ui = '[id*="feedback" i],[class*="feedback" i],[id*="ad-detector" i],[class*="ad-detector" i],[id*="limbo" i],[class*="limbo" i],#dh_pageContainer,#dh_buttonContainer';
+  var selector = 'ins.adsbygoogle,.adsbygoogle,[data-ad-client],[data-ad-slot],iframe[src],.popup-ad,.floating-ad,.ad-banner,[class*="popunder"],[id*="popunder"]' +
+    (is91 ? ',.msop100,img[data-id^="ad"],img[class*="imgad"],a[href]' : '');
+  var pending = [], inQueue = new Set(), hidden = new Map();
+  var running = false, observer = null, scheduleHandle = 0;
+  var state = window.__limboUnifiedV17 = {
+    version: 'v17', paused: false, scanned: 0, hidden: 0,
+    scan: rescan, undo: undo, pause: undo, resume: resume,
+    status: function(){return {paused:state.paused,scanned:state.scanned,hiddenCount:hidden.size,queued:pending.length};}
+  };
+  function isTool(el){try{return !!el.closest(ui);}catch(_){return false;}}
+  function urlHost(raw){try{return new URL(raw,location.href).hostname.toLowerCase();}catch(_){return '';}}
+  function firstParty(h){return h && (h===host || h.endsWith('.'+host) || host.endsWith('.'+h));}
+  function explicitImage(el){
+    if (!el || el.tagName!=='IMG')return false;
+    var id=el.getAttribute('data-id')||'';
+    var cls=typeof el.className==='string'?el.className:'';
+    return /^ad\d+$/i.test(id) || /(?:^|\s)imgad\d+(?:\s|$)/i.test(cls);
   }
-  function urlHost(raw) {
-    try {return new URL(raw, location.href).hostname.toLowerCase();} catch (_) {return '';}
-  }
-  function isIPv4(s) {return /^(?:\\d{1,3}\\.){3}\\d{1,3}$/.test(s);}
-  function adImage(node) {
-    if (!node || !node.querySelector) return false;
-    return !!node.querySelector('img[data-id^="ad"],img[class*="imgad"]');
-  }
-  function qualifiedLink(a) {
-    var host = urlHost(a.getAttribute('href') || '');
-    if (!host || host === location.hostname.toLowerCase()) return false;
-    if (knownAdHosts.test(host)) return true;
-    if (adImage(a)) return true;
-    var visibleImage = !!a.querySelector('img,picture,svg');
-    var extImage = a.getAttribute('target') === '_blank' && visibleImage;
-    // 当前网页的视频卡片链接位于站内；外站图片+新窗口是已验证的广告形态。
-    if (extImage && (isIPv4(host) || !/(?:^|\\.)x-91short\\.com$/.test(host))) return true;
-    return false;
-  }
-  function classify(el) {
-    if (protect(el)) return null;
-    var tag = (el.tagName || '').toUpperCase();
-    if (tag === 'DIV' && el.matches(cssAdContainer) && adImage(el)) return {node:el, why:'homepage-ad-container'};
-    if (tag === 'IMG') {
-      var id = el.getAttribute('data-id') || '';
-      var cn = typeof el.className === 'string' ? el.className : '';
-      if (/^ad\\d+$/i.test(id) || /(?:^|\\s)imgad\\d+(?:\\s|$)/i.test(cn)) {
-        var anchor = el.closest('a');
-        if (anchor && !protect(anchor)) return {node:anchor, why:'known-ad-image'};
-        return {node:el, why:'known-ad-image'};
-      }
+  function hasAdImage(el){return !!(el && el.querySelector && el.querySelector('img[data-id^="ad"],img[class*="imgad"]'));}
+  function suspect(el){
+    if (!(el instanceof Element) || isTool(el) || el.closest('nav,header,footer,form,[role="navigation"]')) return null;
+    var t=el.tagName;
+    if (t==='A') {
+      // Never hide normal internal links or generic external image links.
+      var dest=urlHost(el.getAttribute('href')||'');
+      if(!dest || firstParty(dest))return null;
+      return known.test(dest) ? el : (is91 && hasAdImage(el) ? el : null);
     }
-    if (tag === 'A' && qualifiedLink(el)) return {node:el, why:'external-image-ad-link'};
-    if (tag === 'IFRAME' && knownAdHosts.test(urlHost(el.getAttribute('src') || ''))) return {node:el, why:'known-ad-host'};
-    if (el.matches('[data-ad-client],[data-ad-slot],.popup-ad,.floating-ad,.ad-banner,[class*="popunder"],[id*="popunder"]')) return {node:el, why:'explicit-ad-marker'};
+    if (t==='IFRAME')return known.test(urlHost(el.getAttribute('src')||'')) ? el : null;
+    if (is91 && t==='DIV' && el.matches('.msop100') && hasAdImage(el))return el;
+    if (is91 && explicitImage(el)) {
+      var a=el.closest('a[href]');
+      var dh=a?urlHost(a.getAttribute('href')||''):'';
+      return a && dh && !firstParty(dh) ? a : el;
+    }
+    if (el.matches('[data-ad-client],[data-ad-slot],ins.adsbygoogle,.adsbygoogle'))return el;
+    if (is91 && el.matches('.popup-ad,.floating-ad,.ad-banner,[class*="popunder"],[id*="popunder"]'))return el;
     return null;
   }
-  function hide(el, why) {
-    if (!el || protect(el) || !el.isConnected || changed.length >= maximum) return;
-    if (el.hasAttribute('data-limbo91-hidden-v8')) return;
-    var tag = (el.tagName || '').toUpperCase();
-    if (/^(?:HTML|BODY|HEAD|MAIN|NAV|HEADER|VIDEO|AUDIO|FORM)$/.test(tag)) return;
-    var inline = el.style;
-    if (!inline) return;
-    changed.push({node:el,value:inline.getPropertyValue('display'),priority:inline.getPropertyPriority('display')});
-    el.setAttribute('data-limbo91-hidden-v8', why);
-    inline.setProperty('display','none','important');
-    state.autoHidden++;
+  function hide(el){
+    if (!el || !el.isConnected || hidden.has(el) || isTool(el))return;
+    // Containers for video cards, menus, and forms must never be hidden wholesale.
+    if (/^(?:HTML|BODY|HEAD|MAIN|NAV|HEADER|FOOTER|VIDEO|AUDIO|FORM)$/.test(el.tagName))return;
+    var css=el.style;if(!css)return;
+    hidden.set(el,{display:css.getPropertyValue('display'),priority:css.getPropertyPriority('display')});
+    el.setAttribute('data-limbo-unified-hidden-v17','');
+    css.setProperty('display','none','important');
+    state.hidden++;
   }
-  function scan() {
-    if (!state.enabled || !document.body) return;
-    state.scans++;
-    try {
-      var nodes = document.body.querySelectorAll(candidates);
-      for (var i = 0; i < nodes.length && i < 3000 && changed.length < maximum; i++) {
-        var el = nodes[i];
-        if (tracker && tracker.has(el)) continue;
-        // CSS 已先隐藏已知横幅；这里仍追踪并记录 DOM 变化后的新广告。
-        var found = classify(el);
-        if (found) hide(found.node, found.why);
-        if (tracker) tracker.add(el);
+  function put(el){
+    if (!el || !(el instanceof Element) || inQueue.has(el) || state.paused) return;
+    inQueue.add(el);pending.push(el);
+  }
+  function collect(root){
+    if (state.paused || !root || !(root instanceof Element))return;
+    if (root.matches(selector))put(root);
+    var list=root.querySelectorAll(selector);
+    for (var i=0;i<list.length;i++)put(list[i]);
+    pump();
+  }
+  function pump(){
+    if (running || state.paused || !pending.length) return;
+    running=true;
+    function chunk(){
+      if (state.paused){running=false;pending.length=0;inQueue.clear();return;}
+      // At most 100 elements per turn, but no total lifetime cap.
+      var n=0;
+      while(n++<100 && pending.length){
+        var el=pending.shift();inQueue.delete(el);
+        if (!el || !el.isConnected)continue;
+        state.scanned++;
+        try{var found=suspect(el);if(found)hide(found);}catch(e){console.warn('[limbo-v17] classify failed',e);}
       }
-    } catch (e) { console.warn('[limbo-91-v8] scan error', e); }
-  }
-  function schedule() {
-    if (!state.enabled || timer) return;
-    timer = setTimeout(function(){timer=0;tracker = typeof WeakSet==='function'?new WeakSet():null;scan();}, 250);
-  }
-  function undo() {
-    if (!state.enabled) return;
-    state.enabled = false;
-    document.documentElement.setAttribute('data-limbo91-autoblock-off','');
-    if (observer) observer.disconnect();
-    if (periodic) clearInterval(periodic);
-    if (timer) clearTimeout(timer);
-    for (var i=changed.length-1; i>=0; i--) {
-      var item = changed[i];
-      if (!item.node || !item.node.style) continue;
-      item.node.style.removeProperty('display');
-      if (item.value) item.node.style.setProperty('display',item.value,item.priority);
-      item.node.removeAttribute('data-limbo91-hidden-v8');
+      if(pending.length)setTimeout(chunk,16);else running=false;
     }
-    changed.length=0;
-    console.log('[limbo-91-v8] auto blocked elements restored');
+    setTimeout(chunk,0);
   }
-  state.scan=scan; state.schedule=schedule;
-  window.surge91UndoAutoHidden = undo;
-  document.addEventListener('click',function(e){
-    var btn=e.target && e.target.closest ? e.target.closest('button,[role="button"],a,input[type="button"]') : null;
-    if (!btn) return;
-    var label=(btn.innerText||btn.textContent||btn.getAttribute('value')||'').replace(/\\s+/g,'').trim();
-    if (/^(?:↩️?|↩)?撤回$/.test(label) || label==='一键重置') setTimeout(undo,0);
-  },true);
-  function start() {
-    if (state.started || !document.body) return;
-    state.started=true;
-    scan();
-    setTimeout(scan,500);
-    setTimeout(scan,1800);
-    setTimeout(scan,4200);
-    if (typeof MutationObserver==='function') {
-      observer = new MutationObserver(schedule);
-      observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['href','src','class','data-id','target','onclick']});
-    }
-    periodic=setInterval(function(){tracker=null;scan();},5000);
-    console.log('[limbo-91-v8] automatic scanning active');
-  }
-  if (document.readyState==='loading') document.addEventListener('DOMContentLoaded',start,{once:true});
-  else start();
-})();
-</script>`;
-
-    // New sites: conservative first-party fallback detection; 91short retains the proven v8 logic.
-    var genericScan = String.raw`<script id="limbo-generic-auto-scan-v11">
-(function(){
-  'use strict';
-  if(window.__limboGenericAutoV11)return;
-  var state=window.__limboGenericAutoV11={scanCount:0,hiddenCount:0,paused:false};
-  var selectors='ins.adsbygoogle,[data-ad-client],[data-ad-slot],iframe[src*="doubleclick.net"],iframe[src*="googlesyndication.com"],.adsbygoogle';
-  var scheduled=0, changed=[];
-  function run(){
-    scheduled=0;
-    if(state.paused || (window.__limbo91AutoV9 && window.__limbo91AutoV9.paused)) return;
-    state.scanCount++;
-    var nodes=document.querySelectorAll(selectors);
-    for(var i=0;i<nodes.length;i++){
-      var el=nodes[i]; if(el.dataset.limboGenericHidden)continue;
-      if(el.closest('[id*="limbo" i],[class*="limbo" i]')) continue;
-      changed.push({el:el,display:el.style.getPropertyValue('display'),priority:el.style.getPropertyPriority('display')});
-      el.dataset.limboGenericHidden='1';
-      el.style.setProperty('display','none','important'); state.hiddenCount++;
-    }
-  }
+  function rescan(){if(!state.paused && document.body)collect(document.body);}
   function undo(){
+    if(state.paused)return;
     state.paused=true;
-    for(var i=0;i<changed.length;i++){
-      var item=changed[i], el=item.el;
-      if(!el || !el.style)continue;
-      if(item.display)el.style.setProperty('display',item.display,item.priority);
+    pending.length=0;inQueue.clear();
+    if(scheduleHandle)clearTimeout(scheduleHandle);
+    hidden.forEach(function(old,el){
+      if(!el || !el.style)return;
+      if(old.display)el.style.setProperty('display',old.display,old.priority);
       else el.style.removeProperty('display');
-      delete el.dataset.limboGenericHidden;
+      el.removeAttribute('data-limbo-unified-hidden-v17');
+    });
+    hidden.clear();
+    // Best-effort pause for older v8/v11 scripts if already present from another injector.
+    if(window.__limbo91AutoBlockV8){window.__limbo91AutoBlockV8.enabled=false;}
+    if(window.__limboGenericAutoV11){window.__limboGenericAutoV11.paused=true;}
+    if(window.__limbo91AutoV9){window.__limbo91AutoV9.paused=true;}
+    if(typeof window.limboPassiveAdScanUndo==='function'){
+      try{window.limboPassiveAdScanUndo();}catch(e){console.warn('[limbo-v17] legacy undo failed',e);}
     }
-    changed=[];
   }
-  function schedule(){if(scheduled || state.paused)return; scheduled=setTimeout(run,600);}
-  state.scan=run;
-  function init(){
-    run();
-    if(window.MutationObserver)new MutationObserver(schedule).observe(document.body,{childList:true,subtree:true});
-    window.addEventListener('scroll',schedule,{passive:true});
-    document.addEventListener('click',function(e){
-      var t=e.target && e.target.closest && e.target.closest('button,[role="button"],a');
-      var label=t && (t.innerText||t.textContent||'').trim();
-      if(label && /^(?:撤回|一键重置)$/.test(label))setTimeout(undo,0);
-    },true);
+  function resume(){if(!state.paused)return;state.paused=false;rescan();}
+  function schedule(){
+    if(state.paused || scheduleHandle)return;
+    scheduleHandle=setTimeout(function(){scheduleHandle=0;rescan();},500);
   }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
-})();
-</script>`;
-
-    // v15: 后台扫描独立运行，绝不点击/隐藏/覆盖原作者的 v12.6 检测面板。
-    var autoControls = String.raw`<script id="limbo-background-coordinator-v15">
-(function(){
-  'use strict';
-  if (!/^(?:[a-z0-9.-]*91short[a-z0-9.-]*)$/i.test(location.hostname)) return; // LIMBO_SITES_CONTROL_PATTERN (auto-generated)
-  if(window.__limbo91AutoV9)return;
-  var st=window.__limbo91AutoV9={version:'v15',started:true,paused:false,backgroundRuns:0};
-  var timer=0;
-  function run(){
-    timer=0;
-    if(st.paused)return;
-    st.backgroundRuns++;
-    var main=window.__limbo91AutoBlockV8;
-    if(main && main.enabled && typeof main.scan==='function')main.scan();
-    var gen=window.__limboGenericAutoV11;
-    if(gen && !gen.paused && typeof gen.scan==='function')gen.scan();
-  }
-  function schedule(){if(timer||st.paused)return;timer=setTimeout(run,700);}
-  function boot(){
-    run();setTimeout(run,1500);setTimeout(run,4000);
-    window.addEventListener('scroll',schedule,{passive:true});
+  function start(){
+    if(!document.body)return;
+    rescan();setTimeout(rescan,1100);
+    if(window.MutationObserver){
+      observer=new MutationObserver(function(items){
+        if(state.paused)return;
+        for(var i=0;i<items.length;i++){
+          var rec=items[i];
+          if(rec.type==='attributes')put(rec.target);
+          else for(var j=0;j<rec.addedNodes.length;j++)collect(rec.addedNodes[j]);
+        }
+        pump();
+      });
+      observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['src','href','class','data-id','data-ad-client','data-ad-slot']});
+    }
     window.addEventListener('pageshow',schedule);
     window.addEventListener('popstate',schedule);
-    if(typeof MutationObserver==='function')new MutationObserver(schedule).observe(document.body,{childList:true,subtree:true});
+    // Scroll itself does not rescan the entire document; lazy content is caught by DOM observer.
     document.addEventListener('click',function(e){
       if(!e.isTrusted)return;
-      var t=e.target&&e.target.closest&&e.target.closest('button,a,[role="button"]');
-      var s=t?(t.innerText||t.textContent||'').replace(/\s+/g,'').trim():'';
-      if(/^(?:撤回|一键重置)$/.test(s))st.paused=true;
+      var btn=e.target && e.target.closest && e.target.closest('button,[role="button"],a,input[type="button"]');
+      if(!btn)return;
+      var label=(btn.innerText||btn.textContent||btn.value||'').replace(/\s+/g,'').trim();
+      if(/^(?:↩️?|↩)?撤回$/.test(label)||label==='一键重置')setTimeout(undo,0);
     },true);
   }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
 </script>`;
 
@@ -470,13 +379,12 @@ html:not([data-limbo91-autoblock-off]) body #tablist > a[href^="https://"] {
 </script>`;
 
     var injection = [
-      '<!-- SURGE-LIMBO-91: v15 response-rewrite-injected -->',
+      '<!-- SURGE-LIMBO-91: v17 response-rewrite-injected -->',
       adguardNotice,
       guard,
       quietNotices,
-      isAny91short ? passiveScan : genericScan,
+      unifiedScanner,
       feedbackRecovery,
-      autoControls,
       '<script defer src="https://limbopro.com/Adguard/autoAdDetector.js"></script>',
       '<script defer src="https://limbopro.com/Adguard/Adblock4limbo.user.js"></script>',
       '<script defer src="' + customFn + '"></script>',
@@ -491,10 +399,10 @@ html:not([data-limbo91-autoblock-off]) body #tablist > a[href^="https://"] {
     Object.keys(h).forEach(function (k) {
       if (/^(?:content-length|content-security-policy|content-security-policy-report-only)$/i.test(k)) delete h[k];
     });
-    console.log('[limbo-91-v8] HTML 注入成功: ' + hostname + ' / ' + pathname);
+    console.log('[limbo-91-v17] HTML 注入成功: ' + hostname + ' / ' + pathname);
     return $done({body:body, headers:h});
   } catch (e) {
-    console.log('[limbo-91-v8] ' + e.message);
+    console.log('[limbo-91-v17] ' + e.message);
     $done({});
   }
 })();
