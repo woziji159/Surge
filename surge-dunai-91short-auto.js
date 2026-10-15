@@ -30,6 +30,31 @@
     var customFn = base + 'limbo-function-auto.js?v=20261015-repair5';
     var customElement = base + 'limbo-elementBlocker-auto.js?v=20261015-repair5';
 
+    // v13: Only auto-acknowledge the AdGuard CSS *loaded* notification.
+    // No generic confirmation bypass: destructive/privacy/payment prompts stay manual.
+    var adguardNotice = String.raw`<script id="limbo-adguard-notice-v13">
+(function(){
+  'use strict';
+  if(window.__limboAdguardNoticeV13)return;
+  var originalConfirm=window.confirm;
+  var state=window.__limboAdguardNoticeV13={matched:0,installed:true};
+  function knownLoadedNotice(value){
+    var msg=String(value==null?'':value);
+    return msg.length<1200 &&
+      /(?:Adblock4limbo(?:\.user)?\.css|AdGuard[\s\S]{0,30}(?:基础)?过滤器)/i.test(msg) &&
+      /(?:已加载|加载成功|加载完成)/.test(msg) && /(?:AdGuard|过滤器|CSS)/i.test(msg);
+  }
+  window.confirm=function(message){
+    if(knownLoadedNotice(message)){
+      state.matched++;
+      console.log('[limbo-auto-v13] AdGuard CSS 已加载，跳过单独的成功确认');
+      return true;
+    }
+    return originalConfirm.apply(window,arguments);
+  };
+})();
+</script>`;
+
     // 保留原版仅针对陌生弹窗和已知广告域名的拦截；不创建或移除工具箱按钮。
     var guard = `<script id="limbo-91-custom-v8">
 (function () {
@@ -274,22 +299,23 @@ html:not([data-limbo91-autoblock-off]) body #tablist > a[href^="https://"] {
 })();
 </script>`;
 
-    var autoControls = String.raw`<script id="limbo-original-controls-autorun-v12">
+    var autoControls = String.raw`<script id="limbo-original-controls-autorun-v13">
 /* 91short 自动调用原有扫描面板的交互控制器，运行于网页，不新增 UI。 */
 (function () {
   'use strict';
   if (!/^(?:[a-z0-9-]+\.)*(?:x\-91short\.com)$/i.test(location.hostname)) return; // LIMBO_SITES_CONTROL_PATTERN (auto-generated)
   if (window.__limbo91AutoV9) return; // Keep legacy state name for compatibility
   var state = window.__limbo91AutoV9 = {
-    version: 'v12', started: false, busy: false, paused: false,
+    version: 'v13', started: false, busy: false, paused: false,
     scanClicks: 0, blockClicks: 0, adguardClicks: 0, protectionClicks: 0,
-    lastRun: 0, attempts: 0, lastResult: '', lastError: ''
+    lastRun: 0, attempts: 0, lastResult: '', lastError: '',
+    adguardStatus: 'unknown', protectionStatus: {}
   };
   var stopped = false, scheduled = 0, rerun = false, openedPanel = false;
   // v12: The original detector stays alive off-screen for automation. Only a REAL user
   // click on the scanner entry may show its panel; programmatic clicks never do.
   var userPanelOpen = false, panelProbeQueued = false, lastPanelProbe = 0;
-  var adguardTouched = false, toggleTouched = {};
+  var adguardTryAt=0, adguardTries=0, toggleAttempts={};
   var minRunGap = 2500;
   var panelHidden = null;
   function log(msg) { state.lastResult = msg; console.log('[limbo-auto-v12]', msg); }
@@ -372,32 +398,89 @@ html:not([data-limbo91-autoblock-off]) body #tablist > a[href^="https://"] {
   function disabledText(text) {
     return /默认关闭|未开启|已关闭|已停用|未启用|关闭中|\boff\b/.test(text);
   }
-  function ensureSwitches() {
-    if (!adguardTouched) {
-      var ad = pick(['adguard过滤器','adguardfilter'], {contains:true, maxLen:65});
-      var adState = ad ? norm(ad.el.innerText || ad.el.textContent || ad.text) : '';
-      if (ad && disabledText(adState)) {
-        adguardTouched = clickHit(ad, 'AdGuard 过滤器');
-        if (adguardTouched) state.adguardClicks++;
-      } else if (ad && /已开启|已启用|开启中|\bon\b/.test(adState)) {
-        adguardTouched = true;
-      }
+  function enabledText(text) {
+    return /已开启|已启用|开启中|已加载|正在使用|\bon\b/.test(text);
+  }
+  function adguardLoaded() {
+    var btn=document.getElementById('loadCSS');
+    var status=document.getElementById('loadCSS_status_text');
+    var words=norm(status ? status.textContent : btn ? btn.innerText : '');
+    if(enabledText(words)) return true;
+    // 有些作者版本不会及时更新状态字样，但 stylesheet 已经实际插入。
+    var link=document.querySelector('link[href*="Adblock4limbo.user.css"],style[data-adguard-filter]');
+    if(link && (!('disabled' in link) || !link.disabled)) return true;
+    return false;
+  }
+  function ensureAdGuard() {
+    var btn=document.getElementById('loadCSS');
+    if(!btn){state.adguardStatus='waiting-for-button';return;}
+    if(adguardLoaded()){state.adguardStatus='on';return;}
+    var status=document.getElementById('loadCSS_status_text');
+    var words=norm(status ? status.textContent : btn.innerText);
+    if(!disabledText(words)){
+      // 开关状态没有可靠标记时，不猜测、不反复切换。
+      state.adguardStatus='unknown';return;
     }
-    var switches = ['拦截恶意点击跳转', '拦截点击弹窗广告'];
-    switches.forEach(function (name) {
-      if (toggleTouched[name]) return;
-      var toggle = pick([name], {contains:true, maxLen:75});
-      if (!toggle) return;
-      var text = norm(toggle.el.innerText || toggle.el.textContent || toggle.text);
-      var checked = toggle.el.getAttribute('aria-checked');
-      if (checked === 'false' || disabledText(text)) {
-        toggleTouched[name] = clickHit(toggle, name);
-        if (toggleTouched[name]) state.protectionClicks++;
-      } else if (checked === 'true' || /已开启|已启用/.test(text)) {
-        toggleTouched[name] = true;
-      }
-      // 状态未知不盲点绿色按钮，以免把已经启用的开关关掉。
-    });
+    state.adguardStatus='off';
+    if(typeof window.toggleAdGuardFilter!=='function'){
+      state.adguardStatus='waiting-for-author-script';return;
+    }
+    var now=Date.now();
+    if(adguardTries>=3 || now<adguardTryAt)return;
+    adguardTries++;
+    adguardTryAt=now+12000;
+    try{btn.click();state.adguardClicks++;state.adguardStatus='checking';}
+    catch(e){state.lastError='AdGuard：'+e.message;}
+    setTimeout(function(){
+      state.adguardStatus=adguardLoaded()?'on':'unverified';
+      if(state.adguardStatus!=='on')console.warn('[limbo-auto-v13] AdGuard 点击后未能确认启用');
+    },1800);
+  }
+  function candidateText(el) {
+    if(!el)return '';
+    var values=[el.innerText,el.textContent,el.getAttribute('title'),el.getAttribute('aria-label'),el.getAttribute('data-state')];
+    return norm(values.filter(Boolean).join(' '));
+  }
+  function ensureProtection(name){
+    var hit=pick([name],{contains:true,maxLen:75});
+    if(!hit){state.protectionStatus[name]='no-button';return;}
+    var el=hit.el;
+    // Must be a real control; a toast or an explanatory DIV is NOT a switch.
+    var tag=el.tagName||'';
+    if(!/^(BUTTON|INPUT|A|LABEL)$/.test(tag) &&
+      el.getAttribute('role')!=='switch' && el.getAttribute('role')!=='button' &&
+      !el.hasAttribute('onclick')) {
+      state.protectionStatus[name]='no-reliable-control';return;
+    }
+    var text=candidateText(el);
+    var checked=el.getAttribute('aria-checked');
+    var pressed=el.getAttribute('aria-pressed');
+    var inputType=el.getAttribute('type');
+    var on=checked==='true'||pressed==='true'||(inputType==='checkbox'&&el.checked===true)||enabledText(text);
+    var off=checked==='false'||pressed==='false'||(inputType==='checkbox'&&el.checked===false)||disabledText(text);
+    if(on&&!off){state.protectionStatus[name]='on';return;}
+    if(!off||on){state.protectionStatus[name]='unverified';return;}
+    var now=Date.now(),attempt=toggleAttempts[name]||{tries:0,next:0};
+    state.protectionStatus[name]='off';
+    if(attempt.tries>=3||now<attempt.next)return;
+    attempt.tries++;attempt.next=now+12000;toggleAttempts[name]=attempt;
+    if(clickHit(hit,name)){
+      state.protectionClicks++;
+      state.protectionStatus[name]='checking';
+      setTimeout(function(){
+        var fresh=pick([name],{contains:true,maxLen:75});
+        if(!fresh){state.protectionStatus[name]='unverified';return;}
+        var txt=candidateText(fresh.el);
+        var checked2=fresh.el.getAttribute('aria-checked');
+        var pressed2=fresh.el.getAttribute('aria-pressed');
+        state.protectionStatus[name]=checked2==='true'||pressed2==='true'||enabledText(txt)?'on':'unverified';
+      },1500);
+    }
+  }
+  function ensureSwitches(){
+    ensureAdGuard();
+    ensureProtection('拦截恶意点击跳转');
+    ensureProtection('拦截点击弹窗广告');
   }
   function findScanner() { return pick(['重新扫描'], {contains:true, maxLen:32}); }
   async function ensureScanner() {
@@ -563,8 +646,8 @@ html:not([data-limbo91-autoblock-off]) body #tablist > a[href^="https://"] {
       if (location.href !== lastRoute) {
         lastRoute = location.href;
         // 页面换路由时重新识别原开关，避免把旧面板的状态误当作新面板。
-        adguardTouched = false;
-        toggleTouched = {};
+        adguardTries=0; adguardTryAt=0;
+        toggleAttempts={};
         schedule(650);
       }
     }
@@ -663,7 +746,8 @@ html:not([data-limbo91-autoblock-off]) body #tablist > a[href^="https://"] {
 </script>`;
 
     var injection = [
-      '<!-- SURGE-LIMBO-91: v8 response-rewrite-injected -->',
+      '<!-- SURGE-LIMBO-91: v13 response-rewrite-injected -->',
+      adguardNotice,
       guard,
       isOriginal91short ? passiveScan : genericScan,
       feedbackRecovery,
