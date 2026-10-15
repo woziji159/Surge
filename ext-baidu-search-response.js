@@ -1,119 +1,30 @@
-/*
-  Surge / 百度手机版安全翻页 2026-10-15-safe3
-  修复原则：永不伪造 pn 翻页地址；不抓取、不拼接结果 HTML；
-  仅在百度网页自身出现可见且可验证的「加载更多 / 下一页」控制时点击。
-  百度搜索结果页不再注入毒奶的通用 CSS/JS，避免正常结果被误隐藏。
-  仅修改百度搜索结果主 HTML；其他站点及 Bing/Google 不受影响。
-*/
-const PAGINATION = String.raw`(function () {
-  'use strict';
-  if (window.__surgeBaiduSafePagination3) return;
-  window.__surgeBaiduSafePagination3 = true;
-
-  var loc = new URL(location.href);
-  if (!/^(?:www|m)\.baidu\.com$/i.test(loc.hostname) || loc.pathname !== '/s') return;
-  if (!loc.searchParams.has('wd') && !loc.searchParams.has('word')) return;
-
-  var armed = false, busy = false, lastClick = 0, tick = 0;
-  var key = loc.searchParams.has('wd') ? 'wd' : 'word';
-  var btnText = /^(?:加载更多|載入更多|更多结果|更多結果|查看更多结果|查看更多結果|显示更多|顯示更多|下一页|下一頁|下页|下一步|Next(?: page)?|Load more|Show more)(?:\s*[›»→])?$/i;
-
-  function isVisible(element) {
-    if (!element || !element.getBoundingClientRect) return false;
-    var box = element.getBoundingClientRect();
-    var css = getComputedStyle(element);
-    return box.width > 0 && box.height > 0 && css.display !== 'none' && css.visibility !== 'hidden';
-  }
-  function label(node) {
-    return (node.getAttribute('aria-label') || node.innerText || node.textContent || '').replace(/\s+/g, ' ').trim();
-  }
-  function safeNextLink(anchor) {
-    try {
-      var u = new URL(anchor.href, location.href);
-      if (!/^https:$/.test(u.protocol) || !/^(www|m)\.baidu\.com$/.test(u.hostname) || u.pathname !== '/s') return false;
-      if (u.searchParams.get(key) !== loc.searchParams.get(key)) return false;
-      var current = Number(loc.searchParams.get('pn') || 0);
-      var next = Number(u.searchParams.get('pn'));
-      return Number.isFinite(current) && Number.isFinite(next) && next > current && next <= current + 50;
-    } catch (e) { return false; }
-  }
-  function findNativeNext() {
-    var nodes = document.querySelectorAll(
-      '#page a, #page button, #page [role="button"], ' +
-      '.pagination a, .pagination button, .pager a, .pager button, ' +
-      '.page-container a, .page-container button, ' +
-      '.load-more, .loadmore, [data-testid="load-more"], [class*="load-more"]'
-    );
-    for (var i = 0; i < nodes.length; i++) {
-      var el = nodes[i];
-      if (!isVisible(el) || el.disabled || el.getAttribute('aria-disabled') === 'true') continue;
-      if (!btnText.test(label(el))) continue;
-      if (el.closest('[role="dialog"], form')) continue;
-      if (el.tagName === 'A' && !safeNextLink(el)) continue;
-      return el;
-    }
-    return null;
-  }
-  function hasResults() {
-    return document.querySelectorAll('#content_left .c-result, #content_left .c-container, ' +
-      '#content_left .result, #results .result, #results .c-result, .c-result').length >= 3;
-  }
-  function maybeLoad() {
-    if (!armed || busy || Date.now() - lastClick < 5000) return;
-    if (!hasResults()) return;
-    if (scrollY < 120 || document.documentElement.scrollHeight < innerHeight + 550) return;
-    var remaining = document.documentElement.scrollHeight - scrollY - innerHeight;
-    if (remaining > 500) return;
-    var el = findNativeNext();
-    if (!el) return; // 关键：无按钮时不伪造 ?pn= 也不自动跳页。
-    busy = true;
-    lastClick = Date.now();
-    try { el.click(); } catch (e) { busy = false; return; }
-    armed = false;
-    setTimeout(function () {busy = false;}, 4800);
-  }
-  function onScroll() {
-    if (tick) return;
-    tick = setTimeout(function () { tick = 0; maybeLoad(); }, 150);
-  }
-  function arm() {armed = true; onScroll();}
-  function init() {
-    window.addEventListener('touchmove', arm, {passive:true});
-    window.addEventListener('wheel', arm, {passive:true});
-    window.addEventListener('scroll', onScroll, {passive:true});
-    window.addEventListener('touchend', onScroll, {passive:true});
-  }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, {once:true});
-  else init();
-})();`;
-
-function main() {
+/* Surge 百度 连续追加修复，2026-10-15。
+ * 只修改搜索结果 HTML：无毒奶、无广告净化、无其他域名修改。
+ * 在页面滚动到底部前通过同源 fetch 读取下一页，验证后追加结果。
+ * 无可解析的下一页时，保留本页并显示手动链接，绝不整页自动跳转。
+ */
+const SEARCH_PAGE_JS = "(function () {\n'use strict';\nvar ENGINE = 'baidu';\nvar isBaidu = ENGINE === 'baidu';\nvar marker = isBaidu ? '__surgeBaiduSeamless20261015' : '__surgeBingSeamless20261015';\nif (window[marker]) return;\nwindow[marker] = true;\nvar startURL;\ntry { startURL = new URL(location.href); } catch (_) { return; }\nif (isBaidu ? !/^(www|m)\\.baidu\\.com$/.test(startURL.hostname) || startURL.pathname !== '/s'\n            : !/^(www|cn)\\.bing\\.com$/.test(startURL.hostname) || startURL.pathname !== '/search') return;\nvar phrase = isBaidu ? (startURL.searchParams.get('wd') || startURL.searchParams.get('word')) : startURL.searchParams.get('q');\nif (!phrase) return;\n\nvar state = { busy: false, armed: false, count: 1, last: 0, exhausted: false, next: null };\nvar MAX_PAGES = 10;\nvar MIN_DELAY = 1400;\nvar root = null, sentinel = null, status = null, io = null, waitTimer = 0;\nvar seen = new Set();\nvar loadedURLs = new Set([startURL.href]);\nvar BTN_RE = /^(?:加载更多|載入更多|更多结果|更多結果|查看更多|显示更多|顯示更多|下一页|下一頁|下一步|Next(?: Page)?|More Results|Load More|Show More)(?:\\s*[»›→])?$/i;\nfunction text(el) { return ((el && (el.innerText || el.textContent || el.getAttribute('aria-label') || '')) || '').replace(/\\s+/g,' ').trim(); }\nfunction validURL(href, current) {\n  try {\n    var u = new URL(href, current.href);\n    if (u.origin !== current.origin || u.pathname !== current.pathname) return null;\n    var q = isBaidu ? (u.searchParams.get('wd') || u.searchParams.get('word')) : u.searchParams.get('q');\n    if (q !== phrase) return null;\n    var offsetName = isBaidu ? 'pn' : 'first';\n    var currentOffset = Number(current.searchParams.get(offsetName) || (isBaidu ? 0 : 1));\n    var newOffset = Number(u.searchParams.get(offsetName));\n    if (!Number.isFinite(newOffset) || newOffset <= currentOffset || newOffset > currentOffset + 50) return null;\n    return u;\n  } catch (_) { return null; }\n}\nfunction pageURL(current) {\n  var u = new URL(current.href);\n  var k = isBaidu ? 'pn' : 'first';\n  var old = Number(u.searchParams.get(k) || (isBaidu ? 0 : 1));\n  var step = 10;\n  if (isBaidu) {\n    var rn = Number(u.searchParams.get('rn'));\n    if (Number.isFinite(rn) && rn >= 1 && rn <= 50) step = rn;\n  }\n  u.searchParams.set(k, String(old + step));\n  return u;\n}\nfunction nextHref(doc, current) {\n  var selectors = isBaidu\n    ? '#page a[href], .page-container a[href], .pagination a[href], .pager a[href], a[rel=next], a.new-nextpage, a[class*=nextpage]'\n    : '.b_pag a[href], #b_results li.b_pag a[href], a.sb_pagN[href], a[rel=next]';\n  var matches = doc.querySelectorAll(selectors);\n  for (var i=0; i<matches.length; i++) {\n    var el = matches[i];\n    var u = validURL(el.getAttribute('href'), current);\n    if (!u) continue;\n    var label = text(el);\n    if (el.matches('a[rel=next],a.sb_pagN,a.new-nextpage,a[class*=nextpage]') || BTN_RE.test(label) || /next|下一[页頁]/i.test(el.getAttribute('aria-label') || '')) return u;\n  }\n  // Safari 百度移动版可能没有传统分页链接；仅在后续页面能实际解析出结果时追加。\n  return null;\n}\nfunction candidateCards(doc) {\n  var selector = isBaidu\n    ? '#content_left > .result, #content_left > .c-container, #content_left > .c-result, #results .c-result, #content_left .c-result, .c-result, #results .result, #content_left .result'\n    : '#b_results > li.b_algo, #b_results > li.b_ans, #b_results > li.b_ad, #b_results > li.b_tpcn, .b_results > li.b_algo';\n  var all = Array.from(doc.querySelectorAll(selector));\n  if (isBaidu) {\n    // 只选同一级的搜索卡片，避免把一个结果内部的嵌套元素再次插入。\n    all = all.filter(function(el) {\n      return !!el.querySelector('a[href]') && !el.matches('[role=navigation],.pagination,.pager');\n    });\n    var groups = new Map();\n    all.forEach(function(el) {\n      var parent = el.parentElement;\n      if (!parent) return;\n      // 同一元素可能被多个选择器命中；按父元素分组来避免混合不同布局。\n      var arr = groups.get(parent) || [];\n      if (arr.indexOf(el) < 0) arr.push(el);\n      groups.set(parent,arr);\n    });\n    var best = null, max = 0;\n    groups.forEach(function(arr, parent){\n      if (arr.length > max) { best = {parent:parent,cards:arr}; max=arr.length; }\n    });\n    return best;\n  }\n  var resultRoot = doc.querySelector('#b_results, .b_results');\n  if (!resultRoot) return null;\n  all = all.filter(function(el){ return el.parentElement === resultRoot && (el.querySelector('h2 a[href], a[href]') || text(el).length > 35); });\n  return {parent:resultRoot,cards:all};\n}\nfunction signature(el) {\n  var title = el.querySelector(isBaidu ? 'h3,.c-title-text,[class*=title]' : 'h2');\n  var key = title ? text(title) : text(el).slice(0,110);\n  return key.replace(/\\s+/g,' ').trim().slice(0,170);\n}\nfunction prepareCard(el, base) {\n  var clone = document.importNode(el, true);\n  // 下一页的内嵌脚本不应重新执行，防止重复初始化整个百度或必应页面。\n  clone.querySelectorAll('script,iframe,form').forEach(function(e){e.remove();});\n  clone.querySelectorAll('img,source').forEach(function(img){\n    var src = img.getAttribute('src') || '';\n    var lazy = img.getAttribute('data-src') || img.getAttribute('data-original') || img.getAttribute('data-actualsrc') || img.getAttribute('data-lazy-src');\n    if (lazy && (!src || /^(?:data:|about:blank|#)/i.test(src))) img.setAttribute('src',lazy);\n    var srcset = img.getAttribute('data-srcset');\n    if (srcset && !img.getAttribute('srcset')) img.setAttribute('srcset',srcset);\n    ['src','srcset','poster'].forEach(function(attr){\n      var val=img.getAttribute(attr);\n      if (!val || /^(?:data:|blob:)/i.test(val)) return;\n      if (attr==='srcset') {\n        img.setAttribute('srcset',val.split(',').map(function(x){\n          var m=x.trim().match(/^(\\S+)(.*)$/);\n          if (!m) return x;\n          try{return new URL(m[1],base).href+m[2];}catch(_){return x;}\n        }).join(', '));\n      } else {try{img.setAttribute(attr,new URL(val,base).href);}catch(_){}}\n    });\n    img.setAttribute('loading','lazy');\n  });\n  clone.querySelectorAll('a[href]').forEach(function(a){\n    var href=a.getAttribute('href');\n    if (href && !/^(?:#|javascript:)/i.test(href)) {\n      try {a.href=new URL(href,base).href;} catch(_){}\n    }\n  });\n  // 避免复制同一个 ID 后干扰原页面脚本选择器。\n  clone.querySelectorAll('[id]').forEach(function(e){e.removeAttribute('id');});\n  return clone;\n}\nfunction show(message, link) {\n  if (!status) return;\n  status.replaceChildren(document.createTextNode(message));\n  if (link) {\n    var a=document.createElement('a');\n    a.href=link.href;\n    a.textContent=' 打开下一页 ›';\n    a.style.cssText='margin-left:8px;color:#2466bd;text-decoration:underline';\n    status.appendChild(a);\n  }\n}\nfunction mount() {\n  var b = candidateCards(document);\n  if (!b || b.cards.length < 1) return false;\n  root=b.parent;\n  b.cards.forEach(function(el){var k=signature(el);if(k)seen.add(k);});\n  if (!sentinel) {\n    sentinel=document.createElement('div'); sentinel.id='surge-scroll-sentinel-'+ENGINE;\n    sentinel.style.cssText='height:1px;pointer-events:none;';\n    status=document.createElement('div'); status.id='surge-scroll-status-'+ENGINE;\n    status.style.cssText='font:12px/1.7 -apple-system,BlinkMacSystemFont,sans-serif;color:#72777b;text-align:center;padding:8px 0;min-height:18px;';\n  }\n  if (root.nextSibling !== sentinel) root.parentNode.insertBefore(sentinel,root.nextSibling);\n  if (sentinel.nextSibling !== status) sentinel.parentNode.insertBefore(status,sentinel.nextSibling);\n  if (io) io.disconnect();\n  if ('IntersectionObserver' in window) {\n    io=new IntersectionObserver(function(entries){\n      if(entries.some(function(x){return x.isIntersecting;})) maybeLoad();\n    },{rootMargin:'1300px 0px',threshold:0});\n    io.observe(sentinel);\n  }\n  return true;\n}\nasync function maybeLoad() {\n  if (!state.armed || state.busy || state.exhausted || !root || !root.isConnected) return;\n  if (state.count >= MAX_PAGES) { state.exhausted=true;show('已达到连续加载上限');return; }\n  if (Date.now()-state.last<MIN_DELAY) return;\n  if (window.scrollY < 80) return;\n  if (document.documentElement.scrollHeight-window.scrollY-window.innerHeight > 1500) return;\n  state.busy=true;\n  state.last=Date.now();\n  var current=state.next || startURL;\n  var href=nextHref(document,current);\n  if (!href && state.next) href=state.next;\n  if (!href) href=pageURL(current);\n  if (loadedURLs.has(href.href)) { state.exhausted=true;show('没有更多搜索结果');state.busy=false;return; }\n  show('正在加载下一页…');\n  var controller=new AbortController();\n  var timer=setTimeout(function(){controller.abort();},10500);\n  try {\n    var response=await fetch(href.href,{\n      method:'GET',credentials:'same-origin',redirect:'follow',cache:'no-store',signal:controller.signal,\n      headers:{'Accept':'text/html,application/xhtml+xml;q=0.9,*/*;q=0.8'}\n    });\n    if (!response.ok || !/text\\/html/i.test(response.headers.get('content-type') || '')) throw new Error('HTTP '+response.status+' (not HTML)');\n    var parsed=new DOMParser().parseFromString(await response.text(),'text/html');\n    if (!parsed.querySelector('body') || parsed.querySelector('form[action*=captcha],#verify-form,.verify-wrap')) throw new Error('页面需要验证');\n    var batch=candidateCards(parsed);\n    if (!batch || batch.cards.length < 2) throw new Error('下一页不是可拼接的搜索结果');\n    // 若下一页内容与当前页高度重复，宁可停止，也不跳转或清空页面。\n    var fragment=document.createDocumentFragment(), appended=0, keys=[];\n    batch.cards.forEach(function(el){\n      var sig=signature(el);\n      if (!sig || seen.has(sig)) return;\n      fragment.appendChild(prepareCard(el,response.url || href.href));\n      keys.push(sig); appended++;\n    });\n    if (appended < 2) throw new Error('下一页没有新的结果');\n    var pager = !isBaidu && root.querySelector(':scope > li.b_pag, :scope > li.b_pagN, :scope > li.b_pagP');\n    if (pager) root.insertBefore(fragment,pager);\n    else root.appendChild(fragment);\n    keys.forEach(function(k){seen.add(k);});\n    state.count++;\n    loadedURLs.add(href.href);\n    state.next=nextHref(parsed,href) || pageURL(href);\n    show('已追加第 '+state.count+' 页');\n    mount();\n    // IntersectionObserver 可能仍在视口范围内；下一页只在继续滚动时触发。\n    state.armed=false;\n  } catch(error) {\n    state.exhausted=true;\n    show('无法无缝加载：'+(error && error.message || '未知错误')+'。', href);\n    console.warn('[Surge '+ENGINE+' seamless pagination]',error);\n  } finally {clearTimeout(timer);state.busy=false;}\n}\nfunction userGesture(){\n  if (state.exhausted || state.busy) return;\n  state.armed=true;\n  if (waitTimer) clearTimeout(waitTimer);\n  waitTimer=setTimeout(maybeLoad,100);\n}\nfunction start(){\n  if (!mount()) {\n    var tries=0;\n    var scan=setInterval(function(){\n      tries++;\n      if (mount() || tries>30) clearInterval(scan);\n    },500);\n  }\n  window.addEventListener('touchmove',userGesture,{passive:true});\n  window.addEventListener('wheel',userGesture,{passive:true});\n  window.addEventListener('scroll',function(){if(state.armed && !state.busy)userGesture();},{passive:true});\n  document.addEventListener('visibilitychange',function(){if(document.hidden)state.armed=false;});\n}\nif(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});\nelse start();\n})();";
+(function main() {
   try {
-    const req = new URL($request.url);
-    if (!/^(www|m)\.baidu\.com$/i.test(req.hostname) || req.pathname !== '/s' ||
-        (!req.searchParams.has('wd') && !req.searchParams.has('word'))) {
-      $done({}); return;
-    }
-    const headers = $response.headers || {};
-    const contentType = String(Object.entries(headers).find(([k]) => k.toLowerCase() === 'content-type')?.[1] || '').toLowerCase();
-    if (!contentType.includes('text/html') || typeof $response.body !== 'string') {
-      $done({}); return;
-    }
-    const body = $response.body;
-    if (!/<\/body\s*>/i.test(body) || body.includes('__surgeBaiduSafePagination3')) {
-      $done({}); return;
-    }
-    // 只在文档末尾增加一段本地逻辑。不注入第三方 CSS、广告净化 JS，也不重写内容容器。
-    const newBody = body.replace(/<\/body\s*>/i, '<script id="surge-baidu-safe3">' + PAGINATION + '</script></body>');
-    const outHeaders = { ...headers };
-    // 原响应脚本会去掉 CSP。这里只为了允许内联翻页脚本执行；其他安全响应头不改。
-    for (const h of Object.keys(outHeaders)) {
-      if (h.toLowerCase() === 'content-security-policy' || h.toLowerCase() === 'content-length') delete outHeaders[h];
-    }
-    $done({body:newBody,headers:outHeaders});
-  } catch (error) {
-    console.log('[Baidu safe pagination] ' + error.message);
-    $done({});
-  }
-}
-main();
+    var req=new URL($request.url);
+    var engine='baidu';
+    var ok=engine==='baidu'
+      ? /^(?:www|m)\.baidu\.com$/i.test(req.hostname) && req.pathname==='/s' && (req.searchParams.has('wd') || req.searchParams.has('word'))
+      : /^(?:www|cn)\.bing\.com$/i.test(req.hostname) && req.pathname==='/search' && req.searchParams.has('q');
+    if (!ok || Number($response.status)!==200 || typeof $response.body!=='string'){$done({});return;}
+    var headers=$response.headers||{};
+    var entry=Object.entries(headers).find(function(pair){return pair[0].toLowerCase()==='content-type';});
+    if (entry && !/text\/html/i.test(String(entry[1]))) {$done({});return;}
+    var body=$response.body;
+    if (!/<html[\s>]/i.test(body) || body.indexOf('surge-baidu-seamless-20261015')>=0) {$done({});return;}
+    var code='<script id="surge-baidu-seamless-20261015">'+SEARCH_PAGE_JS+'</script>';
+    if (/<\/body[\s]*>/i.test(body)) body=body.replace(/<\/body[\s]*>/i,code+'</body>');
+    else if (/<\/head[\s]*>/i.test(body)) body=body.replace(/<\/head[\s]*>/i,code+'</head>');
+    else {$done({});return;}
+    var patched=Object.assign({},headers);
+    Object.keys(patched).forEach(function(k){
+      if (/^(?:content-security-policy|content-length)$/i.test(k)) delete patched[k];
+    });
+    $done({body:body,headers:patched});
+  } catch(e) {console.log('[Surge 百度 infinite]',e && e.message);$done({});}
+})();
