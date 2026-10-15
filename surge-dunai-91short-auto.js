@@ -1,5 +1,5 @@
 /*
- * Surge — 91short 毒奶定制脚本：真实广告结构自动屏蔽修复 v8 (2026-10-15)
+ * Surge — 91short 毒奶定制脚本：v9 保持 + 电影页路径/SPA 修复 v10 (2026-10-15)
  * 原始仓库: https://github.com/woziji159/Surge
  * 保留原版导航、反馈、元素屏蔽器及原生撤销功能；不新增悬浮按钮。
  * 仅用于 Surge [Script] http-response 的 HTML 响应，不是直接网页用户脚本。
@@ -10,10 +10,10 @@
     var match = /^https:\/\/([^\/?#]+)(\/[^?#]*)?/i.exec(String($request.url || ''));
     var hostname = match ? match[1].toLowerCase().split(':')[0] : '';
     var pathname = match && match[2] ? match[2] : '/';
-    var domain = /^(?:[a-z0-9-]+\.)*x-91short\.com$/i;
+    var domain = /^(?:[a-z0-9-]+\.)*(?:x\-91short\.com)$/i; // LIMBO_SITES_HOST_PATTERN (auto-generated)
     if (!match || !domain.test(hostname)) return $done({});
     if (/\.(?:json|js|css|jpg|jpeg|png|webp|gif|svg|ico|woff2?|ttf|mp4|m4s|mp3|m3u8|ts|pdf|zip)(?:$|\?)/i.test(pathname) ||
-        /(?:\/api(?:\/|$)|home_recommend_list|\/cdn-cgi\/|\/verify|\/captcha)/i.test(pathname)) return $done({});
+        /(?:\/api(?:\/|$)|^\/home_recommend_list(?:\/|$)|\/cdn-cgi\/|\/verify|\/captcha)/i.test(pathname)) return $done({});
 
     var headers = $response.headers || {};
     var contentKey = Object.keys(headers).find(function (k) { return k.toLowerCase() === 'content-type'; });
@@ -25,6 +25,7 @@
 
     // GitHub Raw 适合 Surge 的 script-path，但作为网页 <script src> 可能被浏览器以 nosniff 拦截。
     // 这两份定制 JS 仍来自用户自己的仓库，只将网页加载地址换成 JS CDN。
+    var isOriginal91short = /(?:^|\.)x-91short\.com$/i.test(hostname);
     var base = 'https://cdn.jsdelivr.net/gh/woziji159/Surge@main/';
     var customFn = base + 'limbo-function-auto.js?v=20261015-repair5';
     var customElement = base + 'limbo-elementBlocker-auto.js?v=20261015-repair5';
@@ -226,11 +227,58 @@ html:not([data-limbo91-autoblock-off]) body #tablist > a[href^="https://"] {
 })();
 </script>`;
 
-    var autoControls = `<script id="limbo-91-original-controls-autorun-v9">
+    // New sites: conservative first-party fallback detection; 91short retains the proven v8 logic.
+    var genericScan = String.raw`<script id="limbo-generic-auto-scan-v11">
+(function(){
+  'use strict';
+  if(window.__limboGenericAutoV11)return;
+  var state=window.__limboGenericAutoV11={scanCount:0,hiddenCount:0,paused:false};
+  var selectors='ins.adsbygoogle,[data-ad-client],[data-ad-slot],iframe[src*="doubleclick.net"],iframe[src*="googlesyndication.com"],.adsbygoogle';
+  var scheduled=0, changed=[];
+  function run(){
+    scheduled=0;
+    if(state.paused || (window.__limbo91AutoV9 && window.__limbo91AutoV9.paused)) return;
+    state.scanCount++;
+    var nodes=document.querySelectorAll(selectors);
+    for(var i=0;i<nodes.length;i++){
+      var el=nodes[i]; if(el.dataset.limboGenericHidden)continue;
+      if(el.closest('[id*="limbo" i],[class*="limbo" i]')) continue;
+      changed.push({el:el,display:el.style.getPropertyValue('display'),priority:el.style.getPropertyPriority('display')});
+      el.dataset.limboGenericHidden='1';
+      el.style.setProperty('display','none','important'); state.hiddenCount++;
+    }
+  }
+  function undo(){
+    state.paused=true;
+    for(var i=0;i<changed.length;i++){
+      var item=changed[i], el=item.el;
+      if(!el || !el.style)continue;
+      if(item.display)el.style.setProperty('display',item.display,item.priority);
+      else el.style.removeProperty('display');
+      delete el.dataset.limboGenericHidden;
+    }
+    changed=[];
+  }
+  function schedule(){if(scheduled || state.paused)return; scheduled=setTimeout(run,600);}
+  function init(){
+    run();
+    if(window.MutationObserver)new MutationObserver(schedule).observe(document.body,{childList:true,subtree:true});
+    window.addEventListener('scroll',schedule,{passive:true});
+    document.addEventListener('click',function(e){
+      var t=e.target && e.target.closest && e.target.closest('button,[role="button"],a');
+      var label=t && (t.innerText||t.textContent||'').trim();
+      if(label && /^(?:撤回|一键重置)$/.test(label))setTimeout(undo,0);
+    },true);
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
+})();
+</script>`;
+
+    var autoControls = String.raw`<script id="limbo-91-original-controls-autorun-v9">
 /* 91short 自动调用原有扫描面板的交互控制器，运行于网页，不新增 UI。 */
 (function () {
   'use strict';
-  if (!/(?:^|\.)x-91short\.com$/i.test(location.hostname)) return;
+  if (!/^(?:[a-z0-9-]+\.)*(?:x\-91short\.com)$/i.test(location.hostname)) return; // LIMBO_SITES_CONTROL_PATTERN (auto-generated)
   if (window.__limbo91AutoV9) return;
   var state = window.__limbo91AutoV9 = {
     version: 'v9', started: false, busy: false, paused: false,
@@ -461,6 +509,24 @@ html:not([data-limbo91-autoblock-off]) body #tablist > a[href^="https://"] {
     setTimeout(function(){schedule(0);}, 5000);
     setTimeout(function(){schedule(0);}, 10000);
     window.addEventListener('scroll',function(){schedule(900);},{passive:true,capture:true});
+    // /film/home_recommend_list 页面内路由切换：不需要重新注入或手动点扫描按钮。
+    // Safari 中 SPA 通过 pushState 改地址时通常不触发 popstate，轻量轮询做兜底。
+    var lastRoute = location.href;
+    function onRouteChange() {
+      if (state.paused) return;
+      if (location.href !== lastRoute) {
+        lastRoute = location.href;
+        // 页面换路由时重新识别原开关，避免把旧面板的状态误当作新面板。
+        adguardTouched = false;
+        toggleTouched = {};
+        schedule(650);
+      }
+    }
+    window.addEventListener('popstate', function () { onRouteChange(); schedule(900); });
+    window.addEventListener('hashchange', function () { onRouteChange(); schedule(900); });
+    window.addEventListener('pageshow', function () { schedule(900); });
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) schedule(900); });
+    setInterval(onRouteChange, 1200);
     // 无限下拉和 SPA 异步追加卡片时触发，不因扫描面板自己的更新形成重入循环。
     if (typeof MutationObserver === 'function') {
       var observer = new MutationObserver(function (records) {
@@ -530,7 +596,7 @@ html:not([data-limbo91-autoblock-off]) body #tablist > a[href^="https://"] {
     var injection = [
       '<!-- SURGE-LIMBO-91: v8 response-rewrite-injected -->',
       guard,
-      passiveScan,
+      isOriginal91short ? passiveScan : genericScan,
       feedbackRecovery,
       autoControls,
       '<script defer src="https://limbopro.com/Adguard/autoAdDetector.js"></script>',
@@ -538,8 +604,8 @@ html:not([data-limbo91-autoblock-off]) body #tablist > a[href^="https://"] {
       '<script defer src="' + customFn + '"></script>',
       '<script defer src="' + customElement + '"></script>',
       '<script defer src="https://limbopro.com/Adguard/isAgent.js"></script>',
-      '<link rel="stylesheet" href="https://limbopro.com/CSS/x-91short.com.css">',
-      '<link rel="stylesheet" href="https://limbopro.com/CSS/limbopro.x-91short.com.css">'
+      isOriginal91short ? '<link rel="stylesheet" href="https://limbopro.com/CSS/x-91short.com.css">' : '',
+      isOriginal91short ? '<link rel="stylesheet" href="https://limbopro.com/CSS/limbopro.x-91short.com.css">' : ''
     ].join('\n');
     body = body.replace(/<head\b[^>]*>/i, function (tag) { return tag + '\n' + injection + '\n'; });
 
