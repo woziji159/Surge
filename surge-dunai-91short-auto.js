@@ -1,5 +1,5 @@
 /*
- * Surge — 91short 毒奶定制脚本：自动高风险扫描修复 v7 (2026-10-15)
+ * Surge — 91short 毒奶定制脚本：真实广告结构自动屏蔽修复 v8 (2026-10-15)
  * 原始仓库: https://github.com/woziji159/Surge
  * 保留原版导航、反馈、元素屏蔽器及原生撤销功能；不新增悬浮按钮。
  * 仅用于 Surge [Script] http-response 的 HTML 响应，不是直接网页用户脚本。
@@ -21,7 +21,7 @@
     var body = $response.body;
     if (typeof body !== 'string' || !/<head\b[^>]*>/i.test(body)) return $done({});
     if (/您的域名并未添加白名单导致无法访问/.test(body)) return $done({});
-    if (/id=["']limbo-91-custom-v7["']/.test(body)) return $done({});
+    if (/id=["']limbo-91-custom-v8["']/.test(body)) return $done({});
 
     // GitHub Raw 适合 Surge 的 script-path，但作为网页 <script src> 可能被浏览器以 nosniff 拦截。
     // 这两份定制 JS 仍来自用户自己的仓库，只将网页加载地址换成 JS CDN。
@@ -30,7 +30,7 @@
     var customElement = base + 'limbo-elementBlocker-auto.js?v=20261015-repair5';
 
     // 保留原版仅针对陌生弹窗和已知广告域名的拦截；不创建或移除工具箱按钮。
-    var guard = `<script id="limbo-91-custom-v7">
+    var guard = `<script id="limbo-91-custom-v8">
 (function () {
   'use strict';
   if (window.__limbo91PopupGuard) return;
@@ -76,165 +76,433 @@
 })();
 </script>`;
 
-    // 兜底扫描：原仓库的 limbo-elementBlocker-auto.js 只对 cn8.x-91short.com 启动
-    // startLimboPassiveAdScan()。其它 x-91short.com 子域名额外使用这段安静的扫描，
-    // 不弹 v12.6 面板，也不添加浮窗；原本的「反馈/导航」由 limbo-function-auto.js 创建。
-    // 高风险元素自动扫描与屏蔽（独立于原手动 v12.6 扫描器）：
-    // 原 v5 仅识别固定 class，且当旧扫描器设置 __limboPassiveAdScanActive 时会完全跳过。
-    // 本版本不会让工具面板自动弹出，也不模仿或改写手动扫描器的内部接口。
-    var passiveScan = `<script id="limbo-91-passive-v7">
+    // v8 针对 2026-10-15 用户提供的真实 91short 首页 HTML：
+    // .msop100 -> imgad31/imgad32/imgad33/imgad35、data-id=adNN、跨站外链；
+    // 直接 CSS 可即时隐藏，JS 在 DOM 动态更新时二次确认并同步支持“撤回”。
+    // 不调用 v12.6 的内部私有 API，也不弹面板或新建反馈按钮。
+    var passiveScan = `<style id="limbo-91-autoblock-css-v8">
+/* 基于用户实际网页 HTML 的确定性广告结构，独立于扫描器评分逻辑 */
+html:not([data-limbo91-autoblock-off]) body div.msop100,
+html:not([data-limbo91-autoblock-off]) body a:has(> img[data-id^="ad"][class*="imgad"]),
+html:not([data-limbo91-autoblock-off]) body img[data-id^="ad"][class*="imgad"],
+html:not([data-limbo91-autoblock-off]) body .nav-menu-item > a[title="领彩金"],
+html:not([data-limbo91-autoblock-off]) body #tablist > a[href^="https://"] {
+  display: none !important;
+}
+</style>
+<script id="limbo-91-autoblock-v8">
 (function () {
   'use strict';
-  if (window.__limbo91AutoBlockV7) return;
-  window.__limbo91AutoBlockV7 = true;
-
-  var enabled = true;
-  var hidden = [];
-  var seen = typeof WeakSet === 'function' ? new WeakSet() : null;
-  var mutationTimer = 0;
-  var periodicTimer = 0;
-  var observer = null;
-  var scanned = 0;
-  var MAX_BLOCKS = 60;
-  var selectors = [
-    'a[href]', 'iframe[src]', '[onclick]', 'ins.adsbygoogle',
+  if (window.__limbo91AutoBlockV8) return;
+  var state = window.__limbo91AutoBlockV8 = {started:false, scans:0, autoHidden:0, enabled:true, version:'v8'};
+  var changed = [];
+  var tracker = typeof WeakSet === 'function' ? new WeakSet() : null;
+  var observer = null, timer = 0, periodic = 0;
+  var maximum = 150;
+  var cssAdContainer = '.msop100';
+  var candidates = [
+    '.msop100',
+    'a[href]',
+    'img[data-id^="ad"]',
+    'img[class*="imgad"]',
+    'iframe[src]',
     '[data-ad-client]', '[data-ad-slot]',
-    '.popup-ad', '.floating-ad', '.ad-banner', '.advertisement-banner',
-    '[id^="google_ads"]', '[class*="popunder"]', '[id*="popunder"]'
+    '.popup-ad', '.floating-ad', '.ad-banner',
+    '[class*="popunder"]', '[id*="popunder"]'
   ].join(',');
-  var adHost = /(?:^|\\.)(?:doubleclick\\.net|googlesyndication\\.com|adsterra\\.com|wpadmngr\\.com|twinrdengine\\.com)$/i;
-  var adLabel = /(?:^|[ _-])(?:ads?|advert(?:isement)?|sponsored|popunder|popup-ad|floating-ad|ad-banner)(?:$|[ _-])/i;
-  var protectedSel = [
-    '#dh_pageContainer', '#gemini-main-container', '#limbo-ad-notice',
-    '[id*="feedback" i]', '[class*="feedback" i]',
-    '[id*="ad-detector" i]', '[class*="ad-detector" i]',
-    '[id*="limbo" i]', '[class*="limbo" i]',
-    'header','nav','main > nav','form','video','audio'
-  ].join(',');
-
-  function blockedUi(el) {
-    try { return Boolean(el.closest(protectedSel)); } catch(e) { return false; }
+  var knownAdHosts = /(?:^|\\.)(?:doubleclick\\.net|googlesyndication\\.com|adsterra\\.com|wpadmngr\\.com|twinrdengine\\.com)$/i;
+  var protectedSelectors = '[id*="feedback" i],[class*="feedback" i],[id*="ad-detector" i],[class*="ad-detector" i],[id*="limbo" i],[class*="limbo" i]';
+  function protect(node) {
+    try {return !!node.closest(protectedSelectors);} catch (_) {return false;}
   }
-  function getHost(url) {
-    try { return new URL(url, location.href).hostname.toLowerCase(); } catch(e) { return ''; }
+  function urlHost(raw) {
+    try {return new URL(raw, location.href).hostname.toLowerCase();} catch (_) {return '';}
   }
-  function hasPic(el) {
-    try { return !!(el.matches('img') || el.querySelector('img,picture,svg,canvas') || (el.getAttribute('style') || '').indexOf('background-image') >= 0); }
-    catch(e) { return false; }
+  function isIPv4(s) {return /^(?:\\d{1,3}\\.){3}\\d{1,3}$/.test(s);}
+  function adImage(node) {
+    if (!node || !node.querySelector) return false;
+    return !!node.querySelector('img[data-id^="ad"],img[class*="imgad"]');
   }
-  function isNumericHost(host) { return /^(?:\\d{1,3}\\.){3}\\d{1,3}$/.test(host); }
-  function score(el) {
-    if (!el || !el.matches || blockedUi(el)) return 0;
-    if (!el.isConnected || hidden.length >= MAX_BLOCKS) return 0;
-    var name = el.nodeName.toLowerCase();
-    if (name === 'html' || name === 'body' || name === 'head' || name === 'script' || name === 'style') return 0;
-    if (el.hasAttribute('data-limbo-91-auto7')) return 0;
-    var classId = String(el.className && typeof el.className === 'string' ? el.className : '') + ' ' + (el.id || '');
-    var s = adLabel.test(classId) ? 65 : 0;
-    if (el.hasAttribute('data-ad-client') || el.hasAttribute('data-ad-slot') || el.matches('ins.adsbygoogle')) s += 65;
-    var href = el.getAttribute('href') || el.getAttribute('src') || '';
-    var host = getHost(href);
-    if (host && adHost.test(host)) s += 75;
-    if (host && host !== location.hostname.toLowerCase()) {
-      if (isNumericHost(host)) s += 35;
-      else if (host !== '' && !adHost.test(host)) s += 12;
-    }
-    if (String(el.getAttribute('target') || '').toLowerCase() === '_blank') s += 15;
-    var onClick = String(el.getAttribute('onclick') || '');
-    if (/window\\.open|location\\.(?:href|assign|replace)/i.test(onClick)) s += 15;
-    if (hasPic(el)) s += 10;
-    // 普通站外链接 / 正常视频缩略图不会仅凭图片、target=_blank 就被删除。
-    return s;
+  function qualifiedLink(a) {
+    var host = urlHost(a.getAttribute('href') || '');
+    if (!host || host === location.hostname.toLowerCase()) return false;
+    if (knownAdHosts.test(host)) return true;
+    if (adImage(a)) return true;
+    var visibleImage = !!a.querySelector('img,picture,svg');
+    var extImage = a.getAttribute('target') === '_blank' && visibleImage;
+    // 当前网页的视频卡片链接位于站内；外站图片+新窗口是已验证的广告形态。
+    if (extImage && (isIPv4(host) || !/(?:^|\\.)x-91short\\.com$/.test(host))) return true;
+    return false;
   }
-  function targetFor(el) {
-    var node = el;
-    if (el.nodeName.toLowerCase() === 'a') {
-      var p = el.parentElement;
-      // 只向上提升一级非常小的纯广告卡片，不允许隐藏页面/视频列表容器。
-      if (p && p !== document.body && !blockedUi(p) && p.children.length <= 2) {
-        var rect = p.getBoundingClientRect();
-        if (rect.height > 0 && rect.height < 500 && rect.width < innerWidth * 1.01 &&
-            (p.innerText || '').trim().length < 80) node = p;
+  function classify(el) {
+    if (protect(el)) return null;
+    var tag = (el.tagName || '').toUpperCase();
+    if (tag === 'DIV' && el.matches(cssAdContainer) && adImage(el)) return {node:el, why:'homepage-ad-container'};
+    if (tag === 'IMG') {
+      var id = el.getAttribute('data-id') || '';
+      var cn = typeof el.className === 'string' ? el.className : '';
+      if (/^ad\\d+$/i.test(id) || /(?:^|\\s)imgad\\d+(?:\\s|$)/i.test(cn)) {
+        var anchor = el.closest('a');
+        if (anchor && !protect(anchor)) return {node:anchor, why:'known-ad-image'};
+        return {node:el, why:'known-ad-image'};
       }
     }
-    return node;
+    if (tag === 'A' && qualifiedLink(el)) return {node:el, why:'external-image-ad-link'};
+    if (tag === 'IFRAME' && knownAdHosts.test(urlHost(el.getAttribute('src') || ''))) return {node:el, why:'known-ad-host'};
+    if (el.matches('[data-ad-client],[data-ad-slot],.popup-ad,.floating-ad,.ad-banner,[class*="popunder"],[id*="popunder"]')) return {node:el, why:'explicit-ad-marker'};
+    return null;
   }
-  function hide(el, pts) {
-    if (!enabled || hidden.length >= MAX_BLOCKS) return;
-    var target = targetFor(el);
-    if (!target || blockedUi(target) || target.hasAttribute('data-limbo-91-auto7')) return;
-    if (!target.isConnected || /^(?:html|body|head|main|header|nav|footer|video|audio|form)$/i.test(target.nodeName)) return;
-    var rect = target.getBoundingClientRect();
-    if (rect.height < 1 || rect.width < 1 || rect.height > Math.max(700, innerHeight * 0.85)) return;
-    hidden.push({el:target, display:target.style.getPropertyValue('display'), priority:target.style.getPropertyPriority('display')});
-    target.setAttribute('data-limbo-91-auto7', String(pts));
-    target.style.setProperty('display', 'none', 'important');
-    console.log('[limbo-91-v7] auto-hide high-risk element (' + pts + '): ' + target.nodeName);
+  function hide(el, why) {
+    if (!el || protect(el) || !el.isConnected || changed.length >= maximum) return;
+    if (el.hasAttribute('data-limbo91-hidden-v8')) return;
+    var tag = (el.tagName || '').toUpperCase();
+    if (/^(?:HTML|BODY|HEAD|MAIN|NAV|HEADER|VIDEO|AUDIO|FORM)$/.test(tag)) return;
+    var inline = el.style;
+    if (!inline) return;
+    changed.push({node:el,value:inline.getPropertyValue('display'),priority:inline.getPropertyPriority('display')});
+    el.setAttribute('data-limbo91-hidden-v8', why);
+    inline.setProperty('display','none','important');
+    state.autoHidden++;
   }
-  function scanElement(el) {
-    if (!enabled || !el || el.nodeType !== 1) return;
-    if (seen && seen.has(el)) return;
-    scanned++;
-    var pts = score(el);
-    if (pts >= 60) hide(el, pts);
-    if (seen) seen.add(el);
-  }
-  function scanAll() {
-    if (!enabled || !document.body || document.hidden) return;
+  function scan() {
+    if (!state.enabled || !document.body) return;
+    state.scans++;
     try {
-      if (seen) seen = new WeakSet(); // 动态更新链接或属性后可重新评分
-      var els = document.body.querySelectorAll(selectors);
-      for (var i = 0; i < Math.min(els.length, 2500) && hidden.length < MAX_BLOCKS; i++) scanElement(els[i]);
-    } catch(e) { console.log('[limbo-91-v7] scan error: ' + e.message); }
+      var nodes = document.body.querySelectorAll(candidates);
+      for (var i = 0; i < nodes.length && i < 3000 && changed.length < maximum; i++) {
+        var el = nodes[i];
+        if (tracker && tracker.has(el)) continue;
+        // CSS 已先隐藏已知横幅；这里仍追踪并记录 DOM 变化后的新广告。
+        var found = classify(el);
+        if (found) hide(found.node, found.why);
+        if (tracker) tracker.add(el);
+      }
+    } catch (e) { console.warn('[limbo-91-v8] scan error', e); }
   }
-  function scheduleScan() {
-    if (!enabled || mutationTimer) return;
-    mutationTimer = setTimeout(function () { mutationTimer = 0; scanAll(); }, 300);
+  function schedule() {
+    if (!state.enabled || timer) return;
+    timer = setTimeout(function(){timer=0;tracker = typeof WeakSet==='function'?new WeakSet():null;scan();}, 250);
   }
-  function restoreAll() {
-    enabled = false; // 避免用户点击撤回后立刻又被定时扫描屏蔽
+  function undo() {
+    if (!state.enabled) return;
+    state.enabled = false;
+    document.documentElement.setAttribute('data-limbo91-autoblock-off','');
     if (observer) observer.disconnect();
-    if (periodicTimer) clearInterval(periodicTimer);
-    clearTimeout(mutationTimer);
-    for (var i = hidden.length - 1; i >= 0; i--) {
-      var v = hidden[i];
-      if (!v.el || !v.el.isConnected) continue;
-      v.el.style.removeProperty('display');
-      if (v.display) v.el.style.setProperty('display', v.display, v.priority);
-      v.el.removeAttribute('data-limbo-91-auto7');
+    if (periodic) clearInterval(periodic);
+    if (timer) clearTimeout(timer);
+    for (var i=changed.length-1; i>=0; i--) {
+      var item = changed[i];
+      if (!item.node || !item.node.style) continue;
+      item.node.style.removeProperty('display');
+      if (item.value) item.node.style.setProperty('display',item.value,item.priority);
+      item.node.removeAttribute('data-limbo91-hidden-v8');
     }
-    console.log('[limbo-91-v7] undo automatic blocks: ' + hidden.length);
-    hidden.length = 0;
+    changed.length=0;
+    console.log('[limbo-91-v8] auto blocked elements restored');
   }
-  window.surge91UndoAutoHidden = restoreAll;
-  document.addEventListener('click', function (e) {
-    var btn = e.target && e.target.closest ? e.target.closest('button,[role="button"],a') : null;
+  window.surge91UndoAutoHidden = undo;
+  document.addEventListener('click',function(e){
+    var btn=e.target && e.target.closest ? e.target.closest('button,[role="button"],a,input[type="button"]') : null;
     if (!btn) return;
-    var label = (btn.innerText || btn.textContent || '').replace(/\\s+/g,'').trim();
-    if (label === '撤回' || label === '↩️撤回' || label === '↩撤回' || label === '一键重置') {
-      // 撤回原面板动作交给原脚本，稍后只恢复 v7 自己隐藏的元素。
-      setTimeout(restoreAll, 0);
-    }
-  }, true);
+    var label=(btn.innerText||btn.textContent||btn.getAttribute('value')||'').replace(/\\s+/g,'').trim();
+    if (/^(?:↩️?|↩)?撤回$/.test(label) || label==='一键重置') setTimeout(undo,0);
+  },true);
   function start() {
-    if (!document.body) return;
-    scanAll();
-    setTimeout(scanAll, 1200);
-    setTimeout(scanAll, 3000);
-    setTimeout(scanAll, 6000);
-    if (typeof MutationObserver === 'function') {
-      observer = new MutationObserver(scheduleScan);
-      observer.observe(document.body, {childList:true, subtree:true, attributes:true, attributeFilter:['href','src','class','id','target','onclick']});
+    if (state.started || !document.body) return;
+    state.started=true;
+    scan();
+    setTimeout(scan,500);
+    setTimeout(scan,1800);
+    setTimeout(scan,4200);
+    if (typeof MutationObserver==='function') {
+      observer = new MutationObserver(schedule);
+      observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['href','src','class','data-id','target','onclick']});
     }
-    periodicTimer = setInterval(scanAll, 5000);
-    console.log('[limbo-91-v7] automatic high-risk scan started');
+    periodic=setInterval(function(){tracker=null;scan();},5000);
+    console.log('[limbo-91-v8] automatic scanning active');
   }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, {once:true});
+  if (document.readyState==='loading') document.addEventListener('DOMContentLoaded',start,{once:true});
   else start();
 })();
 </script>`;
 
-    var feedbackRecovery = `<script id="limbo-91-feedback-recovery-v7">
+    var autoControls = `<script id="limbo-91-original-controls-autorun-v9">
+/* 91short 自动调用原有扫描面板的交互控制器，运行于网页，不新增 UI。 */
+(function () {
+  'use strict';
+  if (!/(?:^|\.)x-91short\.com$/i.test(location.hostname)) return;
+  if (window.__limbo91AutoV9) return;
+  var state = window.__limbo91AutoV9 = {
+    version: 'v9', started: false, busy: false, paused: false,
+    scanClicks: 0, blockClicks: 0, adguardClicks: 0, protectionClicks: 0,
+    lastRun: 0, attempts: 0, lastResult: '', lastError: ''
+  };
+  var stopped = false, scheduled = 0, rerun = false, openedPanel = false;
+  var adguardTouched = false, toggleTouched = {};
+  var minRunGap = 2500;
+  var panelHidden = null, manualOpenUntil = 0;
+  function log(msg) { state.lastResult = msg; console.log('[limbo-91-v9]', msg); }
+  function norm(value) {
+    return String(value || '').replace(/[\s\u200b-\u200d\ufeff]/g, '').trim().toLowerCase();
+  }
+  function delay(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+  // 搜寻原面板的可点击文本；保留用户脚本自身的 click 监听器。
+  function docRoots() {
+    var roots = [document], seen = new Set(), index = 0;
+    while (index < roots.length && roots.length < 30) {
+      var root = roots[index++];
+      if (seen.has(root)) continue;
+      seen.add(root);
+      var all;
+      try { all = root.querySelectorAll('*'); } catch (_) { continue; }
+      for (var i = 0; i < all.length && i < 9000; i++) {
+        var el = all[i];
+        if (el.shadowRoot && roots.indexOf(el.shadowRoot) === -1) roots.push(el.shadowRoot);
+        if (el.tagName === 'IFRAME') {
+          try {
+            if (el.contentDocument && el.contentDocument.body) roots.push(el.contentDocument);
+          } catch (_) { /* 跨域 iframe 不可操作 */ }
+        }
+      }
+    }
+    return roots;
+  }
+  function actionable(el) {
+    if (!el || el.nodeType !== 1) return null;
+    var tag = el.tagName || '';
+    if (/^(BUTTON|A|INPUT|LABEL|SUMMARY)$/.test(tag)) return el;
+    if (el.hasAttribute('onclick') || el.hasAttribute('role') && /button|switch|menuitem/.test(el.getAttribute('role')) || el.hasAttribute('tabindex')) return el;
+    for (var up = 0, p = el.parentElement; p && up < 4; up++, p = p.parentElement) {
+      tag = p.tagName || '';
+      if (/^(BUTTON|A|INPUT|LABEL|SUMMARY)$/.test(tag)) return p;
+      if (p.hasAttribute('onclick') || p.getAttribute('role') === 'button') return p;
+    }
+    // 部分第三方脚本把 click 绑定在 div 上，子元素的 click 会冒泡。
+    return el;
+  }
+  function visible(el) {
+    if (!el || !el.isConnected) return false;
+    try {
+      var style = (el.ownerDocument.defaultView || window).getComputedStyle(el);
+      return style.display !== 'none' && style.visibility !== 'hidden' && el.getClientRects().length > 0;
+    } catch (_) { return true; }
+  }
+  function pick(keys, opts) {
+    opts = opts || {};
+    var candidates = [];
+    var roots = docRoots();
+    for (var r = 0; r < roots.length; r++) {
+      var root = roots[r], nodes;
+      try { nodes = root.querySelectorAll('button,a,input,[role="button"],[role="switch"],[onclick],[tabindex],label,div,span'); }
+      catch (_) { continue; }
+      for (var i = 0; i < nodes.length && i < 10000; i++) {
+        var el = nodes[i];
+        if (!visible(el)) continue;
+        var tag = el.tagName || '';
+        var text = norm((tag === 'INPUT' ? el.value : el.innerText || el.textContent) || el.getAttribute('aria-label') || el.getAttribute('title'));
+        if (!text || text.length > (opts.maxLen || 48)) continue;
+        for (var k = 0; k < keys.length; k++) {
+          if (text === keys[k] || (opts.contains && text.indexOf(keys[k]) !== -1)) {
+            var button = actionable(el);
+            if (button && visible(button)) candidates.push({el:button, text:text, rank:(text===keys[k]?0:10)+text.length});
+            break;
+          }
+        }
+      }
+    }
+    candidates.sort(function (a,b) { return a.rank-b.rank; });
+    return candidates.length ? candidates[0] : null;
+  }
+  function clickHit(hit, label) {
+    if (!hit || !hit.el) return false;
+    try { hit.el.click(); log('已点击 '+label); return true; }
+    catch (e) {state.lastError = label+': '+e.message; return false;}
+  }
+  function disabledText(text) {
+    return /默认关闭|未开启|已关闭|已停用|未启用|关闭中|\boff\b/.test(text);
+  }
+  function ensureSwitches() {
+    if (!adguardTouched) {
+      var ad = pick(['adguard过滤器','adguardfilter'], {contains:true, maxLen:65});
+      var adState = ad ? norm(ad.el.innerText || ad.el.textContent || ad.text) : '';
+      if (ad && disabledText(adState)) {
+        adguardTouched = clickHit(ad, 'AdGuard 过滤器');
+        if (adguardTouched) state.adguardClicks++;
+      } else if (ad && /已开启|已启用|开启中|\bon\b/.test(adState)) {
+        adguardTouched = true;
+      }
+    }
+    var switches = ['拦截恶意点击跳转', '拦截点击弹窗广告'];
+    switches.forEach(function (name) {
+      if (toggleTouched[name]) return;
+      var toggle = pick([name], {contains:true, maxLen:75});
+      if (!toggle) return;
+      var text = norm(toggle.el.innerText || toggle.el.textContent || toggle.text);
+      var checked = toggle.el.getAttribute('aria-checked');
+      if (checked === 'false' || disabledText(text)) {
+        toggleTouched[name] = clickHit(toggle, name);
+        if (toggleTouched[name]) state.protectionClicks++;
+      } else if (checked === 'true' || /已开启|已启用/.test(text)) {
+        toggleTouched[name] = true;
+      }
+      // 状态未知不盲点绿色按钮，以免把已经启用的开关关掉。
+    });
+  }
+  function findScanner() { return pick(['重新扫描'], {contains:true, maxLen:32}); }
+  async function ensureScanner() {
+    var btn = findScanner();
+    if (btn) return btn;
+    var open = pick(['可疑广告元素扫描'], {contains:true, maxLen:45});
+    if (!open) {
+      var box = pick(['工具箱','工具箱//'], {contains:true, maxLen:16});
+      if (box) { clickHit(box, '工具箱'); await delay(500); }
+      open = pick(['可疑广告元素扫描'], {contains:true, maxLen:45});
+    }
+    if (open && clickHit(open, '可疑广告元素扫描')) {
+      openedPanel = true;
+      await delay(600);
+      return findScanner();
+    }
+    return null;
+  }
+  function getPanelRoot(scanButton) {
+    if (!scanButton) return null;
+    var e = scanButton, depth = 0;
+    while (e && depth++ < 12 && e !== document.body) {
+      if (e.nodeType !== 1) break;
+      var txt = norm(e.innerText || '');
+      if (txt.length < 2500 && txt.indexOf('重新扫描')!==-1 &&
+          txt.indexOf('一键屏蔽')!==-1 && txt.indexOf('v12.6')!==-1) {
+        var style = getComputedStyle(e);
+        if (style.position === 'fixed' || style.position === 'absolute') return e;
+      }
+      e = e.parentElement;
+    }
+    return null;
+  }
+  function restorePanel() {
+    if (!panelHidden) return;
+    var el = panelHidden.el;
+    if (el && el.isConnected) {
+      el.style.transform = panelHidden.transform;
+      el.style.pointerEvents = panelHidden.pointerEvents;
+    }
+    panelHidden = null;
+  }
+  function hidePanel(scanButton) {
+    if (!openedPanel || Date.now() < manualOpenUntil) return;
+    var panel = getPanelRoot(scanButton);
+    if (!panel) return;
+    if (panelHidden && panelHidden.el === panel) return;
+    restorePanel();
+    panelHidden = {el:panel, transform:panel.style.transform, pointerEvents:panel.style.pointerEvents};
+    panel.style.transform = 'translateX(-300vw)';
+    panel.style.pointerEvents = 'none';
+  }
+  function countUnprocessed() {
+    var roots=docRoots();
+    for (var i=0; i<roots.length; i++) {
+      var nodes = roots[i].querySelectorAll('div,span,button,strong');
+      for(var j=0;j<nodes.length && j<7000;j++) {
+        var txt=norm(nodes[j].innerText || nodes[j].textContent || '');
+        if(txt.length > 35) continue;
+        var m=txt.match(/^(\d+)未处理\/?共(\d+)/);
+        if(m) return Number(m[1]);
+      }
+    }
+    return null;
+  }
+  async function scanAndBlock() {
+    var scan = await ensureScanner();
+    if (!scan) { log('原扫描按钮未出现（等待网页工具箱完成加载）'); return false; }
+    if (state.paused) return false;
+    if (!clickHit(scan, '重新扫描')) return false;
+    state.scanClicks++;
+    await delay(950);
+    if (state.paused) return false;
+    var block = pick(['一键屏蔽'], {contains:true, maxLen:32});
+    if (!block) { log('原一键屏蔽按钮未出现'); return false; }
+    var count = countUnprocessed();
+    if (count === 0) { log('扫描完成：0 条未处理'); hidePanel(scan.el); return true; }
+    if (clickHit(block, '一键屏蔽')) {
+      state.blockClicks++;
+      await delay(350);
+      log('已调用原版重新扫描和一键屏蔽' + (count===null?'':'；待处理 '+count+' 条'));
+      hidePanel(scan.el);
+      return true;
+    }
+    return false;
+  }
+  async function work() {
+    if (state.paused || stopped) return;
+    if (state.busy) { rerun=true; return; }
+    var now=Date.now();
+    if (now - state.lastRun < minRunGap) return;
+    state.lastRun=now; state.busy=true; state.attempts++;
+    try {
+      ensureSwitches();
+      await scanAndBlock();
+    } catch (e) { state.lastError=String(e.message || e); console.warn('[limbo-91-v9]',e); }
+    finally {
+      state.busy=false;
+      if (rerun) { rerun=false; schedule(1400); }
+    }
+  }
+  function schedule(ms) {
+    if (state.paused || stopped) return;
+    clearTimeout(scheduled);
+    scheduled=setTimeout(function(){ scheduled=0; work(); }, ms || 650);
+  }
+  function boot() {
+    if (state.started || !document.body) return;
+    state.started=true;
+    log('原版功能自动化已启动（等待面板加载）');
+    schedule(1800);
+    setTimeout(function(){schedule(0);}, 5000);
+    setTimeout(function(){schedule(0);}, 10000);
+    window.addEventListener('scroll',function(){schedule(900);},{passive:true,capture:true});
+    // 无限下拉和 SPA 异步追加卡片时触发，不因扫描面板自己的更新形成重入循环。
+    if (typeof MutationObserver === 'function') {
+      var observer = new MutationObserver(function (records) {
+        for (var i=0;i<records.length;i++) {
+          var r=records[i];
+          if (r.type!=='childList') continue;
+          for(var j=0;j<r.addedNodes.length;j++) {
+            var el=r.addedNodes[j];
+            if(el.nodeType!==1) continue;
+            var text=(el.className && typeof el.className==='string')?el.className:'';
+            if (/ad|video|list|card|msop/i.test(text) || el.matches && el.matches('img,a,iframe') || el.querySelector && el.querySelector('img,a[href],video')) { schedule(1000); return; }
+          }
+        }
+      });
+      observer.observe(document.body,{childList:true,subtree:true});
+    }
+    // 每次页面重新打开重新自动开启；手动撤回后暂停本页自动屏蔽，直到刷新。
+    document.addEventListener('click',function(event){
+      if(!event.isTrusted) return;
+      var b=event.target && event.target.closest && event.target.closest('button,a,[role="button"],div,span');
+      if(!b) return;
+      var s=norm(b.innerText || b.textContent);
+      if (s.indexOf('可疑广告元素扫描') !== -1 && s.length < 28) {
+        manualOpenUntil = Date.now() + 30000;
+        restorePanel();
+      }
+      if (s.length <= 16 && (/^撤回$/.test(s) || /^一键重置$/.test(s))) {
+        state.paused=true;
+        restorePanel();
+        clearTimeout(scheduled);
+        log('用户手动撤回，本页暂停自动屏蔽（刷新后恢复）');
+      }
+    },true);
+    setInterval(function(){ if (!state.paused && Date.now()-state.lastRun > 6500) schedule(100); },7000);
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot,{once:true});
+  else boot();
+})();
+
+</script>`;
+
+    var feedbackRecovery = `<script id="limbo-91-feedback-recovery-v8">
 (function(){
   'use strict';
   function hasFeedback(){
@@ -247,9 +515,9 @@
     return false;
   }
   function run(){
-    if(hasFeedback() || document.getElementById('limbo-91-recover-original-feedback-js-v7')) return;
+    if(hasFeedback() || document.getElementById('limbo-91-recover-original-feedback-js-v8')) return;
     var s=document.createElement('script');
-    s.id='limbo-91-recover-original-feedback-js-v7';
+    s.id='limbo-91-recover-original-feedback-js-v8';
     s.src='https://limbopro.com/Adguard/feedBackLinkMake.user.js';
     s.async=true;
     (document.head || document.documentElement).appendChild(s);
@@ -260,10 +528,11 @@
 </script>`;
 
     var injection = [
-      '<!-- SURGE-LIMBO-91: v7 response-rewrite-injected -->',
+      '<!-- SURGE-LIMBO-91: v8 response-rewrite-injected -->',
       guard,
       passiveScan,
       feedbackRecovery,
+      autoControls,
       '<script defer src="https://limbopro.com/Adguard/autoAdDetector.js"></script>',
       '<script defer src="https://limbopro.com/Adguard/Adblock4limbo.user.js"></script>',
       '<script defer src="' + customFn + '"></script>',
@@ -278,10 +547,10 @@
     Object.keys(h).forEach(function (k) {
       if (/^(?:content-length|content-security-policy|content-security-policy-report-only)$/i.test(k)) delete h[k];
     });
-    console.log('[limbo-91-v7] HTML 注入成功: ' + hostname + ' / ' + pathname);
+    console.log('[limbo-91-v8] HTML 注入成功: ' + hostname + ' / ' + pathname);
     return $done({body:body, headers:h});
   } catch (e) {
-    console.log('[limbo-91-v7] ' + e.message);
+    console.log('[limbo-91-v8] ' + e.message);
     $done({});
   }
 })();
