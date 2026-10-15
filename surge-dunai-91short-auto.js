@@ -10,7 +10,7 @@
     var match = /^https:\/\/([^\/?#]+)(\/[^?#]*)?/i.exec(String($request.url || ''));
     var hostname = match ? match[1].toLowerCase().split(':')[0] : '';
     var pathname = match && match[2] ? match[2] : '/';
-    var domain = /^(?:[a-z0-9-]+\.)*(?:x\-91short\.com)$/i; // LIMBO_SITES_HOST_PATTERN (auto-generated)
+    var domain = /^(?:[a-z0-9.-]*91short[a-z0-9.-]*)$/i; // LIMBO_SITES_HOST_PATTERN (auto-generated)
     if (!match || !domain.test(hostname)) return $done({});
     if (/\.(?:json|js|css|jpg|jpeg|png|webp|gif|svg|ico|woff2?|ttf|mp4|m4s|mp3|m3u8|ts|pdf|zip)(?:$|\?)/i.test(pathname) ||
         /(?:\/api(?:\/|$)|^\/home_recommend_list(?:\/|$)|\/cdn-cgi\/|\/verify|\/captcha)/i.test(pathname)) return $done({});
@@ -26,6 +26,7 @@
     // GitHub Raw 适合 Surge 的 script-path，但作为网页 <script src> 可能被浏览器以 nosniff 拦截。
     // 这两份定制 JS 仍来自用户自己的仓库，只将网页加载地址换成 JS CDN。
     var isOriginal91short = /(?:^|\.)x-91short\.com$/i.test(hostname);
+    var isAny91short = hostname.indexOf('91short') !== -1;
     var base = 'https://cdn.jsdelivr.net/gh/woziji159/Surge@main/';
     var customFn = base + 'limbo-function-auto.js?v=20261015-repair5';
     var customElement = base + 'limbo-elementBlocker-auto.js?v=20261015-repair5';
@@ -370,7 +371,7 @@ html:not([data-limbo91-autoblock-off]) body #tablist > a[href^="https://"] {
     var autoControls = String.raw`<script id="limbo-background-coordinator-v15">
 (function(){
   'use strict';
-  if (!/^(?:[a-z0-9-]+\.)*(?:x\-91short\.com)$/i.test(location.hostname)) return; // LIMBO_SITES_CONTROL_PATTERN (auto-generated)
+  if (!/^(?:[a-z0-9.-]*91short[a-z0-9.-]*)$/i.test(location.hostname)) return; // LIMBO_SITES_CONTROL_PATTERN (auto-generated)
   if(window.__limbo91AutoV9)return;
   var st=window.__limbo91AutoV9={version:'v15',started:true,paused:false,backgroundRuns:0};
   var timer=0;
@@ -473,7 +474,7 @@ html:not([data-limbo91-autoblock-off]) body #tablist > a[href^="https://"] {
       adguardNotice,
       guard,
       quietNotices,
-      isOriginal91short ? passiveScan : genericScan,
+      isAny91short ? passiveScan : genericScan,
       feedbackRecovery,
       autoControls,
       '<script defer src="https://limbopro.com/Adguard/autoAdDetector.js"></script>',
