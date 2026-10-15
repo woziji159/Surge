@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""v14: Site list stays sole configuration input. Keep AdGuard and protection automation patches intact."""
+"""v15: Site list stays sole configuration input. Keep AdGuard and protection automation patches intact."""
 from __future__ import annotations
 import re
 import hashlib
@@ -91,7 +91,7 @@ def update_config(conf, hosts, script_content):
     # New JS features must bust the Surge cache even if the website list is unchanged.
     version = hashlib.sha256(('\n'.join(hosts) + '\n' + script_content).encode('utf-8')).hexdigest()[:12]
     resource = r'(script-path=https://raw\.githubusercontent\.com/woziji159/Surge/main/surge-dunai-91short-auto\.js)(?:\?v=[^,\s]+)?'
-    line, replaced = re.subn(resource, lambda m: m.group(1) + '?v=sites14-' + version, line)
+    line, replaced = re.subn(resource, lambda m: m.group(1) + '?v=sites15-' + version, line)
     if replaced != 1:
         raise ValueError('没有找到原始脚本更新地址，拒绝修改')
     entries[index[0]] = line
