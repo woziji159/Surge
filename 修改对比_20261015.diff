@@ -1,146 +1,196 @@
---- 原版/Surge.conf
-+++ 修复版/Surge.conf
-@@ -5,7 +5,6 @@
- loglevel = notify
- exclude-simple-hostnames = true
- [Proxy]
--[Proxy Group]
- # Surge iPhone 策略组；公开配置没有私人节点。
- # 在 Surge 的代理页面添加节点后，PROXY及各地区组会列出全部本地节点。
- # 地区名称仅用于手动选择，不自动推断节点地区；自动选择单独测速。
-@@ -54,7 +53,6 @@
- 微软服务 = select, DIRECT, 节点选择, 美国, 香港, 台湾, 日本, 韩国, 新加坡, include-all-proxies=true
- HTTPDNS控制 = select, DIRECT, REJECT
+--- before/Surge.conf
++++ after/Surge.conf
+@@ -222,7 +222,7 @@
  
--[Rule]
- [Rule]
- # 手动规则优先；只编辑前两份列表即可增加直连/代理覆盖。
- # 主规则按首次匹配生效，广告规则不使用pre-matching，以保留重写和URL例外。
-@@ -204,7 +202,7 @@
- ^https://duckduckgo[.]com/[?]q=jp(?:&.*)?$ https://itunes.apple.com/WebObjects/MZStore.woa/wa/resetAndRedirect?dsf=143462&mt=8&url=/WebObjects/MZStore.woa/wa/viewSoftware?mt=8&id=1108187390&cc=jp&urlDesc= 302
- ^https://duckduckgo[.]com/[?]q=kr(?:&.*)?$ https://itunes.apple.com/WebObjects/MZStore.woa/wa/resetAndRedirect?dsf=143466&mt=8&url=/WebObjects/MZStore.woa/wa/viewSoftware?mt=8&id=1108187390&cc=kr&urlDesc= 302
- ^https://duckduckgo[.]com/[?]q=tr(?:&.*)?$ https://itunes.apple.com/WebObjects/MZStore.woa/wa/resetAndRedirect?dsf=143480&mt=8&url=/WebObjects/MZStore.woa/wa/viewSoftware?mt=8&id=1108187390&cc=tr&urlDesc= 302
--^https://duckduckgo[.]com/[?]q=sg(?:&.*)?$ https://itunes.apple.com/WebObjects/MZStore.woa/wa/resetAndRedirect?dsf=143464&mt=8&url=/WebObjects/MZStore.woa/wa/viewSoftware?mt=8&id=1108187390&cc=tr&urlDesc= 302
-+^https://duckduckgo[.]com/[?]q=sg(?:&.*)?$ https://itunes.apple.com/WebObjects/MZStore.woa/wa/resetAndRedirect?dsf=143464&mt=8&url=/WebObjects/MZStore.woa/wa/viewSoftware?mt=8&id=1108187390&cc=sg&urlDesc= 302
- ^https://duckduckgo[.]com/[?]q=bd(?:\+|%20)([^&]+)(?:&.*)?$ https://www.baidu.com/s?wd=$1%20-adclear 302
- ^https://duckduckgo[.]com/[?]q=([^&]+?)(?:\+|%20)bd(?:&.*)?$ https://www.baidu.com/s?wd=$1%20-adclear 302
- ^https://duckduckgo[.]com/[?]q=wk(?:\+|%20)([^&]+)(?:&.*)?$ https://zh.wikipedia.org/wiki/$1 302
-@@ -763,14 +761,16 @@
- rewrite-266 = type=http-request, pattern=^https?:\/\/ad\.12306\.cn\/ad\/ser\/getAdList, script-path=https://raw.githubusercontent.com/kokoryh/Script/master/js/12306.js, requires-body=true, timeout=60, script-update-interval=86400
- # fmz-blockAds.sgmodule — 51信用卡管家
- rewrite-267 = type=http-response, pattern=^https?:\/\/api\.u51\.com\/generic-config-gateway\/api\/v\d\/guanjia\/me-tab2\/config, script-path=https://raw.githubusercontent.com/fmz200/wool_scripts/main/Scripts/51card.js, requires-body=true, timeout=60, script-update-interval=86400
-+# fmz-blockAds.sgmodule — 电影猎手去广告
-+rewrite-310 = type=http-response, pattern=^https:\/\/app-v1\.ecoliving168\.com\/api\/v1\/movie\/index_recommend\?, script-path=https://raw.githubusercontent.com/fmz200/wool_scripts/main/Scripts/dianyinglieshou.js, requires-body=true, timeout=60, script-update-interval=86400
- # fmz-blockAds.sgmodule — 555影视广告
- rewrite-268 = type=http-response, pattern="^https?:\\/\\/[a-zA-Z0-9-]+(\\.[a-zA-Z0-9-]+){1,3}(:\\d+)?\\/api\\/v\\d\\/movie\\/index_recommend", script-path=https://raw.githubusercontent.com/fmz200/wool_scripts/main/Scripts/555Ad.js, requires-body=true, timeout=60, script-update-interval=86400
- # fmz-blockAds.sgmodule — 阿里巴巴广告
- rewrite-269 = type=http-response, pattern=^https:\/\/guide-acs\.m\.taobao\.com\/gw\/mtop\.cainiao\.guoguo\.nbnetflow\.ads\.mshow, script-path=https://raw.githubusercontent.com/fmz200/wool_scripts/main/Scripts/cainiao/cainiao.js, requires-body=true, timeout=60, script-update-interval=86400
- # fmz-blockAds.sgmodule — 阿里巴巴广告
--rewrite-270 = type=http-response, pattern=^https:\/\/guide-acs\.m\.taobao\.com\/gw\/mtop\.taobao\.(cloudvideo\.video\.query|wireless\.home\.splash\.awesome\.get), script-path=https://raw.githubusercontent.com/fmz200/wool_scripts/main/Scripts/myBlockAds.js, requires-body=true, timeout=60, script-update-interval=86400
-+rewrite-270 = type=http-response, pattern=^https?:\/\/guide-acs\.m\.taobao\.com\/gw\/mtop\.taobao\.(cloudvideo\.video\.query|wireless\.home\.splash\.awesome\.get), script-path=https://raw.githubusercontent.com/fmz200/wool_scripts/main/Scripts/myBlockAds.js, requires-body=true, timeout=60, script-update-interval=86400
- # fmz-blockAds.sgmodule — myBlockAds
--rewrite-271 = type=http-response, pattern=^https:\/\/poplayer\.template\.alibaba\.com\/\w+\.json, script-path=https://raw.githubusercontent.com/fmz200/wool_scripts/main/Scripts/myBlockAds.js, requires-body=true, timeout=60, script-update-interval=86400
-+rewrite-271 = type=http-response, pattern=^https?:\/\/poplayer\.template\.alibaba\.com\/\w+\.json, script-path=https://raw.githubusercontent.com/fmz200/wool_scripts/main/Scripts/myBlockAds.js, requires-body=true, timeout=60, script-update-interval=86400
- # fmz-blockAds.sgmodule — 阿里云盘
- rewrite-272 = type=http-response, pattern=^https:\/\/api\.alipan\.com\/apps\/v2\/users\/home\/(news|widgets), script-path=https://raw.githubusercontent.com/fmz200/wool_scripts/main/Scripts/adrive/adrive.js, requires-body=true, timeout=60, script-update-interval=86400
- # fmz-blockAds.sgmodule — 阿里云盘
-@@ -847,8 +847,6 @@
- rewrite-308 = type=http-response, pattern=^https?:\/\/daijia\.kuaidadi\.com:443\/gateway, script-path=https://raw.githubusercontent.com/fmz200/wool_scripts/main/Scripts/didi/didiAds.js, requires-body=true, timeout=60, script-update-interval=86400
- # fmz-blockAds.sgmodule — 微信小程序个人中心净化
- rewrite-309 = type=http-response, pattern=^https?:\/\/common\.diditaxi\.com\.cn\/common\/v5, script-path=https://raw.githubusercontent.com/fmz200/wool_scripts/main/Scripts/didi/didiAds.js, requires-body=true, timeout=60, script-update-interval=86400
--# fmz-blockAds.sgmodule — 电影猎手去广告
--rewrite-310 = type=http-response, pattern=^https:\/\/app-v1\.ecoliving168\.com\/api\/v1\/movie\/index_recommend\?, script-path=https://raw.githubusercontent.com/fmz200/wool_scripts/main/Scripts/dianyinglieshou.js, requires-body=true, timeout=60, script-update-interval=86400
- # fmz-blockAds.sgmodule — 叮咚买菜
- rewrite-311 = type=http-response, pattern=^https?:\/\/maicai\.api\.ddxq\.mobi\/homeApi\/(?>bottomNavi|homeFlowDetail), script-path=https://raw.githubusercontent.com/zirawell/R-Store/main/Res/Scripts/AntiAd/ddxq.js, requires-body=true, timeout=60, script-update-interval=86400
- # fmz-blockAds.sgmodule — 叮咚买菜
-@@ -954,7 +952,8 @@
- # fmz-blockAds.sgmodule — 朴朴超市
- rewrite-362 = type=http-response, pattern=^https:\/\/j1\.pupuapi\.com\/client\/search\/hot_keywords\/v3, script-path=https://raw.githubusercontent.com/fmz200/wool_scripts/main/Scripts/PupuSplashAds.js, requires-body=true, timeout=60, script-update-interval=86400
- # fmz-blockAds.sgmodule — 朴朴超市
--rewrite-363 = type=http-response, pattern="^https:\\/\\/j1\\.pupuapi\\.com\\/client\\/a朴朴超市,", script-path=https://raw.githubusercontent.com/fmz200/wool_scripts/main/Scripts/PupuSplashAds.js, requires-body=true, timeout=60, script-update-interval=86400
-+# 已停用 rewrite-363：原匹配式混入中文，无法可靠匹配实际接口；其他朴朴规则保留。
-+# rewrite-363 = type=http-response, pattern="^https:\\/\\/j1\\.pupuapi\\.com\\/client\\/a朴朴超市,", script-path=https://raw.githubusercontent.com/fmz200/wool_scripts/main/Scripts/PupuSplashAds.js, requires-body=true, timeout=60, script-update-interval=86400
- # fmz-blockAds.sgmodule — 朴朴超市
- rewrite-364 = type=http-response, pattern=^https:\/\/j1\.pupuapi\.com\/client\/marketing\/advertisement\/v1, script-path=https://raw.githubusercontent.com/fmz200/wool_scripts/main/Scripts/PupuSplashAds.js, requires-body=true, timeout=60, script-update-interval=86400
- # fmz-blockAds.sgmodule — 朴朴超市
-@@ -1117,10 +1116,6 @@
- rewrite-443 = type=http-response, pattern=^https?:\/\/gateway-mobile-gray\.soulapp\.cn\/mobile\/app\/version\/queryIos, script-path=https://raw.githubusercontent.com/fmz200/wool_scripts/main/Scripts/soul/soul_ads.js, requires-body=true, timeout=60, script-update-interval=86400
- # fmz-blockAds.sgmodule — soul_ads
- rewrite-444 = type=http-response, pattern=^https?:\/\/47\.110\.187\.87\/winterfell\/v2\/getIpByDomain, script-path=https://raw.githubusercontent.com/fmz200/wool_scripts/main/Scripts/soul/soul_ads.js, requires-body=true, timeout=60, script-update-interval=86400
--# fmz-blockAds.sgmodule — 淘宝
--rewrite-445 = type=http-response, pattern=^https?:\/\/guide-acs\.m\.taobao\.com\/gw\/mtop\.taobao\.(cloudvideo\.video\.query|wireless\.home\.splash\.awesome\.get), script-path=https://raw.githubusercontent.com/fmz200/wool_scripts/main/Scripts/myBlockAds.js, requires-body=true, timeout=60, script-update-interval=86400
--# fmz-blockAds.sgmodule — 淘宝
--rewrite-446 = type=http-response, pattern=^https?:\/\/poplayer\.template\.alibaba\.com\/\w+\.json, script-path=https://raw.githubusercontent.com/fmz200/wool_scripts/main/Scripts/myBlockAds.js, requires-body=true, timeout=60, script-update-interval=86400
- # fmz-blockAds.sgmodule — 腾讯新闻
- rewrite-447 = type=http-response, pattern=^https?:\/\/(news\.ssp\.qq\.com\/app|r\.inews\.qq\.com\/(get(QQNewsUnreadList|TagFeedList)|gw\/page\/event_detail|news_feed\/hot_module_list)), script-path=https://raw.githubusercontent.com/app2smile/rules/master/js/qq-news.js, requires-body=true, timeout=60, script-update-interval=86400
- # fmz-blockAds.sgmodule — 途虎养车去广告
---- 原版/rewrites.confpart
-+++ 修复版/rewrites.confpart
-@@ -1999,14 +1999,16 @@
- rewrite-266 = type=http-request, pattern=^https?:\/\/ad\.12306\.cn\/ad\/ser\/getAdList, script-path=https://raw.githubusercontent.com/kokoryh/Script/master/js/12306.js, requires-body=true, timeout=60, script-update-interval=86400
- # fmz-blockAds.sgmodule — 51信用卡管家
- rewrite-267 = type=http-response, pattern=^https?:\/\/api\.u51\.com\/generic-config-gateway\/api\/v\d\/guanjia\/me-tab2\/config, script-path=https://raw.githubusercontent.com/fmz200/wool_scripts/main/Scripts/51card.js, requires-body=true, timeout=60, script-update-interval=86400
-+# fmz-blockAds.sgmodule — 电影猎手去广告
-+rewrite-310 = type=http-response, pattern=^https:\/\/app-v1\.ecoliving168\.com\/api\/v1\/movie\/index_recommend\?, script-path=https://raw.githubusercontent.com/fmz200/wool_scripts/main/Scripts/dianyinglieshou.js, requires-body=true, timeout=60, script-update-interval=86400
- # fmz-blockAds.sgmodule — 555影视广告
- rewrite-268 = type=http-response, pattern="^https?:\\/\\/[a-zA-Z0-9-]+(\\.[a-zA-Z0-9-]+){1,3}(:\\d+)?\\/api\\/v\\d\\/movie\\/index_recommend", script-path=https://raw.githubusercontent.com/fmz200/wool_scripts/main/Scripts/555Ad.js, requires-body=true, timeout=60, script-update-interval=86400
- # fmz-blockAds.sgmodule — 阿里巴巴广告
- rewrite-269 = type=http-response, pattern=^https:\/\/guide-acs\.m\.taobao\.com\/gw\/mtop\.cainiao\.guoguo\.nbnetflow\.ads\.mshow, script-path=https://raw.githubusercontent.com/fmz200/wool_scripts/main/Scripts/cainiao/cainiao.js, requires-body=true, timeout=60, script-update-interval=86400
- # fmz-blockAds.sgmodule — 阿里巴巴广告
--rewrite-270 = type=http-response, pattern=^https:\/\/guide-acs\.m\.taobao\.com\/gw\/mtop\.taobao\.(cloudvideo\.video\.query|wireless\.home\.splash\.awesome\.get), script-path=https://raw.githubusercontent.com/fmz200/wool_scripts/main/Scripts/myBlockAds.js, requires-body=true, timeout=60, script-update-interval=86400
-+rewrite-270 = type=http-response, pattern=^https?:\/\/guide-acs\.m\.taobao\.com\/gw\/mtop\.taobao\.(cloudvideo\.video\.query|wireless\.home\.splash\.awesome\.get), script-path=https://raw.githubusercontent.com/fmz200/wool_scripts/main/Scripts/myBlockAds.js, requires-body=true, timeout=60, script-update-interval=86400
- # fmz-blockAds.sgmodule — myBlockAds
--rewrite-271 = type=http-response, pattern=^https:\/\/poplayer\.template\.alibaba\.com\/\w+\.json, script-path=https://raw.githubusercontent.com/fmz200/wool_scripts/main/Scripts/myBlockAds.js, requires-body=true, timeout=60, script-update-interval=86400
-+rewrite-271 = type=http-response, pattern=^https?:\/\/poplayer\.template\.alibaba\.com\/\w+\.json, script-path=https://raw.githubusercontent.com/fmz200/wool_scripts/main/Scripts/myBlockAds.js, requires-body=true, timeout=60, script-update-interval=86400
- # fmz-blockAds.sgmodule — 阿里云盘
- rewrite-272 = type=http-response, pattern=^https:\/\/api\.alipan\.com\/apps\/v2\/users\/home\/(news|widgets), script-path=https://raw.githubusercontent.com/fmz200/wool_scripts/main/Scripts/adrive/adrive.js, requires-body=true, timeout=60, script-update-interval=86400
- # fmz-blockAds.sgmodule — 阿里云盘
-@@ -2083,8 +2085,6 @@
- rewrite-308 = type=http-response, pattern=^https?:\/\/daijia\.kuaidadi\.com:443\/gateway, script-path=https://raw.githubusercontent.com/fmz200/wool_scripts/main/Scripts/didi/didiAds.js, requires-body=true, timeout=60, script-update-interval=86400
- # fmz-blockAds.sgmodule — 微信小程序个人中心净化
- rewrite-309 = type=http-response, pattern=^https?:\/\/common\.diditaxi\.com\.cn\/common\/v5, script-path=https://raw.githubusercontent.com/fmz200/wool_scripts/main/Scripts/didi/didiAds.js, requires-body=true, timeout=60, script-update-interval=86400
--# fmz-blockAds.sgmodule — 电影猎手去广告
--rewrite-310 = type=http-response, pattern=^https:\/\/app-v1\.ecoliving168\.com\/api\/v1\/movie\/index_recommend\?, script-path=https://raw.githubusercontent.com/fmz200/wool_scripts/main/Scripts/dianyinglieshou.js, requires-body=true, timeout=60, script-update-interval=86400
- # fmz-blockAds.sgmodule — 叮咚买菜
- rewrite-311 = type=http-response, pattern=^https?:\/\/maicai\.api\.ddxq\.mobi\/homeApi\/(?>bottomNavi|homeFlowDetail), script-path=https://raw.githubusercontent.com/zirawell/R-Store/main/Res/Scripts/AntiAd/ddxq.js, requires-body=true, timeout=60, script-update-interval=86400
- # fmz-blockAds.sgmodule — 叮咚买菜
-@@ -2190,7 +2190,8 @@
- # fmz-blockAds.sgmodule — 朴朴超市
- rewrite-362 = type=http-response, pattern=^https:\/\/j1\.pupuapi\.com\/client\/search\/hot_keywords\/v3, script-path=https://raw.githubusercontent.com/fmz200/wool_scripts/main/Scripts/PupuSplashAds.js, requires-body=true, timeout=60, script-update-interval=86400
- # fmz-blockAds.sgmodule — 朴朴超市
--rewrite-363 = type=http-response, pattern="^https:\\/\\/j1\\.pupuapi\\.com\\/client\\/a朴朴超市,", script-path=https://raw.githubusercontent.com/fmz200/wool_scripts/main/Scripts/PupuSplashAds.js, requires-body=true, timeout=60, script-update-interval=86400
-+# 已停用 rewrite-363：原匹配式混入中文，无法可靠匹配实际接口；其他朴朴规则保留。
-+# rewrite-363 = type=http-response, pattern="^https:\\/\\/j1\\.pupuapi\\.com\\/client\\/a朴朴超市,", script-path=https://raw.githubusercontent.com/fmz200/wool_scripts/main/Scripts/PupuSplashAds.js, requires-body=true, timeout=60, script-update-interval=86400
- # fmz-blockAds.sgmodule — 朴朴超市
- rewrite-364 = type=http-response, pattern=^https:\/\/j1\.pupuapi\.com\/client\/marketing\/advertisement\/v1, script-path=https://raw.githubusercontent.com/fmz200/wool_scripts/main/Scripts/PupuSplashAds.js, requires-body=true, timeout=60, script-update-interval=86400
- # fmz-blockAds.sgmodule — 朴朴超市
-@@ -2353,10 +2354,6 @@
- rewrite-443 = type=http-response, pattern=^https?:\/\/gateway-mobile-gray\.soulapp\.cn\/mobile\/app\/version\/queryIos, script-path=https://raw.githubusercontent.com/fmz200/wool_scripts/main/Scripts/soul/soul_ads.js, requires-body=true, timeout=60, script-update-interval=86400
- # fmz-blockAds.sgmodule — soul_ads
- rewrite-444 = type=http-response, pattern=^https?:\/\/47\.110\.187\.87\/winterfell\/v2\/getIpByDomain, script-path=https://raw.githubusercontent.com/fmz200/wool_scripts/main/Scripts/soul/soul_ads.js, requires-body=true, timeout=60, script-update-interval=86400
--# fmz-blockAds.sgmodule — 淘宝
--rewrite-445 = type=http-response, pattern=^https?:\/\/guide-acs\.m\.taobao\.com\/gw\/mtop\.taobao\.(cloudvideo\.video\.query|wireless\.home\.splash\.awesome\.get), script-path=https://raw.githubusercontent.com/fmz200/wool_scripts/main/Scripts/myBlockAds.js, requires-body=true, timeout=60, script-update-interval=86400
--# fmz-blockAds.sgmodule — 淘宝
--rewrite-446 = type=http-response, pattern=^https?:\/\/poplayer\.template\.alibaba\.com\/\w+\.json, script-path=https://raw.githubusercontent.com/fmz200/wool_scripts/main/Scripts/myBlockAds.js, requires-body=true, timeout=60, script-update-interval=86400
- # fmz-blockAds.sgmodule — 腾讯新闻
- rewrite-447 = type=http-response, pattern=^https?:\/\/(news\.ssp\.qq\.com\/app|r\.inews\.qq\.com\/(get(QQNewsUnreadList|TagFeedList)|gw\/page\/event_detail|news_feed\/hot_module_list)), script-path=https://raw.githubusercontent.com/app2smile/rules/master/js/qq-news.js, requires-body=true, timeout=60, script-update-interval=86400
- # fmz-blockAds.sgmodule — 途虎养车去广告
---- 原版/safari-search.sgmodule
-+++ 修复版/safari-search.sgmodule
-@@ -86,7 +86,7 @@
- ^https://duckduckgo[.]com/[?]q=jp(?:&.*)?$ https://itunes.apple.com/WebObjects/MZStore.woa/wa/resetAndRedirect?dsf=143462&mt=8&url=/WebObjects/MZStore.woa/wa/viewSoftware?mt=8&id=1108187390&cc=jp&urlDesc= 302
- ^https://duckduckgo[.]com/[?]q=kr(?:&.*)?$ https://itunes.apple.com/WebObjects/MZStore.woa/wa/resetAndRedirect?dsf=143466&mt=8&url=/WebObjects/MZStore.woa/wa/viewSoftware?mt=8&id=1108187390&cc=kr&urlDesc= 302
- ^https://duckduckgo[.]com/[?]q=tr(?:&.*)?$ https://itunes.apple.com/WebObjects/MZStore.woa/wa/resetAndRedirect?dsf=143480&mt=8&url=/WebObjects/MZStore.woa/wa/viewSoftware?mt=8&id=1108187390&cc=tr&urlDesc= 302
--^https://duckduckgo[.]com/[?]q=sg(?:&.*)?$ https://itunes.apple.com/WebObjects/MZStore.woa/wa/resetAndRedirect?dsf=143464&mt=8&url=/WebObjects/MZStore.woa/wa/viewSoftware?mt=8&id=1108187390&cc=tr&urlDesc= 302
-+^https://duckduckgo[.]com/[?]q=sg(?:&.*)?$ https://itunes.apple.com/WebObjects/MZStore.woa/wa/resetAndRedirect?dsf=143464&mt=8&url=/WebObjects/MZStore.woa/wa/viewSoftware?mt=8&id=1108187390&cc=sg&urlDesc= 302
- ^https://duckduckgo[.]com/[?]q=bd(?:\+|%20)([^&]+)(?:&.*)?$ https://www.baidu.com/s?wd=$1%20-adclear 302
- ^https://duckduckgo[.]com/[?]q=([^&]+?)(?:\+|%20)bd(?:&.*)?$ https://www.baidu.com/s?wd=$1%20-adclear 302
- ^https://duckduckgo[.]com/[?]q=wk(?:\+|%20)([^&]+)(?:&.*)?$ https://zh.wikipedia.org/wiki/$1 302
---- 原版/surge-service-google-exceptions.list
-+++ 修复版/surge-service-google-exceptions.list
-@@ -1,4 +1,3 @@
- # Surge service-google-exceptions — 2026-10-14
--# Policy: 谷歌服务; rules: 2
--DOMAIN,safebrowsing.googleapis.com
-+# Policy: 谷歌服务; rules: 1
- DOMAIN-SUFFIX,safebrowsing.googleapis.com
+ [Script]
+ 
+-# Google 历史连续下滑版：下一页追加在当前页下方，不自动整页跳转。
++# Google 综合增强：主配置作为唯一启用入口；沿用已验证脚本 URL（独立模块仅保留 MitM 兼容）。
+ Google 综合增强 = type=http-response, pattern=^https://www[.]google[.][a-z.]+/(?:search[?]|[?](?:sa|FORM)=|$), requires-body=true, max-size=-1, timeout=10, engine=auto, script-path=https://raw.githubusercontent.com/woziji159/Surge/main/ext-google-combined-response.js?v=continuous-0c5322a
+ 
+ 
+--- before/google-search.sgmodule
++++ after/google-search.sgmodule
+@@ -1,6 +1,5 @@
+-#!name=Google 综合增强（原生翻页修复）
+-#!desc=繁体中文翻页兼容、提前加载、Google页面加载优化；保留毒奶净化。
+-[Script]
+-Google 综合增强 = type=http-response, pattern=^https://www[.]google[.][a-z.]+/(?:search[?]|[?](?:sa|FORM)=|$), requires-body=true, max-size=-1, timeout=10, engine=auto, script-path=https://raw.githubusercontent.com/woziji159/Surge/main/ext-google-combined-response.js?v=20261014-native-zhfix3
++#!name=Google 综合增强（主配置兼容补充）
++#!desc=为旧的模块订阅保留 Google MitM 主机名；Google 综合增强脚本统一由 Surge.conf 启用，避免双份脚本。单独安装本模块不提供翻页功能。
++# 主配置中的 Google 综合增强脚本保持原样，请勿同时添加其他第三方同类脚本。
+ [MITM]
+ hostname = %APPEND% www.google.*
+--- before/safari-search.sgmodule
++++ after/safari-search.sgmodule
+@@ -1,107 +1,5 @@
+-#!name=Safari 超级搜索与微信快捷入口
+-#!desc=Safari 搜索引擎选择 DuckDuckGo；x 名称打开 16 个快捷入口；保留全部搜索关键词。
+-[URL Rewrite]
+-# 16 个 x 名称入口须先于通用搜索；整串匹配，避免携带 DuckDuckGo 参数。
+-^https://duckduckgo[.]com/[?]q=x(\+|%20)(%E5%BE%90%E5%B7%9E%E5%B8%82%E5%8F%A3%E8%85%94%E5%8C%BB%E9%99%A2|%E5%BE%90%E5%B7%9E%E5%8F%A3%E8%85%94%E5%8C%BB%E9%99%A2)(&.*)?$ https://wxmpurl.cn/BIyWtZ69Cie 302
+-^https://duckduckgo[.]com/[?]q=x(\+|%20)(%E8%BD%A6%E6%9D%A5%E4%BA%86|%E8%BD%A6%E6%9D%A5%E4%BA%86%E7%B2%BE%E5%87%86%E5%AE%9E%E6%97%B6%E5%85%AC%E4%BA%A4)(&.*)?$ https://wxaurl.cn/22f6kixLBGq 302
+-^https://duckduckgo[.]com/[?]q=x(\+|%20)(%E7%99%BE%E5%BA%A6%E8%B4%B4%E5%90%A7|%E8%B4%B4%E5%90%A7)(&.*)?$ https://wxmpurl.cn/xOnOOnNJmmi 302
+-^https://duckduckgo[.]com/[?]q=x(\+|%20)(%E4%B8%AD%E5%9B%BD%E5%B9%BF%E7%94%B5%E8%BF%90%E8%90%A5%E5%95%86|%E4%B8%AD%E5%9B%BD%E5%B9%BF%E7%94%B5%E8%90%A5%E4%B8%9A%E5%8E%85|%E4%B8%AD%E5%9B%BD%E5%B9%BF%E7%94%B5|%E5%B9%BF%E7%94%B5)(&.*)?$ https://wxmpurl.cn/AVyPwpUgeja 302
+-^https://duckduckgo[.]com/[?]q=x(\+|%20)(%E8%83%96%E4%B8%9C%E6%9D%A5)(&.*)?$ https://wxmpurl.cn/1dv5LbMRLuc 302
+-^https://duckduckgo[.]com/[?]q=x(\+|%20)(%E5%BE%AE%E5%8D%9A)(&.*)?$ https://wxmpurl.cn/79wueTiJRou 302
+-^https://duckduckgo[.]com/[?]q=x(\+|%20)(%E5%9B%BD%E5%AE%B6%E6%94%BF%E5%8A%A1%E6%9C%8D%E5%8A%A1%E5%B9%B3%E5%8F%B0%E5%85%AC%E4%BC%97%E5%8F%B7|%E5%9B%BD%E5%AE%B6%E6%94%BF%E5%8A%A1%E6%9C%8D%E5%8A%A1%E5%B9%B3%E5%8F%B0|%E5%9B%BD%E5%AE%B6%E6%94%BF%E5%8A%A1)(&.*)?$ https://mp.weixin.qq.com/s/CIUMYyqmOdTTPKD6IfuVeQ 302
+-^https://duckduckgo[.]com/[?]q=x(\+|%20)(%E6%BB%B4%E6%BB%B4%E5%87%BA%E8%A1%8C|%E6%BB%B4%E6%BB%B4)(&.*)?$ https://wxmpurl.cn/sVsH1EBhWSs 302
+-^https://duckduckgo[.]com/[?]q=x(\+|%20)(%E5%A4%A7%E4%BC%97%E7%82%B9%E8%AF%84|%E7%82%B9%E8%AF%84)(&.*)?$ https://wxmpurl.cn/bKlYY5qONnq 302
+-^https://duckduckgo[.]com/[?]q=x(\+|%20)(%E6%B7%AE%E5%8C%97%E5%B8%82%E4%BA%BA%E6%B0%91%E5%8C%BB%E9%99%A2|%E6%B7%AE%E5%8C%97%E4%BA%BA%E6%B0%91%E5%8C%BB%E9%99%A2)(&.*)?$ http://his.huaibeihosp.com/#/index 302
+-^https://duckduckgo[.]com/[?]q=x(\+|%20)(%E6%BF%89%E6%BA%AA%E5%8E%BF%E5%8C%BB%E9%99%A2|%E6%BF%89%E6%BA%AA%E5%8E%BF%E4%BA%BA%E6%B0%91%E5%8C%BB%E9%99%A2|%E6%BF%89%E6%BA%AA%E5%8C%BB%E9%99%A2)(&.*)?$ https://wxmpurl.cn/xCLnPOqzKQg 302
+-^https://duckduckgo[.]com/[?]q=x(\+|%20)(%E6%96%87%E6%A1%A3|%E9%87%91%E5%B1%B1%E6%96%87%E6%A1%A3|WPS%E6%96%87%E6%A1%A3)(&.*)?$ https://wxmpurl.cn/HrKgOyUdr2d 302
+-^https://duckduckgo[.]com/[?]q=x(\+|%20)(%E7%91%9E%E5%B9%B8|%E7%91%9E%E5%B9%B8%E5%92%96%E5%95%A1)(&.*)?$ https://wxmpurl.cn/6VE5MMYItMp 302
+-^https://duckduckgo[.]com/[?]q=x(\+|%20)(%E5%96%9C%E8%8C%B6|%E5%96%9C%E8%8C%B6GO)(&.*)?$ https://wxmpurl.cn/3JON7uLJ7it 302
+-^https://duckduckgo[.]com/[?]q=x(\+|%20)(%E9%9C%B8%E7%8E%8B%E8%8C%B6%E5%A7%AC)(&.*)?$ https://wxmpurl.cn/ZGnn9ybYzap 302
+-^https://duckduckgo[.]com/[?]q=x(\+|%20)(%E4%B8%89%E8%A7%92%E6%B4%B2|%E4%B8%89%E8%A7%92%E6%B4%B2%E8%A1%8C%E5%8A%A8)(&.*)?$ https://wxmpurl.cn/ljk0ufcyzej 302
+-^https?://(?:www[.])?(?:g|google)[.]cn((?:/|[?]|#).*)?$ https://www.google.com$1 302
+-^https://duckduckgo[.]com/[?]q=yd(?:\+|%20)([^&]+)(?:&.*)?$ http://dict.youdao.com/search?q=$1 302
+-^https://duckduckgo[.]com/[?]q=([^&]+?)(?:\+|%20)yd(?:&.*)?$ http://dict.youdao.com/search?q=$1 302
+-^https://duckduckgo[.]com/[?]q=trc(?:\+|%20)([^&]+)(?:&.*)?$ https://translate.google.com/#view=home&op=translate&sl=auto&tl=zh-CN&text=$1 302
+-^https://duckduckgo[.]com/[?]q=([^&]+?)(?:\+|%20)trc(?:&.*)?$ https://translate.google.com/#view=home&op=translate&sl=auto&tl=zh-CN&text=$1 302
+-^https://duckduckgo[.]com/[?]q=tre(?:\+|%20)([^&]+)(?:&.*)?$ https://translate.google.com/#view=home&op=translate&sl=auto&tl=en&text=$1 302
+-^https://duckduckgo[.]com/[?]q=([^&]+?)(?:\+|%20)tre(?:&.*)?$ https://translate.google.com/#view=home&op=translate&sl=auto&tl=en&text=$1 302
+-^https://duckduckgo[.]com/[?]q=trj(?:\+|%20)([^&]+)(?:&.*)?$ https://translate.google.com/#view=home&op=translate&sl=auto&tl=ja&text=$1 302
+-^https://duckduckgo[.]com/[?]q=([^&]+?)(?:\+|%20)trj(?:&.*)?$ https://translate.google.com/#view=home&op=translate&sl=auto&tl=ja&text=$1 302
+-^https://duckduckgo[.]com/[?]q=tt(?:\+|%20)([^&]+)(?:&.*)?$ https://so.toutiao.com/search?keyword=$1 302
+-^https://duckduckgo[.]com/[?]q=([^&]+?)(?:\+|%20)tt(?:&.*)?$ https://so.toutiao.com/search?keyword=$1 302
+-^https://duckduckgo[.]com/[?]q=db(?:\+|%20)([^&]+)(?:&.*)?$ https://m.douban.com/search?query=$1 302
+-^https://duckduckgo[.]com/[?]q=([^&]+?)(?:\+|%20)db(?:&.*)?$ https://m.douban.com/search?query=$1 302
+-^https://duckduckgo[.]com/[?]q=zh(?:\+|%20)([^&]+)(?:&.*)?$ http://www.zhihu.com/search?q=$1 302
+-^https://duckduckgo[.]com/[?]q=([^&]+?)(?:\+|%20)zh(?:&.*)?$ http://www.zhihu.com/search?q=$1 302
+-^https://duckduckgo[.]com/[?]q=wb(?:\+|%20)([^&]+)(?:&.*)?$ https://s.weibo.com/weibo/$1 302
+-^https://duckduckgo[.]com/[?]q=([^&]+?)(?:\+|%20)wb(?:&.*)?$ https://s.weibo.com/weibo/$1 302
+-^https://duckduckgo[.]com/[?]q=wx(?:\+|%20)([^&]+)(?:&.*)?$ https://weixin.sogou.com/weixinwap?query=$1 302
+-^https://duckduckgo[.]com/[?]q=([^&]+?)(?:\+|%20)wx(?:&.*)?$ https://weixin.sogou.com/weixinwap?query=$1 302
+-^https://duckduckgo[.]com/[?]q=up(?:\+|%20)([^&]+)(?:&.*)?$ https://unsplash.com/s/photos/$1 302
+-^https://duckduckgo[.]com/[?]q=([^&]+?)(?:\+|%20)up(?:&.*)?$ https://unsplash.com/s/photos/$1 302
+-^https://duckduckgo[.]com/[?]q=sspai(?:\+|%20)([^&]+)(?:&.*)?$ https://sspai.com/search/post/$1 302
+-^https://duckduckgo[.]com/[?]q=([^&]+?)(?:\+|%20)sspai(?:&.*)?$ https://sspai.com/search/post/$1 302
+-^https://duckduckgo[.]com/[?]q=ssp(?:\+|%20)([^&]+)(?:&.*)?$ https://www.google.com/search?as_q=$1&as_sitesearch=sspai.com 302
+-^https://duckduckgo[.]com/[?]q=([^&]+?)(?:\+|%20)ssp(?:&.*)?$ https://www.google.com/search?as_q=$1&as_sitesearch=sspai.com 302
+-^https://duckduckgo[.]com/[?]q=tw(?:\+|%20)([^&]+)(?:&.*)?$ https://twitter.com/search?q=$1 302
+-^https://duckduckgo[.]com/[?]q=([^&]+?)(?:\+|%20)tw(?:&.*)?$ https://twitter.com/search?q=$1 302
+-^https://duckduckgo[.]com/[?]q=gh(?:\+|%20)([^&]+)(?:&.*)?$ https://github.com/search?q=$1 302
+-^https://duckduckgo[.]com/[?]q=([^&]+?)(?:\+|%20)gh(?:&.*)?$ https://github.com/search?q=$1 302
+-^https://duckduckgo[.]com/[?]q=gu(?:\+|%20)([^&]+)(?:&.*)?$ https://github.com/search?q=$1&type=users 302
+-^https://duckduckgo[.]com/[?]q=([^&]+?)(?:\+|%20)gu(?:&.*)?$ https://github.com/search?q=$1&type=users 302
+-^https://duckduckgo[.]com/[?]q=gc(?:\+|%20)([^&]+)(?:&.*)?$ https://github.com/search?o=desc&q=$1&s=indexed&type=Code 302
+-^https://duckduckgo[.]com/[?]q=([^&]+?)(?:\+|%20)gc(?:&.*)?$ https://github.com/search?o=desc&q=$1&s=indexed&type=Code 302
+-^https://duckduckgo[.]com/[?]q=so(?:\+|%20)([^&]+)(?:&.*)?$ https://stackoverflow.com/search?q=$1 302
+-^https://duckduckgo[.]com/[?]q=([^&]+?)(?:\+|%20)so(?:&.*)?$ https://stackoverflow.com/search?q=$1 302
+-^https://duckduckgo[.]com/[?]q=se(?:\+|%20)([^&]+)(?:&.*)?$ https://stackexchange.com/search?q=$1 302
+-^https://duckduckgo[.]com/[?]q=([^&]+?)(?:\+|%20)se(?:&.*)?$ https://stackexchange.com/search?q=$1 302
+-^https://duckduckgo[.]com/[?]q=wa(?:\+|%20)([^&]+)(?:&.*)?$ https://www.wolframalpha.com/input/?i=$1 302
+-^https://duckduckgo[.]com/[?]q=([^&]+?)(?:\+|%20)wa(?:&.*)?$ https://www.wolframalpha.com/input/?i=$1 302
+-^https://duckduckgo[.]com/[?]q=rd(?:\+|%20)([^&]+)(?:&.*)?$ https://www.reddit.com/search?q=$1 302
+-^https://duckduckgo[.]com/[?]q=([^&]+?)(?:\+|%20)rd(?:&.*)?$ https://www.reddit.com/search?q=$1 302
+-^https://duckduckgo[.]com/[?]q=zdm(?:\+|%20)([^&]+)(?:&.*)?$ https://search.m.smzdm.com/?v=b&s=$1 302
+-^https://duckduckgo[.]com/[?]q=([^&]+?)(?:\+|%20)zdm(?:&.*)?$ https://search.m.smzdm.com/?v=b&s=$1 302
+-^https://duckduckgo[.]com/[?]q=jd(?:\+|%20)([^&]+)(?:&.*)?$ openapp.jdmobile://virtual?params={"des":"productList","keyWord":"$1","from":"search","category":"jump"} 302
+-^https://duckduckgo[.]com/[?]q=([^&]+?)(?:\+|%20)jd(?:&.*)?$ openapp.jdmobile://virtual?params={"des":"productList","keyWord":"$1","from":"search","category":"jump"} 302
+-^https://duckduckgo[.]com/[?]q=tb(?:\+|%20)([^&]+)(?:&.*)?$ taobao://s.taobao.com?q=$1 302
+-^https://duckduckgo[.]com/[?]q=([^&]+?)(?:\+|%20)tb(?:&.*)?$ taobao://s.taobao.com?q=$1 302
+-^https://duckduckgo[.]com/[?]q=yt(?:\+|%20)([^&]+)(?:&.*)?$ https://www.youtube.com/results?search_query=$1 302
+-^https://duckduckgo[.]com/[?]q=([^&]+?)(?:\+|%20)yt(?:&.*)?$ https://www.youtube.com/results?search_query=$1 302
+-^https://duckduckgo[.]com/[?]q=bli(?:\+|%20)([^&]+)(?:&.*)?$ https://m.bilibili.com/search?keyword=$1 302
+-^https://duckduckgo[.]com/[?]q=([^&]+?)(?:\+|%20)bli(?:&.*)?$ https://m.bilibili.com/search?keyword=$1 302
+-^https://duckduckgo[.]com/[?]q=gd(?:\+|%20)([^&]+)(?:&.*)?$ https://www.google.com/search?q=%22Google+Drive%22+$1 302
+-^https://duckduckgo[.]com/[?]q=([^&]+?)(?:\+|%20)gd(?:&.*)?$ https://www.google.com/search?q=%22Google+Drive%22+$1 302
+-^https://duckduckgo[.]com/[?]q=tgd(?:\+|%20)([^&]+)(?:&.*)?$ https://t.me/s/gdurl?q=$1 302
+-^https://duckduckgo[.]com/[?]q=([^&]+?)(?:\+|%20)tgd(?:&.*)?$ https://t.me/s/gdurl?q=$1 302
+-^https://duckduckgo[.]com/[?]q=ph(?:\+|%20)([^&]+)(?:&.*)?$ https://cn.pornhub.com/video/search?search=$1 302
+-^https://duckduckgo[.]com/[?]q=([^&]+?)(?:\+|%20)ph(?:&.*)?$ https://cn.pornhub.com/video/search?search=$1 302
+-^https://duckduckgo[.]com/[?]q=af(?:\+|%20)([^&]+)(?:&.*)?$ https://www.acfun.cn/search?keyword=$1 302
+-^https://duckduckgo[.]com/[?]q=([^&]+?)(?:\+|%20)af(?:&.*)?$ https://www.acfun.cn/search?keyword=$1 302
+-^https://duckduckgo[.]com/[?]q=ys(?:\+|%20)([^&]+)(?:&.*)?$ https://soupian.icu/search?key=$1 302
+-^https://duckduckgo[.]com/[?]q=([^&]+?)(?:\+|%20)ys(?:&.*)?$ https://soupian.icu/search?key=$1 302
+-^https://duckduckgo[.]com/[?]q=cn(?:&.*)?$ https://itunes.apple.com/WebObjects/MZStore.woa/wa/resetAndRedirect?dsf=143465&mt=8&url=/WebObjects/MZStore.woa/wa/viewSoftware?mt=8&id=1108187390&cc=cn&urlDesc= 302
+-^https://duckduckgo[.]com/[?]q=hk(?:&.*)?$ https://itunes.apple.com/WebObjects/MZStore.woa/wa/resetAndRedirect?dsf=143463&mt=8&url=/WebObjects/MZStore.woa/wa/viewSoftware?mt=8&id=1108187390&cc=hk&urlDesc= 302
+-^https://duckduckgo[.]com/[?]q=tw(?:&.*)?$ https://itunes.apple.com/WebObjects/MZStore.woa/wa/resetAndRedirect?dsf=143470&mt=8&url=/WebObjects/MZStore.woa/wa/viewSoftware?mt=8&id=1108187390&cc=tw&urlDesc= 302
+-^https://duckduckgo[.]com/[?]q=us(?:&.*)?$ https://itunes.apple.com/WebObjects/MZStore.woa/wa/resetAndRedirect?dsf=143441&mt=8&url=/WebObjects/MZStore.woa/wa/viewSoftware?mt=8&id=1108187390&cc=us&urlDesc= 302
+-^https://duckduckgo[.]com/[?]q=jp(?:&.*)?$ https://itunes.apple.com/WebObjects/MZStore.woa/wa/resetAndRedirect?dsf=143462&mt=8&url=/WebObjects/MZStore.woa/wa/viewSoftware?mt=8&id=1108187390&cc=jp&urlDesc= 302
+-^https://duckduckgo[.]com/[?]q=kr(?:&.*)?$ https://itunes.apple.com/WebObjects/MZStore.woa/wa/resetAndRedirect?dsf=143466&mt=8&url=/WebObjects/MZStore.woa/wa/viewSoftware?mt=8&id=1108187390&cc=kr&urlDesc= 302
+-^https://duckduckgo[.]com/[?]q=tr(?:&.*)?$ https://itunes.apple.com/WebObjects/MZStore.woa/wa/resetAndRedirect?dsf=143480&mt=8&url=/WebObjects/MZStore.woa/wa/viewSoftware?mt=8&id=1108187390&cc=tr&urlDesc= 302
+-^https://duckduckgo[.]com/[?]q=sg(?:&.*)?$ https://itunes.apple.com/WebObjects/MZStore.woa/wa/resetAndRedirect?dsf=143464&mt=8&url=/WebObjects/MZStore.woa/wa/viewSoftware?mt=8&id=1108187390&cc=sg&urlDesc= 302
+-^https://duckduckgo[.]com/[?]q=bd(?:\+|%20)([^&]+)(?:&.*)?$ https://www.baidu.com/s?wd=$1%20-adclear 302
+-^https://duckduckgo[.]com/[?]q=([^&]+?)(?:\+|%20)bd(?:&.*)?$ https://www.baidu.com/s?wd=$1%20-adclear 302
+-^https://duckduckgo[.]com/[?]q=wk(?:\+|%20)([^&]+)(?:&.*)?$ https://zh.wikipedia.org/wiki/$1 302
+-^https://duckduckgo[.]com/[?]q=([^&]+?)(?:\+|%20)wk(?:&.*)?$ https://zh.wikipedia.org/wiki/$1 302
+-^https://duckduckgo[.]com/[?]q=wz(?:\+|%20)([^&]+)(?:&.*)?$ https://www.wuzhuiso.com/s?q=$1 302
+-^https://duckduckgo[.]com/[?]q=([^&]+?)(?:\+|%20)wz(?:&.*)?$ https://www.wuzhuiso.com/s?q=$1 302
+-^https://duckduckgo[.]com/[?]q=yh(?:\+|%20)([^&]+)(?:&.*)?$ https://greasyfork.org/zh-CN/scripts?q=$1 302
+-^https://duckduckgo[.]com/[?]q=([^&]+?)(?:\+|%20)yh(?:&.*)?$ https://greasyfork.org/zh-CN/scripts?q=$1 302
+-^https://duckduckgo[.]com/[?]q=gi(?:\+|%20)([^&]+)(?:&.*)?$ https://www.google.com/search?&tbm=isch&q=$1 302
+-^https://duckduckgo[.]com/[?]q=([^&]+?)(?:\+|%20)gi(?:&.*)?$ https://www.google.com/search?&tbm=isch&q=$1 302
+-^https://duckduckgo[.]com/[?]q=by(?:\+|%20)([^&]+)(?:&.*)?$ https://www.bing.com/search?q=$1 302
+-^https://duckduckgo[.]com/[?]q=([^&]+?)(?:\+|%20)by(?:&.*)?$ https://www.bing.com/search?q=$1 302
+-^https://duckduckgo[.]com/[?]q=ios(?:\+|%20)([^&]+)(?:&.*)?$ https://www.qimai.cn/search/index/search/$1 302
+-^https://duckduckgo[.]com/[?]q=([^&]+?)(?:\+|%20)ios(?:&.*)?$ https://www.qimai.cn/search/index/search/$1 302
+-^https://duckduckgo[.]com/[?]q=([^&]+)(?:&.*)?$ https://www.google.com/search?q=$1 302
+-
++#!name=Safari 超级搜索（主配置兼容补充）
++#!desc=Safari 超级搜索及微信快捷入口的100条重写已包含在Surge.conf；此模块仅补充MitM，避免重写两份同时运行。单独安装本模块不提供快捷入口。
++# 16 个微信小程序入口及其余搜索重定向均在 Surge.conf 的 [URL Rewrite] 保留原样。
+ [MITM]
+ hostname = %APPEND% duckduckgo.com, g.cn, www.g.cn, google.cn, www.google.cn
+--- before/surge-ai.list
++++ after/surge-ai.list
+@@ -1,5 +1,5 @@
+ # Surge ai — 2026-10-14
+-# Policy: 人工智能; rules: 48
++# Policy: 人工智能; rules: 47
+ # Sources: OpenAI, BardAI, Gemini, Claude
+ DOMAIN,browser-intake-datadoghq.com
+ DOMAIN,chat.openai.com.cdn.cloudflare.net
+@@ -31,7 +31,6 @@
+ DOMAIN-KEYWORD,openai
+ IP-CIDR,24.199.123.28/32,no-resolve
+ IP-CIDR,64.23.132.171/32,no-resolve
+-IP-ASN,20473,no-resolve
+ DOMAIN,ai.google.dev
+ DOMAIN,alkalimakersuite-pa.clients6.google.com
+ DOMAIN,generativelanguage.googleapis.com
+@@ -49,3 +48,4 @@
+ DOMAIN,cdn.usefathom.com
+ DOMAIN-SUFFIX,anthropic.com
+ DOMAIN-SUFFIX,claude.ai
++# 共享云厂商 ASN 20473 已移除，防止非 AI 流量误命中。
+--- before/surge-copilot.list
++++ after/surge-copilot.list
+@@ -1,5 +1,5 @@
+ # Surge copilot — 2026-10-14
+-# Policy: 微软AI; rules: 20
++# Policy: 微软AI; rules: 17
+ # Sources: Copilot
+ DOMAIN,api.msn.com
+ DOMAIN,api.statsig.com
+@@ -17,7 +17,5 @@
+ DOMAIN,www.bing.com
+ DOMAIN-SUFFIX,api.microsoftapp.net
+ DOMAIN-SUFFIX,bing-shopping.microsoft-falcon.io
+-DOMAIN-SUFFIX,challenges.cloudflare.com
+ DOMAIN-SUFFIX,edgeservices.bing.com
+-DOMAIN-KEYWORD,openaicom-api
+-IP-ASN,14061,no-resolve
++# 注意：OpenAI 的 openaicom-api* 域名留给人工智能组；通用 Cloudflare 验证和共享 ASN 不强制归类 Copilot。
+--- before/surge-google-drive.list
++++ after/surge-google-drive.list
+@@ -1,12 +1,14 @@
+ # Surge google-drive — 2026-10-14
+-# Policy: 谷歌网盘; rules: 9
++# Policy: 谷歌网盘; rules: 10
+ # Sources: GoogleDrive
+-DOMAIN,www.googleapis.com
+ DOMAIN-SUFFIX,docs.google.com
+ DOMAIN-SUFFIX,drive.google.com
+ DOMAIN-SUFFIX,googledrive.com
+-DOMAIN-SUFFIX,googleusercontent.com
++DOMAIN,drive.usercontent.google.com
++DOMAIN,drive-data-export.usercontent.google.com
++DOMAIN,drive-data-export-eu.usercontent.google.com
+ USER-AGENT,%E4%BA%91%E7%AB%AF%E7%A1%AC%E7%9B%98*
+ USER-AGENT,*com.google.Drive*
+ USER-AGENT,Google.Drive*
+ PROCESS-NAME,BackupandSync
++# Google 共用 www.googleapis.com / googleusercontent.com 默认归谷歌服务；Drive 文件的部分流量可能因此走谷歌服务组。

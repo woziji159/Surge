@@ -1,5 +1,5 @@
 # Surge copilot — 2026-10-14
-# Policy: 微软AI; rules: 20
+# Policy: 微软AI; rules: 17
 # Sources: Copilot
 DOMAIN,api.msn.com
 DOMAIN,api.statsig.com
@@ -17,7 +17,5 @@ DOMAIN,sydney.bing.com
 DOMAIN,www.bing.com
 DOMAIN-SUFFIX,api.microsoftapp.net
 DOMAIN-SUFFIX,bing-shopping.microsoft-falcon.io
-DOMAIN-SUFFIX,challenges.cloudflare.com
 DOMAIN-SUFFIX,edgeservices.bing.com
-DOMAIN-KEYWORD,openaicom-api
-IP-ASN,14061,no-resolve
+# 注意：OpenAI 的 openaicom-api* 域名留给人工智能组；通用 Cloudflare 验证和共享 ASN 不强制归类 Copilot。

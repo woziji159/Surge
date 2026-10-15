@@ -1,6 +1,5 @@
-#!name=Google 综合增强（原生翻页修复）
-#!desc=繁体中文翻页兼容、提前加载、Google页面加载优化；保留毒奶净化。
-[Script]
-Google 综合增强 = type=http-response, pattern=^https://www[.]google[.][a-z.]+/(?:search[?]|[?](?:sa|FORM)=|$), requires-body=true, max-size=-1, timeout=10, engine=auto, script-path=https://raw.githubusercontent.com/woziji159/Surge/main/ext-google-combined-response.js?v=20261014-native-zhfix3
+#!name=Google 综合增强（主配置兼容补充）
+#!desc=为旧的模块订阅保留 Google MitM 主机名；Google 综合增强脚本统一由 Surge.conf 启用，避免双份脚本。单独安装本模块不提供翻页功能。
+# 主配置中的 Google 综合增强脚本保持原样，请勿同时添加其他第三方同类脚本。
 [MITM]
 hostname = %APPEND% www.google.*

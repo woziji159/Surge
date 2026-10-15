@@ -1,12 +1,14 @@
 # Surge google-drive — 2026-10-14
-# Policy: 谷歌网盘; rules: 9
+# Policy: 谷歌网盘; rules: 10
 # Sources: GoogleDrive
-DOMAIN,www.googleapis.com
 DOMAIN-SUFFIX,docs.google.com
 DOMAIN-SUFFIX,drive.google.com
 DOMAIN-SUFFIX,googledrive.com
-DOMAIN-SUFFIX,googleusercontent.com
+DOMAIN,drive.usercontent.google.com
+DOMAIN,drive-data-export.usercontent.google.com
+DOMAIN,drive-data-export-eu.usercontent.google.com
 USER-AGENT,%E4%BA%91%E7%AB%AF%E7%A1%AC%E7%9B%98*
 USER-AGENT,*com.google.Drive*
 USER-AGENT,Google.Drive*
 PROCESS-NAME,BackupandSync
+# Google 共用 www.googleapis.com / googleusercontent.com 默认归谷歌服务；Drive 文件的部分流量可能因此走谷歌服务组。

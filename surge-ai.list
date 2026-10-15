@@ -1,5 +1,5 @@
 # Surge ai — 2026-10-14
-# Policy: 人工智能; rules: 48
+# Policy: 人工智能; rules: 47
 # Sources: OpenAI, BardAI, Gemini, Claude
 DOMAIN,browser-intake-datadoghq.com
 DOMAIN,chat.openai.com.cdn.cloudflare.net
@@ -31,7 +31,6 @@ DOMAIN-SUFFIX,turn.livekit.cloud
 DOMAIN-KEYWORD,openai
 IP-CIDR,24.199.123.28/32,no-resolve
 IP-CIDR,64.23.132.171/32,no-resolve
-IP-ASN,20473,no-resolve
 DOMAIN,ai.google.dev
 DOMAIN,alkalimakersuite-pa.clients6.google.com
 DOMAIN,generativelanguage.googleapis.com
@@ -49,3 +48,4 @@ DOMAIN-KEYWORD,generativelanguage
 DOMAIN,cdn.usefathom.com
 DOMAIN-SUFFIX,anthropic.com
 DOMAIN-SUFFIX,claude.ai
+# 共享云厂商 ASN 20473 已移除，防止非 AI 流量误命中。
