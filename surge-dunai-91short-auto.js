@@ -1,5 +1,5 @@
 /*
- * Surge — 毒奶站点增强 v19（检测器加载与双扫描冲突修复）：统一扫描器 / 无 150 总量上限 / 撤回暂停 / 收紧链接误判
+ * Surge — 毒奶站点增强 v21（检测器加载与双扫描冲突修复）：统一扫描器 / 无 150 总量上限 / 撤回暂停 / 收紧链接误判
  * 原始仓库: https://github.com/woziji159/Surge
  * 保留原版导航、反馈、元素屏蔽器及原生撤销功能；不新增悬浮按钮。
  * 仅用于 Surge [Script] http-response 的 HTML 响应，不是直接网页用户脚本。
@@ -21,7 +21,7 @@
     var body = $response.body;
     if (typeof body !== 'string' || !/<head\b[^>]*>/i.test(body)) return $done({});
     if (/您的域名并未添加白名单导致无法访问/.test(body)) return $done({});
-    if (/SURGE-LIMBO-91:\s*(?:v17|v18|v19|v20)|id=["']limbo-unified-autoscan-v17["']/.test(body)) return $done({});
+    if (/SURGE-LIMBO-91:\s*(?:v17|v18|v19|v20|v21)|id=["']limbo-native-autoblock-v21["']/.test(body)) return $done({});
 
     // GitHub Raw 适合 Surge 的 script-path，但作为网页 <script src> 可能被浏览器以 nosniff 拦截。
     // 这两份定制 JS 仍来自用户自己的仓库，只将网页加载地址换成 JS CDN。
@@ -69,7 +69,20 @@
     console.warn('[limbo-v14] AdGuard 作者 CSS 未能加载:',link.href);
   });
   (document.head||document.documentElement).appendChild(link);
-  st.snapshot=function(){return {status:st.status,loaded:st.loaded,attached:!!(link.sheet && link.isConnected),enabled:!link.disabled,source:st.source,filtersEffect:'not inferred from stylesheet load'};};
+  function ensureAttached(){
+    if(link.isConnected)return;
+    try{
+      (document.head||document.documentElement).appendChild(link);
+      st.status=st.loaded?(st.manualOff?'off':'loading'):'loading';
+      updateButton();
+    }catch(e){st.status='error';st.attachError=String(e);}
+  }
+  st.snapshot=function(){
+    var actual=!!(link.isConnected && link.sheet && !link.disabled);
+    return {status:actual?'on':(st.manualOff?'off':st.status==='error'?'error':'not-attached'),
+      loaded:st.loaded,attached:!!(link.isConnected && link.sheet),enabled:actual,
+      source:st.source,filtersEffect:'not inferred from stylesheet load'};
+  };
   document.addEventListener('click',function(e){
     var t=e.target&&e.target.closest&&e.target.closest('#loadCSS');
     if(!t||!e.isTrusted)return;
@@ -88,8 +101,10 @@
     }
   });
   function start(){
-    updateButton();
-    if(document.body)observer.observe(document.body,{childList:true,subtree:true});
+    ensureAttached();updateButton();
+    if(document.documentElement)observer.observe(document.documentElement,{childList:true,subtree:true});
+    // Check stale 'loaded' state in case the app replaces <head> during SPA navigation.
+    setInterval(function(){ensureAttached();if(st.status==='on'&&!link.isConnected){st.status='loading';updateButton();}},4500);
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
@@ -205,144 +220,158 @@
 
     // v17: 一个后台扫描器；分批处理无终身数量上限；统一的暂停/撤回。
     // 只处理明确的广告标记和已知广告主机，避免拦截一般站内链接。
-    var unifiedScanner = String.raw`<script id="limbo-unified-autoscan-v17">
-(function(){
+    var unifiedScanner = String.raw`<script id="limbo-native-autoblock-v21">
+(function () {
   'use strict';
-  if (window.__limboUnifiedV17) return;
-  var host = location.hostname.toLowerCase();
-  var is91 = host.indexOf('91short') !== -1;
-  var known = /(?:^|\.)(?:doubleclick\.net|googlesyndication\.com|adsterra\.com|wpadmngr\.com|twinrdengine\.com|magsrv\.com|jads\.co)$/i;
-  var ui = '[id*="feedback" i],[class*="feedback" i],[id*="ad-detector" i],[class*="ad-detector" i],[id*="limbo" i],[class*="limbo" i],#dh_pageContainer,#dh_buttonContainer';
-  var selector = 'ins.adsbygoogle,.adsbygoogle,[data-ad-client],[data-ad-slot],iframe[src],.popup-ad,.floating-ad,.ad-banner,[class*="popunder"],[id*="popunder"]' +
-    (is91 ? ',.msop100,img[data-id^="ad"],img[class*="imgad"],a[href]' : '');
-  var pending = [], inQueue = new Set(), hidden = new Map();
-  var running = false, observer = null, scheduleHandle = 0;
-  var state = window.__limboUnifiedV17 = {
-    version: 'v17', paused: false, scanned: 0, hidden: 0,
-    scan: rescan, undo: undo, pause: undo, resume: resume,
-    status: function(){return {paused:state.paused,scanned:state.scanned,hiddenCount:hidden.size,queued:pending.length};}
-  };
-  function isTool(el){try{return !!el.closest(ui);}catch(_){return false;}}
-  function urlHost(raw){try{return new URL(raw,location.href).hostname.toLowerCase();}catch(_){return '';}}
-  function firstParty(h){return h && (h===host || h.endsWith('.'+host) || host.endsWith('.'+h));}
-  function explicitImage(el){
-    if (!el || el.tagName!=='IMG')return false;
-    var id=el.getAttribute('data-id')||'';
-    var cls=typeof el.className==='string'?el.className:'';
-    return /^ad\d+$/i.test(id) || /(?:^|\s)imgad\d+(?:\s|$)/i.test(cls);
-  }
-  function hasAdImage(el){return !!(el && el.querySelector && el.querySelector('img[data-id^="ad"],img[class*="imgad"]'));}
-  function suspect(el){
-    if (!(el instanceof Element) || isTool(el) || el.closest('nav,header,footer,form,[role="navigation"]')) return null;
-    var t=el.tagName;
-    if (t==='A') {
-      // Never hide normal internal links or generic external image links.
-      var dest=urlHost(el.getAttribute('href')||'');
-      if(!dest || firstParty(dest))return null;
-      return known.test(dest) ? el : (is91 && hasAdImage(el) ? el : null);
-    }
-    if (t==='IFRAME')return known.test(urlHost(el.getAttribute('src')||'')) ? el : null;
-    if (is91 && t==='DIV' && el.matches('.msop100') && hasAdImage(el))return el;
-    if (is91 && explicitImage(el)) {
-      var a=el.closest('a[href]');
-      var dh=a?urlHost(a.getAttribute('href')||''):'';
-      return a && dh && !firstParty(dh) ? a : el;
-    }
-    if (el.matches('[data-ad-client],[data-ad-slot],ins.adsbygoogle,.adsbygoogle'))return el;
-    if (is91 && el.matches('.popup-ad,.floating-ad,.ad-banner,[class*="popunder"],[id*="popunder"]'))return el;
-    return null;
-  }
-  function hide(el){
-    if (!el || !el.isConnected || hidden.has(el) || isTool(el))return;
-    // Containers for video cards, menus, and forms must never be hidden wholesale.
-    if (/^(?:HTML|BODY|HEAD|MAIN|NAV|HEADER|FOOTER|VIDEO|AUDIO|FORM)$/.test(el.tagName))return;
-    var css=el.style;if(!css)return;
-    hidden.set(el,{display:css.getPropertyValue('display'),priority:css.getPropertyPriority('display')});
-    el.setAttribute('data-limbo-unified-hidden-v17','');
-    css.setProperty('display','none','important');
-    state.hidden++;
-  }
-  function put(el){
-    if (!el || !(el instanceof Element) || inQueue.has(el) || state.paused) return;
-    inQueue.add(el);pending.push(el);
-  }
-  function collect(root){
-    if (state.paused || !root || !(root instanceof Element))return;
-    if (root.matches(selector))put(root);
-    var list=root.querySelectorAll(selector);
-    for (var i=0;i<list.length;i++)put(list[i]);
-    pump();
-  }
-  function pump(){
-    if (running || state.paused || !pending.length) return;
-    running=true;
-    function chunk(){
-      if (state.paused){running=false;pending.length=0;inQueue.clear();return;}
-      // At most 100 elements per turn, but no total lifetime cap.
-      var n=0;
-      while(n++<100 && pending.length){
-        var el=pending.shift();inQueue.delete(el);
-        if (!el || !el.isConnected)continue;
-        state.scanned++;
-        try{var found=suspect(el);if(found)hide(found);}catch(e){console.warn('[limbo-v17] classify failed',e);}
+  if (window.__limboNativeAutoV21) return;
+  var state = window.__limboNativeAutoV21 = {
+    version:'v21', ready:false, paused:false, busy:false,
+    scans:0, nativeBlocked:0, lastCandidates:0, errors:[], lastError:'',
+    scan:function(){schedule('manual');},
+    pause:function(){pause('manual');},
+    resume:function(){state.paused=false;state.pausedReason='';schedule('resume');},
+    status:function(){return {
+      ready:state.ready, paused:state.paused, pausedReason:state.pausedReason||'',
+      busy:state.busy, scans:state.scans, nativeBlocked:state.nativeBlocked,
+      lastCandidates:state.lastCandidates, lastError:state.lastError,
+      nativeFlags:{
+        hijack:read('hijackDefuser')==='1',
+        popup:read('windowhijackDefuser')==='1',
+        hijackFunction:typeof window.addEventListener_defuserV2==='function',
+        popupFunction:typeof window.window_open_defuser==='function'
       }
-      if(pending.length)setTimeout(chunk,16);else running=false;
-    }
-    setTimeout(chunk,0);
+    };}
+  };
+  // Compatibility: prevent limbo-elementBlocker-auto.js from starting a second scanner.
+  // It is an alias to the native scanner, NOT the independent v17 scanner.
+  window.__limboUnifiedV17=state;
+  function read(key){try{return localStorage.getItem(key);}catch(_){return null;}}
+  function write(key,val){try{localStorage.setItem(key,val);}catch(e){state.lastError='Storage: '+e.message;}}
+  // Native AdDetector reads these at SCRIPT INITIALIZATION (not when the menu is clicked).
+  write('hijackDefuser','1');
+  write('windowhijackDefuser','1');
+  // Default to background operation on each page load; manual UI opening still works.
+  write('ad_detector_ui_open','false');
+  var d=null, timer=null, processing=false, lastRun=0, started=false;
+  var queued=false, lastRequest='';
+  function pause(reason){
+    state.paused=true;state.pausedReason=reason;
+    if(timer){clearTimeout(timer);timer=null;}
+    queued=false;
   }
-  function rescan(){if(!state.paused && document.body)collect(document.body);}
-  function undo(){
-    if(state.paused)return;
-    state.paused=true;
-    pending.length=0;inQueue.clear();
-    if(scheduleHandle)clearTimeout(scheduleHandle);
-    hidden.forEach(function(old,el){
-      if(!el || !el.style)return;
-      if(old.display)el.style.setProperty('display',old.display,old.priority);
-      else el.style.removeProperty('display');
-      el.removeAttribute('data-limbo-unified-hidden-v17');
+  function hookNative(detector){
+    if(detector.__limboNativeHookedV21)return;
+    detector.__limboNativeHookedV21=true;
+    // Undo/reset must suspend EVERY automatic native invocation, not only one queue.
+    ['undo','resetAll'].forEach(function(name){
+      if(typeof detector[name]!=='function')return;
+      var old=detector[name];
+      detector[name]=function(){pause(name);return old.apply(this,arguments);};
     });
-    hidden.clear();
-    // Best-effort pause for older v8/v11 scripts if already present from another injector.
-    if(window.__limbo91AutoBlockV8){window.__limbo91AutoBlockV8.enabled=false;}
-    if(window.__limboGenericAutoV11){window.__limboGenericAutoV11.paused=true;}
-    if(window.__limbo91AutoV9){window.__limbo91AutoV9.paused=true;}
-    if(typeof window.limboPassiveAdScanUndo==='function'){
-      try{window.limboPassiveAdScanUndo();}catch(e){console.warn('[limbo-v17] legacy undo failed',e);}
+    // Stored UI preference from a previous run must not cause the panel to auto-open.
+    // Only at first connection; never intercept future manual showUI()/toggleUI().
+    if(detector.isUIVisible && typeof detector.hideUI==='function'){
+      try{detector.hideUI();}catch(e){state.lastError='Hide UI: '+e.message;}
     }
   }
-  function resume(){if(!state.paused)return;state.paused=false;rescan();}
-  function schedule(){
-    if(state.paused || scheduleHandle)return;
-    scheduleHandle=setTimeout(function(){scheduleHandle=0;rescan();},500);
+  function findNative(){
+    if(d)return d;
+    try{
+      if(typeof window.getDetector!=='function')return null;
+      var candidate=window.getDetector();
+      if(!candidate||typeof candidate.scan!=='function'||typeof candidate.cleanAll!=='function')return null;
+      d=candidate;hookNative(d);state.ready=true;
+      return d;
+    }catch(e){state.lastError='Native init: '+e.message;return null;}
   }
-  function start(){
-    if(!document.body)return;
-    rescan();setTimeout(rescan,1100);
-    if(window.MutationObserver){
-      observer=new MutationObserver(function(items){
-        if(state.paused)return;
-        for(var i=0;i<items.length;i++){
-          var rec=items[i];
-          if(rec.type==='attributes')put(rec.target);
-          else for(var j=0;j<rec.addedNodes.length;j++)collect(rec.addedNodes[j]);
-        }
-        pump();
+  function countCandidates(detector){
+    var count=0;
+    if(detector.detectedAds && typeof detector.detectedAds.forEach==='function'){
+      detector.detectedAds.forEach(function(meta){
+        if(meta && meta.element && meta.element.isConnected && !meta.isBlocked)count++;
       });
-      observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['src','href','class','data-id','data-ad-client','data-ad-slot']});
     }
-    window.addEventListener('pageshow',schedule);
-    window.addEventListener('popstate',schedule);
-    // Scroll itself does not rescan the entire document; lazy content is caught by DOM observer.
-    document.addEventListener('click',function(e){
-      if(!e.isTrusted)return;
-      var btn=e.target && e.target.closest && e.target.closest('button,[role="button"],a,input[type="button"]');
-      if(!btn)return;
-      var label=(btn.innerText||btn.textContent||btn.value||'').replace(/\s+/g,'').trim();
-      if(/^(?:↩️?|↩)?撤回$/.test(label)||label==='一键重置')setTimeout(undo,0);
-    },true);
+    return count;
   }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
+  async function run(){
+    timer=null;
+    if(state.paused || state.busy)return;
+    var detector=findNative();
+    if(!detector)return;
+    state.busy=true;
+    lastRun=Date.now();
+    try{
+      detector.scan();
+      state.scans++;
+      var count=countCandidates(detector);
+      state.lastCandidates=count;
+      if(count){
+        // Suppress only the visual progress indicator for BACKGROUND calls.
+        // Hand-operated buttons still call the unmodified native UI implementation.
+        var progress=detector.showTopProgress;
+        var result;
+        try{
+          if(typeof progress==='function')detector.showTopProgress=function(){return {update:function(){},finish:function(){}};};
+          result=detector.cleanAll();
+        }finally{
+          if(typeof progress==='function')detector.showTopProgress=progress;
+        }
+        var n=await Promise.resolve(result);
+        if(typeof n==='number')state.nativeBlocked+=n;
+      }
+      state.lastError='';
+    }catch(e){
+      state.lastError='Native auto-block: '+(e&&e.message||String(e));
+      console.warn('[limbo-v21]',state.lastError);
+    }finally{
+      state.busy=false;
+      if(queued && !state.paused){queued=false;schedule('follow-up');}
+    }
+  }
+  function schedule(reason){
+    if(state.paused)return;
+    lastRequest=reason;
+    if(state.busy){queued=true;return;}
+    if(timer)return;
+    // Rate limiting prevents MutationObserver feedback loops and expensive scans.
+    timer=setTimeout(run,Math.max(500,1800-(Date.now()-lastRun)));
+  }
+  function onDOM(items){
+    if(state.paused)return;
+    for(var i=0;i<items.length;i++){
+      var m=items[i];
+      if(m.type==='childList' && m.addedNodes && m.addedNodes.length){
+        var found=false;
+        for(var j=0;j<m.addedNodes.length;j++){
+          var el=m.addedNodes[j];
+          if(el.nodeType===1 && !el.closest('#ad-detector-host,#dh_pageContainer,#dh_buttonContainer') &&
+             !el.matches('#ad-detector-dynamic-css-rules,#anti-ad-fixed-dynamic-style,#ad-detector-top-progress')){
+            found=true;break;
+          }
+        }
+        if(found){schedule('new-dom');return;}
+      }
+    }
+  }
+  function boot(){
+    if(started || !document.body)return;
+    started=true;
+    var obs=new MutationObserver(onDOM);
+    obs.observe(document.body,{childList:true,subtree:true});
+    window.addEventListener('pageshow',function(){schedule('pageshow');});
+    window.addEventListener('popstate',function(){schedule('popstate');});
+    document.addEventListener('scroll',function(){schedule('scroll');},{passive:true});
+    // Remote scripts may appear well after DOMContentLoaded. No need to open their panel.
+    var tries=0;
+    var wait=setInterval(function(){
+      if(findNative()){
+        clearInterval(wait);
+        schedule('native-ready');
+        setTimeout(function(){schedule('late-images');},1600);
+      } else if(++tries>=240){clearInterval(wait);state.lastError='Native AdDetector did not load in 120 seconds';}
+    },500);
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
 </script>`;
 
@@ -414,11 +443,11 @@
 </script>`;
 
     var injection = [
-      '<!-- SURGE-LIMBO-91: v20 response-rewrite-injected -->',
+      '<!-- SURGE-LIMBO-91: v21 response-rewrite-injected -->',
+      unifiedScanner,
       adguardNotice,
       guard,
       quietNotices,
-      unifiedScanner,
       feedbackRecovery,
       '<script defer src="https://limbopro.com/Adguard/autoAdDetector.js"></script>',
       '<script defer src="https://limbopro.com/Adguard/Adblock4limbo.user.js"></script>',
@@ -434,10 +463,10 @@
     Object.keys(h).forEach(function (k) {
       if (/^(?:content-length|content-security-policy|content-security-policy-report-only)$/i.test(k)) delete h[k];
     });
-    console.log('[limbo-91-v20] HTML 注入成功: ' + hostname + ' / ' + pathname);
+    console.log('[limbo-91-v21] HTML 注入成功: ' + hostname + ' / ' + pathname);
     return $done({body:body, headers:h});
   } catch (e) {
-    console.log('[limbo-91-v20] ' + e.message);
+    console.log('[limbo-91-v21] ' + e.message);
     $done({});
   }
 })();
