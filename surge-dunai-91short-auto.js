@@ -1,5 +1,5 @@
 /*
- * Surge — 毒奶站点增强 v17：统一扫描器 / 无 150 总量上限 / 撤回暂停 / 收紧链接误判
+ * Surge — 毒奶站点增强 v18：统一扫描器 / 无 150 总量上限 / 撤回暂停 / 收紧链接误判
  * 原始仓库: https://github.com/woziji159/Surge
  * 保留原版导航、反馈、元素屏蔽器及原生撤销功能；不新增悬浮按钮。
  * 仅用于 Surge [Script] http-response 的 HTML 响应，不是直接网页用户脚本。
@@ -21,7 +21,7 @@
     var body = $response.body;
     if (typeof body !== 'string' || !/<head\b[^>]*>/i.test(body)) return $done({});
     if (/您的域名并未添加白名单导致无法访问/.test(body)) return $done({});
-    if (/SURGE-LIMBO-91:\s*v17|id=["']limbo-unified-autoscan-v17["']/.test(body)) return $done({});
+    if (/SURGE-LIMBO-91:\s*(?:v17|v18)|id=["']limbo-unified-autoscan-v17["']/.test(body)) return $done({});
 
     // GitHub Raw 适合 Surge 的 script-path，但作为网页 <script src> 可能被浏览器以 nosniff 拦截。
     // 这两份定制 JS 仍来自用户自己的仓库，只将网页加载地址换成 JS CDN。
@@ -37,7 +37,7 @@
 (function(){
   'use strict';
   if(window.__limboAdguardV14)return;
-  var st=window.__limboAdguardV14={status:'loading',loaded:false,manualOff:false,source:'https://limbopro.com/CSS/Adblock4limbo.user.css'};
+  var st=window.__limboAdguardV14={status:'loading',loaded:false,attached:false,manualOff:false,source:'https://limbopro.com/CSS/Adblock4limbo.user.css'};
   var link=document.createElement('link');
   link.id='limbo-adguard-css-v14';link.rel='stylesheet';link.href=st.source;
   st.link=link;
@@ -45,7 +45,7 @@
     var label=document.getElementById('loadCSS_status_text');
     var btn=document.getElementById('loadCSS');
     if(!label||!btn)return;
-    var wanted=st.status==='on'?'已开启':st.status==='off'?'已关闭':st.status==='error'?'加载失败':'加载中';
+    var wanted=st.status==='on'?'CSS已载入':st.status==='off'?'已关闭':st.status==='error'?'加载失败':'加载中';
     if(label.textContent!==wanted)label.textContent=wanted;
     btn.setAttribute('data-limbo-adguard-status-v14',st.status);
     btn.setAttribute('aria-pressed',st.status==='on'?'true':'false');
@@ -58,16 +58,18 @@
   }
   link.addEventListener('load',function(){
     st.loaded=true;
-    st.status=st.manualOff?'off':'on';
+    st.attached=!!(link.sheet && link.isConnected);
+    st.status=st.attached?(st.manualOff?'off':'on'):'error';
     link.disabled=st.manualOff;
     updateButton();
     console.log('[limbo-v14] AdGuard 作者 CSS 已加载:',link.href);
   });
   link.addEventListener('error',function(){
-    st.loaded=false;st.status='error';updateButton();
+    st.loaded=false;st.attached=false;st.status='error';updateButton();
     console.warn('[limbo-v14] AdGuard 作者 CSS 未能加载:',link.href);
   });
   (document.head||document.documentElement).appendChild(link);
+  st.snapshot=function(){return {status:st.status,loaded:st.loaded,attached:!!(link.sheet && link.isConnected),enabled:!link.disabled,source:st.source,filtersEffect:'not inferred from stylesheet load'};};
   document.addEventListener('click',function(e){
     var t=e.target&&e.target.closest&&e.target.closest('#loadCSS');
     if(!t||!e.isTrusted)return;
@@ -93,78 +95,91 @@
 })();
 </script>`;
 
-    // v15: 只做静默的实际点击拦截，不创建任何“已开启”通知；不接管原版工具箱。
-    var guard = String.raw`<script id="limbo-91-protection-v15">
+    // v18: 局部拦截器，实际注册事件；不伪造毒奶原版开关状态或弹出提示。
+    var guard = String.raw`<script id="limbo-91-protection-v18">
 (function(){
   'use strict';
-  if(window.__limbo91ProtectionV15)return;
-  var st=window.__limbo91ProtectionV15={version:'v15',clickRedirect:'on',popup:'pending',blockedClicks:0,blockedPopups:0};
-  var knownAd=/(?:^|\.)(?:doubleclick\.net|googlesyndication\.com|adsterra\.com|wpadmngr\.com|twinrdengine\.com|tsyndicate\.com|magsrv\.com|jads\.co)$/i;
+  if (window.__limboProtectionV18) return;
+  var st=window.__limboProtectionV18={
+    version:'v18', captureInstalled:false, popupInstalled:false,
+    blockedClicks:0,blockedPopups:0,allowedNavigations:0,
+    lastReason:'',lastBlockedURL:'', type:'local protection (not original author toggles)'
+  };
+  var known=/(?:^|\.)(?:doubleclick\.net|googlesyndication\.com|googleadservices\.com|adsterra\.com|wpadmngr\.com|twinrdengine\.com|tsyndicate\.com|magsrv\.com|jads\.co|popads\.net)$/i;
   var feedback=/(?:^|\.)(?:limbopro\.com|github\.com|t\.me)$/i;
-  var adMarkers='.msop100,.popup-ad,.floating-ad,.ad-banner,.popunder,[class*="popunder"],[id*="popunder"],a:has(> img[data-id^="ad"]),img[data-id^="ad"],img[class*="imgad"],[data-ad-slot],[data-ad-client]';
-  var lastTrusted=0,lastSafeTarget=null;
+  var adNodes='[data-ad-client],[data-ad-slot],ins.adsbygoogle,.adsbygoogle,.msop100,.popup-ad,.floating-ad,.ad-banner,.popunder,[class*="popunder"],[id*="popunder"],img[data-id^="ad"],img[class^="imgad"],a:has(> img[data-id^="ad"])';
+  var lastGesture={time:0,href:'',anchor:null,kind:''};
+  function targetURL(s){try{return new URL(String(s||''),location.href);}catch(_){return null;}}
+  function firstParty(host){var h=location.hostname.toLowerCase();return host===h||host.endsWith('.'+h)||h.endsWith('.'+host);}
   function ip(host){return /^(?:\d{1,3}\.){3}\d{1,3}$/.test(host);}
-  function site(host){return host===location.hostname || host.endsWith('.'+location.hostname) || location.hostname.endsWith('.'+host);}
-  function dest(url){try{return new URL(String(url),location.href);}catch(_){return null;}}
-  function suspicious(u){return !!u&&(/^https?:$/.test(u.protocol))&&(ip(u.hostname)||knownAd.test(u.hostname));}
-  function mark(el){
-    if(!el||!el.closest)return false;
-    var found=el.closest(adMarkers);
-    // Only blocks obvious ad markers, not parent video cards.
-    return !!found;
+  function danger(u){return !!u && /^https?:$/.test(u.protocol) && (known.test(u.hostname)||ip(u.hostname));}
+  function isTool(el){return !!(el&&el.closest&&el.closest('#dh_pageContainer,#dh_buttonContainer,[id*="ad-detector" i],[class*="ad-detector" i],[id*="limbo" i],[class*="limbo" i]'));}
+  function adNode(el){
+    if(!el||!el.closest||isTool(el))return false;
+    try{return !!el.closest(adNodes);}catch(_){return false;}
   }
-  function inspectTarget(e){
-    if(e.defaultPrevented)return;
-    var el=e.target;
-    if(!el||!el.closest)return;
-    var anchor=el.closest('a[href],area[href]');
-    var suspiciousAd=mark(el);
-    var uri=anchor?dest(anchor.getAttribute('href')):null;
-    var badHref=suspicious(uri);
-    var externalPopup=!!(anchor && uri && anchor.target==='_blank' && !site(uri.hostname) && !feedback.test(uri.hostname));
-    if(suspiciousAd || badHref || externalPopup){
+  function recordBlock(why,url,popup){
+    st.lastReason=why;st.lastBlockedURL=String(url||'').slice(0,350);
+    if(popup)st.blockedPopups++;else st.blockedClicks++;
+    // No popups, fake confirmations, or noisy console logs.
+  }
+  function resolveAnchor(el){return el&&el.closest?el.closest('a[href],area[href]'):null;}
+  function handleUserEvent(e){
+    var el=e.target;if(!el||!el.closest||isTool(el))return;
+    var a=resolveAnchor(el), u=a?targetURL(a.getAttribute('href')):null;
+    var bad=adNode(el)||danger(u);
+    if(bad){
       if(e.cancelable)e.preventDefault();
       e.stopImmediatePropagation();
-      st.blockedClicks++;
-      if(e.isTrusted)lastSafeTarget=null;
-      console.debug('[limbo-v15] 已拦截广告点击');
+      recordBlock(adNode(el)?'marked-ad-click':'known-ad-destination',u&&u.href,false);
+      lastGesture={time:0,href:'',anchor:null,kind:''};
       return;
     }
+    // Only trusted gestures can authorise new windows, not script-generated clicks.
     if(e.isTrusted){
-      lastTrusted=Date.now();
-      lastSafeTarget=anchor;
+      lastGesture={time:Date.now(),href:u?u.href:'',anchor:a,kind:e.type};
+      st.allowedNavigations++;
     }
   }
-  // Capture before most site listeners; also handles ad overlays implemented as DIV/IMG.
-  window.addEventListener('click',inspectTarget,true);
-  // Capture the initial touch to prevent ads listening to touchstart instead of click.
-  window.addEventListener('touchstart',function(e){
-    if(mark(e.target)){
-      if(e.cancelable)e.preventDefault();e.stopImmediatePropagation();st.blockedClicks++;
-    }
-  },{capture:true,passive:false});
-  var priorOpen=window.open;
-  function guardedOpen(url){
-    var target=dest(url);
-    var accepted=target && (/^https?:$/.test(target.protocol)) &&
-      !suspicious(target) &&
-      // Legitimate feedback links are allowed only immediately after a real user click.
-      ((feedback.test(target.hostname) && Date.now()-lastTrusted<2500) ||
-       (site(target.hostname) && Date.now()-lastTrusted<2500 && lastSafeTarget));
-    if(!accepted){st.blockedPopups++;console.debug('[limbo-v15] 已拦截弹窗');return null;}
-    return priorOpen.apply(this,arguments);
+  function add(type){
+    window.addEventListener(type,handleUserEvent,{capture:true,passive:false});
   }
-  guardedOpen.__limboV15=true;
-  function install(){
-    if(window.open!==guardedOpen){
-      priorOpen=window.open;
-      // Avoid circular wrappers if another script reinstalls a previous wrapper.
-      if(priorOpen===guardedOpen)return;
-      window.open=guardedOpen;
-    }
-    st.popup=window.open===guardedOpen?'on':'unverified';
+  try{
+    add('touchstart');add('touchend');add('click');
+    st.captureInstalled=true;
+  }catch(e){st.captureError=String(e);}
+  var nextOpen=window.open;
+  function interceptOpen(url){
+    var u=targetURL(url),age=Date.now()-lastGesture.time;
+    // A user-requested blank tab with no URL is allowed only following a gesture.
+    var hasGesture=age>=0&&age<1300;
+    var explicitSameAnchor=!!(u && lastGesture.href && u.href===lastGesture.href);
+    var ownSite=!!(u && firstParty(u.hostname));
+    var isFeedback=!!(u && feedback.test(u.hostname));
+    var safe=!!u && /^https?:$/.test(u.protocol) && !danger(u) &&
+      hasGesture && (explicitSameAnchor || isFeedback || (ownSite && !!lastGesture.anchor));
+    if(!safe){recordBlock('unexpected-popup',u&&u.href,true);return null;}
+    return nextOpen.apply(this,arguments);
   }
-  install();setInterval(install,2500);
+  interceptOpen.__limboProtectionV18=true;
+  function installPopup(){
+    if(window.open!==interceptOpen){
+      // Avoid recursive wrapping when someone copies this wrapper back.
+      if(window.open!==nextOpen && window.open && !window.open.__limboProtectionV18)
+        nextOpen=window.open;
+      try{window.open=interceptOpen;}catch(e){st.popupError=String(e);}
+    }
+    st.popupInstalled=window.open===interceptOpen;
+  }
+  installPopup();
+  // Only re-install if another page script actually replaces window.open.
+  setInterval(function(){if(window.open!==interceptOpen)installPopup();},2500);
+  st.snapshot=function(){return {
+    click:st.captureInstalled,popup:st.popupInstalled,
+    blockedClicks:st.blockedClicks,blockedPopups:st.blockedPopups,
+    lastReason:st.lastReason,lastBlockedURL:st.lastBlockedURL,
+    originalAuthorSwitches:'not verified'
+  };};
 })();
 </script>`;
 
@@ -379,7 +394,7 @@
 </script>`;
 
     var injection = [
-      '<!-- SURGE-LIMBO-91: v17 response-rewrite-injected -->',
+      '<!-- SURGE-LIMBO-91: v18 response-rewrite-injected -->',
       adguardNotice,
       guard,
       quietNotices,
@@ -399,10 +414,10 @@
     Object.keys(h).forEach(function (k) {
       if (/^(?:content-length|content-security-policy|content-security-policy-report-only)$/i.test(k)) delete h[k];
     });
-    console.log('[limbo-91-v17] HTML 注入成功: ' + hostname + ' / ' + pathname);
+    console.log('[limbo-91-v18] HTML 注入成功: ' + hostname + ' / ' + pathname);
     return $done({body:body, headers:h});
   } catch (e) {
-    console.log('[limbo-91-v17] ' + e.message);
+    console.log('[limbo-91-v18] ' + e.message);
     $done({});
   }
 })();
