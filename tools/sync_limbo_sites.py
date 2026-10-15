@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""v16: 91short keyword domains plus site list; preserve existing JS injection."""
+"""v17: site list updates for unified scanner, no legacy dual-scanner injection."""
 from __future__ import annotations
 import re
 import hashlib
@@ -99,7 +99,7 @@ def update_config(conf, hosts, script_content):
     # New JS features must bust the Surge cache even if the website list is unchanged.
     version = hashlib.sha256(('\n'.join(hosts) + '\n' + script_content).encode('utf-8')).hexdigest()[:12]
     resource = r'(script-path=https://raw\.githubusercontent\.com/woziji159/Surge/main/surge-dunai-91short-auto\.js)(?:\?v=[^,\s]+)?'
-    line, replaced = re.subn(resource, lambda m: m.group(1) + '?v=sites16-' + version, line)
+    line, replaced = re.subn(resource, lambda m: m.group(1) + '?v=sites17-' + version, line)
     if replaced != 1:
         raise ValueError('没有找到原始脚本更新地址，拒绝修改')
     entries[index[0]] = line
@@ -158,11 +158,8 @@ def update_js(script, hosts):
     script, count = old_outer.subn(lambda _: new_outer, script)
     if count != 1:
         raise ValueError('JS 主域名检查不唯一，拒绝修改')
-    new_control = '  if (!/' + regexp + '/i.test(location.hostname)) return; ' + CTRL_PATTERN_MARK
-    old_control = re.compile(r'(?m)^  if \(!/.*?/i\.test\(location\.hostname\)\) return;(?: ' + re.escape(CTRL_PATTERN_MARK) + r')?$')
-    script, count = old_control.subn(lambda _: new_control, script)
-    if count != 1:
-        raise ValueError('JS 自动面板控制器域名检查不唯一，拒绝修改')
+    # v17 unified scanner inherits the injected host; there is no v9 UI controller.
+    # Do not regenerate a legacy click-to-open scan controller.
     # The v8 blocking style is designed only for 91short. Do not hide similarly
     # named elements on unrelated future sites.
     # Keep vendor CSS exclusive to its actual x-91short.com domain.
@@ -173,82 +170,11 @@ def update_js(script, hosts):
         raise ValueError('x-91short.com 专属 CSS 判断结构改变，请人工检查')
     if 'var isAny91short' not in script:
         script = script.replace(check, check + "\n    var isAny91short = hostname.indexOf('91short') !== -1;", 1)
-    expected = '      isOriginal91short ? passiveScan : genericScan,'
-    updated = '      isAny91short ? passiveScan : genericScan,'
-    if script.count(expected) == 1:
-        script = script.replace(expected, updated, 1)
-    elif script.count(updated) != 1:
-        raise ValueError('91short 广告扫描注入位置改变，请人工检查')
+    if script.count('      unifiedScanner,') != 1:
+        raise ValueError('v17 统一自动扫描器注入位置改变，请人工检查')
 
-    if 'var isOriginal91short' not in script:
-        needle = "    var base = 'https://cdn.jsdelivr.net/gh/woziji159/Surge@main/';"
-        if script.count(needle) != 1:
-            raise ValueError('无法找到原站资源地址')
-        script = script.replace(needle, "    var isOriginal91short = /(?:^|\\.)x-91short\\.com$/i.test(hostname);\n" + needle, 1)
-        # Uniquely replace only the injection array insertion, not the actual script source.
-        n = '      passiveScan,\n'
-        if script.count(n) != 1: raise ValueError('找不到唯一的 passiveScan 注入位置')
-        script = script.replace(n, '      isOriginal91short ? passiveScan : genericScan,\n', 1)
-        for name in ('x-91short.com.css', 'limbopro.x-91short.com.css'):
-            style = '<link rel="stylesheet" href="https://limbopro.com/CSS/' + name + '">'
-            original = "      '" + style + "'"
-            conditional = "      isOriginal91short ? '" + style + "' : ''"
-            if original in script:
-                script = script.replace(original, conditional, 1)
-
-    if 'var genericScan = String.raw`' not in script:
-        insertion = "    var autoControls = String.raw`<script id=\"limbo-91-original-controls-autorun-v9\">"
-        if script.count(insertion) != 1:
-            raise ValueError('无法找到自动控制器插入点')
-        generic = r'''    // New sites: conservative first-party fallback detection; 91short retains the proven v8 logic.
-    var genericScan = String.raw`<script id="limbo-generic-auto-scan-v11">
-(function(){
-  'use strict';
-  if(window.__limboGenericAutoV11)return;
-  var state=window.__limboGenericAutoV11={scanCount:0,hiddenCount:0,paused:false};
-  var selectors='ins.adsbygoogle,[data-ad-client],[data-ad-slot],iframe[src*="doubleclick.net"],iframe[src*="googlesyndication.com"],.adsbygoogle';
-  var scheduled=0, changed=[];
-  function run(){
-    scheduled=0;
-    if(state.paused || (window.__limbo91AutoV9 && window.__limbo91AutoV9.paused)) return;
-    state.scanCount++;
-    var nodes=document.querySelectorAll(selectors);
-    for(var i=0;i<nodes.length;i++){
-      var el=nodes[i]; if(el.dataset.limboGenericHidden)continue;
-      if(el.closest('[id*="limbo" i],[class*="limbo" i]')) continue;
-      changed.push({el:el,display:el.style.getPropertyValue('display'),priority:el.style.getPropertyPriority('display')});
-      el.dataset.limboGenericHidden='1';
-      el.style.setProperty('display','none','important'); state.hiddenCount++;
-    }
-  }
-  function undo(){
-    state.paused=true;
-    for(var i=0;i<changed.length;i++){
-      var item=changed[i], el=item.el;
-      if(!el || !el.style)continue;
-      if(item.display)el.style.setProperty('display',item.display,item.priority);
-      else el.style.removeProperty('display');
-      delete el.dataset.limboGenericHidden;
-    }
-    changed=[];
-  }
-  function schedule(){if(scheduled || state.paused)return; scheduled=setTimeout(run,600);}
-  function init(){
-    run();
-    if(window.MutationObserver)new MutationObserver(schedule).observe(document.body,{childList:true,subtree:true});
-    window.addEventListener('scroll',schedule,{passive:true});
-    document.addEventListener('click',function(e){
-      var t=e.target && e.target.closest && e.target.closest('button,[role="button"],a');
-      var label=t && (t.innerText||t.textContent||'').trim();
-      if(label && /^(?:撤回|一键重置)$/.test(label))setTimeout(undo,0);
-    },true);
-  }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
-})();
-</script>`;
-
-'''
-        script = script.replace(insertion, generic + insertion, 1)
+    if 'var unifiedScanner = String.raw`' not in script:
+        raise ValueError('缺少 v17 统一扫描器，禁止从旧版意外重新生成')
     return script
 
 
