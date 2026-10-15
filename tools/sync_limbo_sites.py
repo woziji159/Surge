@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""v15: Site list stays sole configuration input. Keep AdGuard and protection automation patches intact."""
+"""v16: 91short keyword domains plus site list; preserve existing JS injection."""
 from __future__ import annotations
 import re
 import hashlib
@@ -84,19 +84,31 @@ def update_config(conf, hosts, script_content):
     if suffix not in old_pat:
         raise ValueError('rewrite-001 路径排除结构已改变；拒绝自动覆盖')
     after = old_pat[old_pat.index(suffix):]
-    group = '|'.join(re.escape(host) for host in hosts)
-    new_pattern = r'^https:\/\/(?:[a-z0-9-]+\.)*(?:' + group + r')' + after
+    other = [host for host in hosts if '91short' not in host]
+    # Match ANY HTTPS hostname containing '91short', plus user-listed hosts.
+    # This does not match URLs that only contain the word in the path/query.
+    keyword = r'[a-z0-9.-]*91short[a-z0-9.-]*'
+    if other:
+        extra = '|'.join(re.escape(host) for host in other)
+        hostname_pattern = r'(?:' + keyword + r'|(?:[a-z0-9-]+\.)*(?:' + extra + r'))'
+    else:
+        hostname_pattern = r'(?:' + keyword + r')'
+    new_pattern = r'^https:\/\/' + hostname_pattern + after
     line = line[:m.start(2)] + new_pattern + line[m.end(2):]
     # Changing the site list also changes the script URL so Surge cannot reuse an old version.
     # New JS features must bust the Surge cache even if the website list is unchanged.
     version = hashlib.sha256(('\n'.join(hosts) + '\n' + script_content).encode('utf-8')).hexdigest()[:12]
     resource = r'(script-path=https://raw\.githubusercontent\.com/woziji159/Surge/main/surge-dunai-91short-auto\.js)(?:\?v=[^,\s]+)?'
-    line, replaced = re.subn(resource, lambda m: m.group(1) + '?v=sites15-' + version, line)
+    line, replaced = re.subn(resource, lambda m: m.group(1) + '?v=sites16-' + version, line)
     if replaced != 1:
         raise ValueError('没有找到原始脚本更新地址，拒绝修改')
     entries[index[0]] = line
     conf = ''.join(entries)
-    direct = '\n'.join([SITE_MARK_START] + [f'DOMAIN-SUFFIX,{h},DIRECT' for h in hosts] + [SITE_MARK_END])
+    # First matching rules win: route any 91short-related hostname directly,
+    # independently of FINAL/leak policy. Other user sites keep suffix rules.
+    direct = '\n'.join([SITE_MARK_START, 'DOMAIN-KEYWORD,91short,DIRECT'] +
+                       [f'DOMAIN-SUFFIX,{h},DIRECT' for h in hosts if '91short' not in h] +
+                       [SITE_MARK_END])
     existing_block = re.search(r'(?m)^' + re.escape(SITE_MARK_START) + r'\n[\s\S]*?^' + re.escape(SITE_MARK_END) + r'$', conf)
     if existing_block:
         conf = conf[:existing_block.start()] + direct + conf[existing_block.end():]
@@ -120,7 +132,9 @@ def update_config(conf, hosts, script_content):
     current = [h.strip() for h in rows[i][len('hostname = '):].split(',') if h.strip()]
     # Strip only additions previously marked as generated.
     current = [h for h in current if h not in previous]
-    additions = []
+    # Surge MITM Host List supports '*' anywhere within the hostname.
+    # A keyword rule alone is NOT sufficient for rewriting encrypted HTTPS.
+    additions = ['*91short*'] if '*91short*' not in current else []
     for host in hosts:
         for part in (host, '*.' + host):
             if part not in current and part not in additions:
@@ -132,8 +146,13 @@ def update_config(conf, hosts, script_content):
 
 
 def update_js(script, hosts):
-    group = '|'.join(re.escape(host) for host in hosts)
-    regexp = r'^(?:[a-z0-9-]+\.)*(?:' + group + r')$'
+    other = [host for host in hosts if '91short' not in host]
+    keyword = r'[a-z0-9.-]*91short[a-z0-9.-]*'
+    if other:
+        group = '|'.join(re.escape(host) for host in other)
+        regexp = r'^(?:' + keyword + r'|(?:[a-z0-9-]+\.)*(?:' + group + r'))$'
+    else:
+        regexp = r'^(?:' + keyword + r')$'
     new_outer = '    var domain = /' + regexp + '/i; ' + HOST_PATTERN_MARK
     old_outer = re.compile(r'(?m)^    var domain = /.*?/i;(?: ' + re.escape(HOST_PATTERN_MARK) + r')?$')
     script, count = old_outer.subn(lambda _: new_outer, script)
@@ -146,6 +165,21 @@ def update_js(script, hosts):
         raise ValueError('JS 自动面板控制器域名检查不唯一，拒绝修改')
     # The v8 blocking style is designed only for 91short. Do not hide similarly
     # named elements on unrelated future sites.
+    # Keep vendor CSS exclusive to its actual x-91short.com domain.
+    # For other domains merely containing 91short, enable the existing
+    # auto-hide scanner and keep original navigation/feedback resources.
+    check = r"    var isOriginal91short = /(?:^|\.)x-91short\.com$/i.test(hostname);"
+    if script.count(check) != 1:
+        raise ValueError('x-91short.com 专属 CSS 判断结构改变，请人工检查')
+    if 'var isAny91short' not in script:
+        script = script.replace(check, check + "\n    var isAny91short = hostname.indexOf('91short') !== -1;", 1)
+    expected = '      isOriginal91short ? passiveScan : genericScan,'
+    updated = '      isAny91short ? passiveScan : genericScan,'
+    if script.count(expected) == 1:
+        script = script.replace(expected, updated, 1)
+    elif script.count(updated) != 1:
+        raise ValueError('91short 广告扫描注入位置改变，请人工检查')
+
     if 'var isOriginal91short' not in script:
         needle = "    var base = 'https://cdn.jsdelivr.net/gh/woziji159/Surge@main/';"
         if script.count(needle) != 1:
