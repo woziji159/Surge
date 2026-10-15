@@ -447,9 +447,30 @@
     // Preserve logging, the two native interceptors, and the native auto ad blocker.
     var hideEventLogFab = '<style id="limbo-hide-eventlog-fab-v21-1">#event-log-viewer-v3 .ev-fab{display:none !important}</style>';
 
+    // This only runs when Surge has actually intercepted a fresh HTML response.
+    // Disable old site-controlled Service Workers; the rule above prevents the site's observed sw-register.js from re-enabling them.
+    var swCleanup = String.raw`<script id="limbo-91-serviceworker-cleanup-v21-2">
+(function(){
+  'use strict';
+  try {
+    if (!navigator.serviceWorker || typeof navigator.serviceWorker.getRegistrations !== 'function') return;
+    navigator.serviceWorker.getRegistrations().then(function(registrations){
+      registrations.forEach(function(reg){
+        if (reg.scope && reg.scope.indexOf(location.origin + '/') === 0) {
+          reg.unregister().then(function(ok){
+            if (ok) console.log('[limbo-v21.2] old site Service Worker unregistered:', reg.scope);
+          }).catch(function(){});
+        }
+      });
+    }).catch(function(){});
+  } catch (_) {}
+})();
+</script>`;
+
     var injection = [
       '<!-- SURGE-LIMBO-91: v21 response-rewrite-injected -->',
       hideEventLogFab,
+      swCleanup,
       unifiedScanner,
       adguardNotice,
       guard,
@@ -469,6 +490,12 @@
     Object.keys(h).forEach(function (k) {
       if (/^(?:content-length|content-security-policy|content-security-policy-report-only)$/i.test(k)) delete h[k];
     });
+    Object.keys(h).forEach(function (k) { if (/^(?:cache-control|pragma|expires)$/i.test(k)) delete h[k]; });
+    h['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0';
+    h['Pragma'] = 'no-cache';
+    h['Expires'] = '0';
+    // Old ETag/Last-Modified validators are no longer valid for the rewritten HTML.
+    Object.keys(h).forEach(function (k) { if (/^(?:etag|last-modified)$/i.test(k)) delete h[k]; });
     console.log('[limbo-91-v21] HTML 注入成功: ' + hostname + ' / ' + pathname);
     return $done({body:body, headers:h});
   } catch (e) {
