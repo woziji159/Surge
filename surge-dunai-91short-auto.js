@@ -1,5 +1,5 @@
 /*
- * Surge — 毒奶站点增强 v21.3（91short 独立精准去广告与视频保护）：统一扫描器 / 无 150 总量上限 / 撤回暂停 / 收紧链接误判
+ * Surge — 毒奶站点增强 v21.4（91short 积极屏蔽可疑元素、仅保护已确认播放器）：统一扫描器 / 无 150 总量上限 / 撤回暂停 / 收紧链接误判
  * 原始仓库: https://github.com/woziji159/Surge
  * 保留原版导航、反馈、元素屏蔽器及原生撤销功能；不新增悬浮按钮。
  * 仅用于 Surge [Script] http-response 的 HTML 响应，不是直接网页用户脚本。
@@ -218,17 +218,16 @@
 })();
 </script>`;
 
-    // v21.3: 91short 专用精准屏蔽；保护播放器、视频封面及视频卡片，保留原版撤回。
-    // 以后新增其他网站仅加载毒奶基础功能，单站屏蔽策略独立开发。
-    // v21.3: 91short-only dedicated auto-block policy; preserve original v12.6 manual UI.
-    // No unconditional native cleanAll: select verified advertising candidates first.
+    // v21.4: User-selected aggressive 91short policy: auto-block all v12.6 suspicious candidates,
+    // except the two verified player elements and the ancestors necessary to display them.
+    // Other domains remain in base-only mode; manual controls and undo remain available.
     var unifiedScanner = String.raw`<script id="limbo-native-autoblock-v21">
 (function(){
   'use strict';
   if(window.__limboNativeAutoV21)return;
   var site91=/(?:^|[.-])91short(?:[.-]|$)/i.test(location.hostname);
   var state=window.__limboNativeAutoV21={
-    version:'v21.3',mode:site91?'91short-precision':'base-only',ready:false,paused:false,busy:false,
+    version:'v21.4',mode:site91?'91short-aggressive-player-only':'base-only',ready:false,paused:false,busy:false,
     scans:0,nativeBlocked:0,lastCandidates:0,lastSelected:0,protectedSkipped:0,ambiguousSkipped:0,
     restoredMedia:0,removedLegacyRules:0,lastError:'',
     scan:function(){schedule('manual');},
@@ -295,20 +294,27 @@
   function player(){return document.querySelector('iframe#playbox.in-video,iframe#playbox');}
   function protectedNodes(){
     if(!site91)return [];
-    var arr=Array.from(document.querySelectorAll('iframe#playbox.in-video,iframe#playbox,.player-box,.player-box-main,.player-wrapper'));
-    var p=player();
-    if(p){var a=p.parentElement;for(var n=0;a&&n<4;n++,a=a.parentElement){if(arr.indexOf(a)===-1)arr.push(a);}}
-    return arr;
+    // Protect only verified 91short video player targets and their structural ancestors.
+    // A parent that contains the player must stay visible; descendants are NOT automatically exempt.
+    var nodes=[],seen=new Set();
+    var roots=document.querySelectorAll('iframe#playbox.in-video,.player-box');
+    for(var i=0;i<roots.length;i++){
+      var n=roots[i];
+      while(n && n.nodeType===1 && n!==document.documentElement){
+        if(!seen.has(n)){seen.add(n);nodes.push(n);}
+        n=n.parentElement;
+      }
+    }
+    return nodes;
   }
   function isProtected(el){
     if(!site91 || !el || el.nodeType!==1)return false;
+    // Exclude only the two confirmed player selectors and elements that contain them.
+    // Other candidate images/video cards can be auto-blocked by design in this aggressive mode.
     try{
-      if(el.matches('video,audio,source,track,iframe#playbox.in-video,iframe#playbox,.player-box,.player-box-main,.player-wrapper'))return true;
-      if(el.matches('img[data-cover],img[data-gif_cover],[data-cover][data-id],[data-gif_cover][data-id]'))return true;
-      if(el.closest('a[href*="/film/"]'))return true;
-      if(el.matches('a[href*="/film/"]') || el.querySelector('a[href*="/film/"]'))return true;
-      if(el.querySelector('video,audio,iframe#playbox.in-video,iframe#playbox,.player-box'))return true;
-      var p=player();if(p && el.contains(p))return true;
+      if(el.matches('iframe#playbox.in-video,.player-box'))return true;
+      var roots=document.querySelectorAll('iframe#playbox.in-video,.player-box');
+      for(var i=0;i<roots.length;i++)if(el.contains(roots[i]))return true;
       return false;
     }catch(_){return false;}
   }
@@ -383,45 +389,15 @@
     }catch(_){return false;}
     return true;
   }
-  function markedAd(el){
-    try{
-      if(el.matches(explicitAd))return true;
-      var marked=el.matches(marker91)||(el.matches('div.msop100')&&!!el.querySelector(marker91));
-      if(!marked)return false;
-      var a=el.closest('a[href]')||el.querySelector('a[href]');
-      return !!(a&&outbound(url(a.getAttribute('href'))));
-    }catch(_){return false;}
-  }
-  function knownAdLink(el){
-    var raw=el.getAttribute('href')||el.getAttribute('src')||'';
-    if(hostAd(raw))return true;
-    var links=el.querySelectorAll('a[href],iframe[src]');
-    for(var i=0;i<links.length&&i<12;i++){
-      if(hostAd(links[i].getAttribute('href')||links[i].getAttribute('src')))return true;
-    }
-    return false;
-  }
-  function maliciousOverlay(el){
-    if(!el.matches('div,a,section,span'))return false;
-    var cs=getComputedStyle(el),rect=el.getBoundingClientRect();
-    var z=parseInt(cs.zIndex,10)||0,opacity=parseFloat(cs.opacity);
-    var vw=innerWidth||1,vh=innerHeight||1;
-    return (cs.position==='fixed'||cs.position==='absolute') && z>=999 && opacity<=0.05 &&
-      rect.width>=vw*0.65 && rect.height>=vh*0.35 && cs.pointerEvents!=='none' &&
-      (!!el.getAttribute('onclick')||!!el.querySelector('a[href]')||el.matches('a[href]'));
-  }
-  function confident(detector,meta){
+  // Deliberately aggressive site policy: if original v12.6 registered it as suspicious,
+  // block it unless doing so would hide the known player or match its structural ancestors.
+  function eligibleCandidate(detector,meta){
     var el=meta&&meta.element;
-    if(!el||!el.isConnected||meta.isBlocked||isProtected(el))return false;
-    if(!safeSelector(detector,el))return false;
-    if(knownAdLink(el))return true;
-    if(markedAd(el))return true;
-    if(maliciousOverlay(el))return true;
-    return false;
+    return !!(el&&el.isConnected&&!meta.isBlocked&&!isProtected(el)&&safeSelector(detector,el));
   }
   function hookNative(detector){
-    if(detector.__limboNativeHookedV213)return;
-    detector.__limboNativeHookedV213=true;
+    if(detector.__limboNativeHookedV214)return;
+    detector.__limboNativeHookedV214=true;
     ['undo','resetAll'].forEach(function(name){
       if(typeof detector[name]!=='function')return;
       var original=detector[name];
@@ -470,7 +446,7 @@
         if(!meta||!meta.element||!meta.element.isConnected||meta.isBlocked)return;
         candidates++;
         if(isProtected(meta.element))protectedSkipped++;
-        else if(site91&&confident(detector,meta))selected.set(id,meta);
+        else if(site91&&eligibleCandidate(detector,meta))selected.set(id,meta);
         else ambiguous++;
       });
       state.lastCandidates=candidates;state.lastSelected=selected.size;
@@ -494,7 +470,7 @@
         if(detector.isUIVisible&&typeof detector.updateUI==='function')detector.updateUI();
       }
       state.lastError='';
-    }catch(e){state.lastError='Native precision block: '+(e&&e.message||String(e));console.warn('[limbo-v21.3]',state.lastError);}
+    }catch(e){state.lastError='Native aggressive block: '+(e&&e.message||String(e));console.warn('[limbo-v21.4]',state.lastError);}
     finally{state.busy=false;if(queued&&!state.paused){queued=false;schedule('follow-up');}}
   }
   function schedule(reason){
@@ -627,7 +603,7 @@
 </script>`;
 
     var injection = [
-      '<!-- SURGE-LIMBO-91: v21.3 response-rewrite-injected -->',
+      '<!-- SURGE-LIMBO-91: v21.4 response-rewrite-injected -->',
       hideEventLogFab,
       swCleanup,
       unifiedScanner,
@@ -655,10 +631,10 @@
     h['Expires'] = '0';
     // Old ETag/Last-Modified validators are no longer valid for the rewritten HTML.
     Object.keys(h).forEach(function (k) { if (/^(?:etag|last-modified)$/i.test(k)) delete h[k]; });
-    console.log('[limbo-91-v21.3] HTML 注入成功: ' + hostname + ' / ' + pathname);
+    console.log('[limbo-91-v21.4] HTML 注入成功: ' + hostname + ' / ' + pathname);
     return $done({body:body, headers:h});
   } catch (e) {
-    console.log('[limbo-91-v21.3] ' + e.message);
+    console.log('[limbo-91-v21.4] ' + e.message);
     $done({});
   }
 })();
