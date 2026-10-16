@@ -1,5 +1,11 @@
 /*
- * Surge — 毒奶站点增强 v21.4（91short 积极屏蔽可疑元素、仅保护已确认播放器）：统一扫描器 / 无 150 总量上限 / 撤回暂停 / 收紧链接误判
+ * Surge — 毒奶站点增强 v21.5（加载提速版）
+ * v21.5 只优化加载速度，不改去广告规则：
+ *   1) 毒奶原版脚本 Adblock4limbo.user.js 排到最前并提高下载优先级（开关 TOOLBOX_FIRST）；
+ *   2) 反馈补救不再固定等 4.5 秒：毒奶导航按钮一出现就检查（保留 4.5 秒兜底，补载前防重复）；
+ *   3) 提示隐藏器不再每次 DOM 变化都整页逐元素扫描。
+ *   v21.4 的统一扫描器 / 播放器保护 / 两个恶意拦截开关 / AdGuard CSS 等代码原样保留，未改动。
+ * v21.4（91short 积极屏蔽可疑元素、仅保护已确认播放器）：统一扫描器 / 无 150 总量上限 / 撤回暂停 / 收紧链接误判
  * 原始仓库: https://github.com/woziji159/Surge
  * 保留原版导航、反馈、元素屏蔽器及原生撤销功能；不新增悬浮按钮。
  * 仅用于 Surge [Script] http-response 的 HTML 响应，不是直接网页用户脚本。
@@ -30,6 +36,11 @@
     var base = 'https://cdn.jsdelivr.net/gh/woziji159/Surge@main/';
     var customFn = base + 'limbo-function-auto.js?v=fix19-7ab1517d593a';
     var customElement = base + 'limbo-elementBlocker-auto.js?v=fix19-cea6685a742c';
+
+    // v21.5: 远程脚本加载顺序开关。
+    // true  = 毒奶原版脚本（导航/工具箱）最先执行并提高下载优先级，AdDetector 排第二；
+    // false = 恢复 v21.4 的顺序（AdDetector 最先）。如发现去广告表现变差，改成 false 即可对比。
+    var TOOLBOX_FIRST = true;
 
     // v14: 加载作者实际的远程 CSS，不再点击作者的弹窗按钮。
     // 仅拦截 #loadCSS 的真人点击来手动关闭/开启本页已加载的样式；绝不改写全局 confirm。
@@ -511,6 +522,8 @@
 </script>`;
 
     // v15: 仅隐藏这两种诊断性提示；保留原作者脚本和可疑广告检测按钮。
+    // v21.5: 每次先用一次 body.innerText 判断这两条提示是否真的显示在页面上，没有就直接返回；
+    //        原来每次 DOM 变化都要逐个读取最多 12000 个元素的 innerText（会强制排版），页面越大越卡。
     var quietNotices = String.raw`<script id="limbo-quiet-diagnostic-v15">
 (function(){
   'use strict';
@@ -523,9 +536,16 @@
     if(!s||s.length>125)return false;
     return hints.some(function(p){return s.indexOf(p)!==-1;});
   }
+  function pageHasHint(){
+    try{
+      var s=String(document.body.innerText||'').replace(/\s+/g,'');
+      return hints.some(function(p){return s.indexOf(p)!==-1;});
+    }catch(_){return true;}
+  }
   function hide(){
     queued=false;
     if(!document.body)return;
+    if(!pageHasHint())return;
     var list=document.body.querySelectorAll('div,span,p,strong,small');
     for(var i=0;i<list.length&&i<12000;i++){
       var el=list[i];
@@ -552,6 +572,8 @@
 })();
 </script>`;
 
+    // v21.5: 不再固定等 4.5 秒。毒奶导航按钮（#dh_button）一出现，300ms 后检查并按需补载；
+    //        导航一直没出现时，仍按原来的 4.5 秒兜底。补载前先确认辅助脚本没被加载过，避免重复。
     var feedbackRecovery = `<script id="limbo-91-feedback-recovery-v8">
 (function(){
   'use strict';
@@ -564,16 +586,35 @@
     }
     return false;
   }
+  function hasHelper(){
+    return typeof window.alFeedback_showPanel==='function' || !!document.querySelector('script[src*="feedBackLinkMake"]');
+  }
   function run(){
-    if(hasFeedback() || document.getElementById('limbo-91-recover-original-feedback-js-v8')) return;
+    if(hasFeedback() || hasHelper() || document.getElementById('limbo-91-recover-original-feedback-js-v8')) return;
     var s=document.createElement('script');
     s.id='limbo-91-recover-original-feedback-js-v8';
     s.src='https://limbopro.com/Adguard/feedBackLinkMake.user.js';
     s.async=true;
     (document.head || document.documentElement).appendChild(s);
   }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){setTimeout(run,4500);},{once:true});
-  else setTimeout(run,4500);
+  function arm(){
+    var done=false, mo=null;
+    function toolboxReady(){ return !!(document.getElementById('dh_button') || document.getElementById('dh_buttonContainer')); }
+    function go(){
+      if(done) return;
+      done=true;
+      if(mo){ try{ mo.disconnect(); }catch(e){} }
+      setTimeout(run,300);
+    }
+    if(toolboxReady()){ go(); return; }
+    try{
+      mo=new MutationObserver(function(){ if(toolboxReady()) go(); });
+      mo.observe(document.documentElement,{childList:true,subtree:true});
+    }catch(e){}
+    setTimeout(go,4500);
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',arm,{once:true});
+  else arm();
 })();
 </script>`;
 
@@ -602,23 +643,31 @@
 })();
 </script>`;
 
+    // v21.5: defer 脚本按书写顺序依次执行，且都在文档解析完成后、DOMContentLoaded 之前。
+    // 原版脚本必须排在 customFn / customElement 之前（后两者会覆盖它的同名函数），
+    // 所以只调整 AdDetector 的位置：原来它排在最前，原版导航要等它下载并执行完才能出现。
+    var scriptToolbox = '<script defer' + (TOOLBOX_FIRST ? ' fetchpriority="high"' : '') + ' src="https://limbopro.com/Adguard/Adblock4limbo.user.js"></script>';
+    var scriptDetector = '<script defer src="https://limbopro.com/Adguard/autoAdDetector.js"></script>';
+    var scriptCustomFn = '<script defer src="' + customFn + '"></script>';
+    var scriptCustomElement = '<script defer src="' + customElement + '"></script>';
+    var scriptAgent = '<script defer src="https://limbopro.com/Adguard/isAgent.js"></script>';
+    var remoteScripts = TOOLBOX_FIRST
+      ? [scriptToolbox, scriptDetector, scriptCustomFn, scriptCustomElement, scriptAgent]
+      : [scriptDetector, scriptToolbox, scriptCustomFn, scriptCustomElement, scriptAgent];
+
     var injection = [
-      '<!-- SURGE-LIMBO-91: v21.4 response-rewrite-injected -->',
+      '<!-- SURGE-LIMBO-91: v21.5 response-rewrite-injected -->',
       hideEventLogFab,
       swCleanup,
       unifiedScanner,
       adguardNotice,
       guard,
       quietNotices,
-      feedbackRecovery,
-      '<script defer src="https://limbopro.com/Adguard/autoAdDetector.js"></script>',
-      '<script defer src="https://limbopro.com/Adguard/Adblock4limbo.user.js"></script>',
-      '<script defer src="' + customFn + '"></script>',
-      '<script defer src="' + customElement + '"></script>',
-      '<script defer src="https://limbopro.com/Adguard/isAgent.js"></script>',
+      feedbackRecovery
+    ].concat(remoteScripts, [
       isOriginal91short ? '<link rel="stylesheet" href="https://limbopro.com/CSS/x-91short.com.css">' : '',
       isOriginal91short ? '<link rel="stylesheet" href="https://limbopro.com/CSS/limbopro.x-91short.com.css">' : ''
-    ].join('\n');
+    ]).join('\n');
     body = body.replace(/<head\b[^>]*>/i, function (tag) { return tag + '\n' + injection + '\n'; });
 
     var h = Object.assign({}, headers);
@@ -631,10 +680,10 @@
     h['Expires'] = '0';
     // Old ETag/Last-Modified validators are no longer valid for the rewritten HTML.
     Object.keys(h).forEach(function (k) { if (/^(?:etag|last-modified)$/i.test(k)) delete h[k]; });
-    console.log('[limbo-91-v21.4] HTML 注入成功: ' + hostname + ' / ' + pathname);
+    console.log('[limbo-91-v21.5] HTML 注入成功: ' + hostname + ' / ' + pathname);
     return $done({body:body, headers:h});
   } catch (e) {
-    console.log('[limbo-91-v21.4] ' + e.message);
+    console.log('[limbo-91-v21.5] ' + e.message);
     $done({});
   }
 })();
