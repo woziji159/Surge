@@ -1,5 +1,7 @@
 # Surge service-ai-exceptions — 2026-10-14
-# Policy: 人工智能; rules: 8
+# Policy: 人工智能; rules: 9
+# Claude 功能配置域名在 surge-ads.txt 中被拦截；提前放行并继续走人工智能策略。
+DOMAIN,statsig.anthropic.com
 DOMAIN-SUFFIX,oaistatsig.com
 DOMAIN,cdn.openaimerge.com
 DOMAIN,cdn.workos.com
