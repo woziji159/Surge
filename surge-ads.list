@@ -1,7 +1,15 @@
 # Surge ads — 2026-10-14
-# Policy: 广告拦截; rules: 765
+# Policy: 广告拦截; rules: 772
 # Sources: Advertising, Privacy, Hijacking, qx-dns-ads-01.list, qx-dns-ads-02.list, qx-adguard-dns.list
 # 最新原生广告/隐私/劫持+三份旧DNS增量合并，完全重复与被同策略父域覆盖的项已删除。未导入旧38.9万整套分流。
+# 2026-10-16 酷狗开屏广告补强：仅新增已知广告素材/下发主机，不拦业务主域。
+DOMAIN,ad.kugou.com
+DOMAIN,mvads.kugou.com
+DOMAIN,splashimgretrybssdl.cloud.kugou.com
+DOMAIN,adsfile.kugou.com
+DOMAIN,adsfile.bssdlbig.kugou.com
+DOMAIN,webvoobssdl.kugou.com
+DOMAIN,mdpfilebssdlbig.kugou.com
 DOMAIN-KEYWORD,-logging.nextmedia.com
 DOMAIN-KEYWORD,-rtb.gravite.net
 DOMAIN-KEYWORD,-s2s.sensic.net
