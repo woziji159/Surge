@@ -1,4 +1,4 @@
-/* Surge Google Search - native-only smooth scroll v4.
+/* Surge Google Search - native-first smooth scroll v6 (mobile button compatibility).
  * Native Google More-results clicks, with early activation and support for wrapped links.
  * NEVER fetch/clone another Google SERP into the DOM, preserving Google media scripts.
  * If native loading cannot be triggered, leave the original button available.
@@ -13,10 +13,10 @@
     var contentType = Object.entries(headers).find(function (entry) { return entry[0].toLowerCase() === 'content-type'; });
     if (contentType && !/text\/html/i.test(String(contentType[1]))) { $done({}); return; }
     var body = $response.body;
-    if (!/<\/body\s*>/i.test(body) || /id=["']surge-google-native-scroll-v4["']/.test(body)) { $done({}); return; }
-    var injection = '<script id="surge-google-native-scroll-v4">' + String.raw`(function () {
+    if (!/<\/body\s*>/i.test(body) || /id=["']surge-google-native-scroll-v6["']/.test(body)) { $done({}); return; }
+    var injection = '<script id="surge-google-native-scroll-v6">' + String.raw`(function () {
   'use strict';
-  if (window.top !== window.self || window.__surgeGoogleNativeScrollV4) return;
+  if (window.top !== window.self || window.__surgeGoogleNativeScrollV6) return;
   // Desktop Google uses classic pagination; a separate frame engine below handles Mac.
   if (/\bMacintosh\b/i.test(navigator.userAgent) && !/\b(iPhone|iPad|iPod|Mobile)\b/i.test(navigator.userAgent) && navigator.maxTouchPoints <= 1) return;
   if (location.pathname !== '/search') return;
@@ -27,7 +27,7 @@
   if (initial.searchParams.get('tbm') === 'isch' ||
       initial.searchParams.get('udm') === '2' ||
       initial.searchParams.get('udm') === '50') return;
-  window.__surgeGoogleNativeScrollV4 = true;
+  window.__surgeGoogleNativeScrollV6 = true;
 
   var sawGesture = false;
   var running = false;
@@ -38,6 +38,30 @@
   var failedButtons = typeof WeakSet === 'function' ? new WeakSet() : null;
   var observing = null;
   var fallbackTimer = null;
+  var routeKey = initial.pathname + '|' + initial.searchParams.get('q') + '|' +
+    (initial.searchParams.get('tbm') || '') + '|' + (initial.searchParams.get('udm') || '') + '|' + (initial.searchParams.get('tbs') || '');
+  var lastMutationScanAt = 0;
+
+  function refreshSearch() {
+    var now = new URL(location.href);
+    var q = now.searchParams.get('q');
+    if (now.pathname !== '/search' || !q ||
+        now.searchParams.get('tbm') === 'isch' ||
+        now.searchParams.get('udm') === '2' || now.searchParams.get('udm') === '50') return false;
+    var key = now.pathname + '|' + q + '|' + (now.searchParams.get('tbm') || '') + '|' +
+      (now.searchParams.get('udm') || '') + '|' + (now.searchParams.get('tbs') || '');
+    if (key !== routeKey) {
+      routeKey = key;
+      initial = now;
+      term = q;
+      attemptCount = 0;
+      previousClickAt = 0;
+      if (failedButtons) failedButtons = new WeakSet();
+      stopObserving();
+      running = false;
+    }
+    return true;
+  }
 
   function isVisible(el) {
     if (!el || !el.isConnected || el.closest('[hidden],[aria-hidden="true"]')) return false;
@@ -45,39 +69,55 @@
     return c.display !== 'none' && c.visibility !== 'hidden' && el.getClientRects().length > 0;
   }
   function looksLikeMore(el) {
-    // Test a short, exact accessible label first to avoid grabbing article snippets.
-    var t = (el.getAttribute('aria-label') || el.textContent || '').replace(/\s+/g, ' ').trim();
-    return t.length < 60 && /^(?:more(?: search)? results|show more(?: search)? results|show more|更多搜索结果|更多結果|更多搜尋結果|更多结果|显示更多结果|顯示更多結果|查看更多结果|查看更多結果)(?:\s*[⌄⌃›»↓→])?$/i.test(t);
+    if (!el) return false;
+    // Google may put visible text on a child and a different aria-label on
+    // the interactive parent. Check both rather than letting aria override text.
+    var labels = [el.getAttribute('aria-label') || '', el.getAttribute('title') || '',
+      (el.tagName === 'INPUT' ? el.value : '') || '', el.textContent || ''];
+    for (var i = 0; i < labels.length; i++) {
+      var t = String(labels[i]).replace(/[\u200b-\u200f\u2060]/g, '').replace(/\s+/g, ' ').trim();
+      if (t.length > 95 || !t) continue;
+      if (/^(?:(?:更多|查看更多|显示更多|顯示更多|加载更多|載入更多)(?:\s*(?:搜索|搜尋))?\s*(?:结果|結果)|(?:more|show more|load more)(?:\s+search)?\s+results)(?:\s*[⌄⌃›»↓→])?$/i.test(t)) return true;
+    }
+    return false;
   }
   function isSameQueryAnchor(a) {
     if (!a || !a.hasAttribute('href')) return false;
+    var href = (a.getAttribute('href') || '').trim();
+    if (!href || href.charAt(0) === '#' || /^javascript:/i.test(href)) return true;
     try {
-      var to = new URL(a.getAttribute('href'), location.href);
-      if (to.origin !== initial.origin || to.pathname !== '/search' || to.searchParams.get('q') !== term) return false;
-      for (var i = 0, keys = ['tbm', 'udm', 'tbs']; i < keys.length; i++) {
-        if ((to.searchParams.get(keys[i]) || '') !== (initial.searchParams.get(keys[i]) || '')) return false;
+      var to = new URL(href, location.href);
+      // Some Google native More-results controls do not put a "start" value
+      // in href; they load more results through a JS click handler instead.
+      if (to.origin !== location.origin || to.pathname !== '/search') return false;
+      var here = new URL(location.href);
+      if (to.searchParams.has('q') && to.searchParams.get('q') !== here.searchParams.get('q')) return false;
+      var keys = ['tbm', 'udm', 'tbs'];
+      for (var i = 0; i < keys.length; i++) {
+        if (to.searchParams.has(keys[i]) && to.searchParams.get(keys[i]) !== here.searchParams.get(keys[i])) return false;
       }
-      var start = Number(to.searchParams.get('start'));
-      return to.searchParams.has('start') && Number.isFinite(start) && start >= 0;
+      return true;
     } catch (_) { return false; }
   }
   function eligible(el) {
     if (!el || (failedButtons && failedButtons.has(el)) || !isVisible(el) || !looksLikeMore(el)) return false;
     var anchor = el.closest('a[href]');
     if (anchor) return isSameQueryAnchor(anchor);
+    // Do not submit forms accidentally; Google native loader is not a form submit.
     return !el.closest('form[action]');
   }
   function findMore() {
+    var sel = 'button,[role="button"],a[href],[jsaction],[onclick],input[type="button"],input[type="submit"]';
+    // Google can render this as a div[jsaction] or a link rather than a button.
     var scopes = document.querySelectorAll('#botstuff,#foot,#nav,[role="navigation"],#search,main');
     for (var s = 0; s < scopes.length; s++) {
-      var nodes = scopes[s].querySelectorAll('button,[role="button"],a[href]');
-      // Search backward: Google's pagination is usually the last such control.
+      var nodes = scopes[s].querySelectorAll(sel);
       for (var i = nodes.length - 1; i >= 0; i--) {
         if (eligible(nodes[i])) return nodes[i];
       }
     }
-    var all = document.querySelectorAll('button,[role="button"],a[href]');
-    for (var j = all.length - 1; j >= Math.max(0, all.length - 420); j--) {
+    var all = document.querySelectorAll(sel);
+    for (var j = all.length - 1; j >= Math.max(0, all.length - 650); j--) {
       if (eligible(all[j])) return all[j];
     }
     return null;
@@ -123,10 +163,9 @@
     try {
       var anchor = button.closest('a[href]');
       if (anchor) {
-        // Let Google's registered click listeners run while preventing a plain
-        // href click from triggering full-page navigation. If it has no AJAX
-        // listener, the original More results control remains usable by hand.
-        var cancelDefault = function (event) { event.preventDefault(); };
+        // Run Google's own handler without allowing the href's ordinary full
+        // page navigation. Never block a real/user-trusted click.
+        var cancelDefault = function (event) { if (!event.isTrusted) event.preventDefault(); };
         anchor.addEventListener('click', cancelDefault);
         try { button.click(); } finally { anchor.removeEventListener('click', cancelDefault); }
       } else {
@@ -142,7 +181,7 @@
   }
   function check() {
     scheduled = false;
-    if (!sawGesture || running || attemptCount >= maxAttempts || Date.now() - previousClickAt < 1150) return;
+    if (!refreshSearch() || !sawGesture || running || attemptCount >= maxAttempts || Date.now() - previousClickAt < 1150) return;
     var pos = scrollY || document.documentElement.scrollTop || 0;
     if (pos < 75) return;
     var more = findMore();
@@ -166,6 +205,29 @@
     });
     window.addEventListener('scroll',queue,{passive:true});
     window.addEventListener('resize',queue,{passive:true});
+    // Some queries mount the More-results button after the last scroll event.
+    // Debounce DOM changes rather than scanning the whole page on each mutation.
+    if (typeof MutationObserver === 'function') {
+      var buttonsObserver = new MutationObserver(function () {
+        if (!sawGesture || running || Date.now() - lastMutationScanAt < 850) return;
+        lastMutationScanAt = Date.now();
+        queue();
+      });
+      buttonsObserver.observe(document.body, {subtree:true,childList:true});
+    }
+    // A manual click may keep the same Google button node after loading more.
+    // Let automatic loading resume for the next page after such a click.
+    document.addEventListener('click',function (event) {
+      if (!event.isTrusted) return;
+      var el = event.target;
+      for (var i = 0; el && i < 4; i++, el = el.parentElement) {
+        if (looksLikeMore(el)) {
+          if (failedButtons) failedButtons = new WeakSet();
+          setTimeout(queue,900);
+          break;
+        }
+      }
+    },true);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded',start,{once:true});
   else start();
