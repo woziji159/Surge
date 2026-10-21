@@ -1,47 +1,114 @@
-# Surge iPhone 策略组；公开配置没有私人节点。
-# 在 Surge 的代理页面添加节点后，PROXY及各地区组会列出全部本地节点。
-# 地区名称仅用于手动选择，不自动推断节点地区；自动选择单独测速。
+# 策略组：与 Surge.conf 的 [Proxy Group] 保持一致（2026-10-20 重构）。
 [Proxy Group]
-PROXY = select, include-all-proxies=true
+# ==== 订阅来源（先在手机「策略」页确认这三个组里是否真的有节点）====
+# 主订阅=付费机场（Surge 只支持 Hysteria2/SS/VMess/Trojan 等，VLESS 节点 Surge 无法使用）。
+# 以后付费失效：只改下面「主订阅」这一行的 policy-path 为新的订阅链接即可，其余策略组自动按地区重新筛选。
+主订阅 = select, policy-path=https://liangxin.xyz/api/v1/liangxin?OwO=1a6ee95eb23a5b291d14936a57a7574f, update-interval=86400
+# 若上一行在手机里看不到任何节点（面板没有对 Surge 返回 Surge 格式），改用下面这一行（仓库内静态快照，节点变动后需重新生成）：
+# 主订阅 = select, policy-path=https://raw.githubusercontent.com/woziji159/Surge/main/paid-nodes.list, update-interval=86400
+免费订阅1 = select, policy-path=https://shangguan92.ccwu.cc/sub?token=d7e9530026b773748ff85fc0a23b5e34, update-interval=86400, external-policy-name-prefix=免费1-
+# 免费订阅2：目前转换结果里没有任何真实节点（节点是 Surge 不支持的 VLESS），暂时只用来占位，修好后自动并入各免费组。
+免费订阅2 = select, policy-path=https://url.v1.mk/sub?target=surge&url=https%3A%2F%2Fwoziji159.dpdns.org%2F78d80d88-627e-4826-87ef-86955eff2444%2Fsub&insert=false, update-interval=86400, external-policy-name-prefix=免费2-
+
+# ==== 基础控制组（保持原样）====
 广告拦截 = select, REJECT
 苹果服务 = select, DIRECT
 iOS系统更新 = select, REJECT, DIRECT
-节点选择 = select, PROXY, 自动选择, 香港, 台湾, 日本, 韩国, 新加坡, 美国, DIRECT, include-all-proxies=true
-自动选择 = url-test, include-all-proxies=true, interval=600, tolerance=20
-香港 = select, PROXY, DIRECT, include-all-proxies=true
-台湾 = select, PROXY, DIRECT, include-all-proxies=true
-日本 = select, PROXY, DIRECT, include-all-proxies=true
-韩国 = select, PROXY, DIRECT, include-all-proxies=true
-新加坡 = select, PROXY, DIRECT, include-all-proxies=true
-美国 = select, PROXY, DIRECT, include-all-proxies=true
-TikTok国际版 = select, 节点选择, DIRECT, 香港, 台湾, 日本, 韩国, 新加坡, 美国
-人工智能 = select, 节点选择, DIRECT, 香港, 台湾, 日本, 韩国, 新加坡, 美国
-奈飞视频 = select, 节点选择, include-all-proxies=true, policy-regex-filter=(nf|解锁NF|NF|奈|Netflix)
-谷歌服务 = select, 节点选择, 自动选择, 香港, 台湾, 日本, 韩国, 新加坡, 美国, PROXY, DIRECT
-电报 = select, 节点选择, 自动选择, 香港, 台湾, 日本, 韩国, 新加坡, 美国, PROXY, DIRECT
-加密货币 = select, 节点选择, 自动选择, 香港, 台湾, 日本, 韩国, 新加坡, 美国, PROXY, DIRECT
-漏网之鱼 = select, 节点选择, 自动选择, 香港, 台湾, 日本, 韩国, 新加坡, 美国, PROXY, DIRECT
-GitHub = select, 节点选择, PROXY, 美国, 香港, 台湾, 日本, 韩国, 新加坡, DIRECT, include-all-proxies=true
-X推特 = select, 节点选择, 香港, 台湾, 日本, 韩国, 新加坡, 美国, include-all-proxies=true
-国外邮箱 = select, 节点选择, PROXY, include-all-proxies=true
-苹果智能 = select, DIRECT, 节点选择, 美国, 香港, 台湾, 日本, 韩国, 新加坡, include-all-proxies=true
-Grok人工智能 = select, 节点选择, DIRECT, 美国, 香港, 台湾, 日本, 韩国, 新加坡, include-all-proxies=true
-Perplexity搜索 = select, 节点选择, DIRECT, 美国, 香港, 台湾, 日本, 韩国, 新加坡, include-all-proxies=true
-Cursor编程 = select, 节点选择, DIRECT, 美国, 香港, 台湾, 日本, 韩国, 新加坡, include-all-proxies=true
-游戏下载 = select, DIRECT, 节点选择, 美国, 香港, 台湾, 日本, 韩国, 新加坡, include-all-proxies=true
-文件下载 = select, DIRECT, 节点选择, 美国, 香港, 台湾, 日本, 韩国, 新加坡, include-all-proxies=true
-PT下载 = select, DIRECT, 节点选择, 美国, 香港, 台湾, 日本, 韩国, 新加坡, include-all-proxies=true
-网络测速 = select, DIRECT, 节点选择, 美国, 香港, 台湾, 日本, 韩国, 新加坡, include-all-proxies=true
-Emby影院 = select, 节点选择, DIRECT, 美国, 香港, 台湾, 日本, 韩国, 新加坡, include-all-proxies=true
-微软网盘 = select, 节点选择, DIRECT, 美国, 香港, 台湾, 日本, 韩国, 新加坡, include-all-proxies=true
-谷歌网盘 = select, 节点选择, DIRECT, 美国, 香港, 台湾, 日本, 韩国, 新加坡, include-all-proxies=true
-贝宝支付 = select, PROXY, include-all-proxies=true
-Discord社群 = select, 节点选择, DIRECT, 美国, 香港, 台湾, 日本, 韩国, 新加坡, include-all-proxies=true
-Reddit论坛 = select, 节点选择, DIRECT, 美国, 香港, 台湾, 日本, 韩国, 新加坡, include-all-proxies=true
-Twitch直播 = select, 节点选择, DIRECT, 美国, 香港, 台湾, 日本, 韩国, 新加坡, include-all-proxies=true
-学术论文 = select, 节点选择, DIRECT, 美国, 香港, 台湾, 日本, 韩国, 新加坡, include-all-proxies=true
-Steam游戏 = select, 节点选择, DIRECT, 美国, 香港, 台湾, 日本, 韩国, 新加坡, include-all-proxies=true
-游戏平台 = select, 节点选择, DIRECT, 美国, 香港, 台湾, 日本, 韩国, 新加坡, include-all-proxies=true
-微软AI = select, 节点选择, DIRECT, 美国, 香港, 台湾, 日本, 韩国, 新加坡, include-all-proxies=true
-微软服务 = select, DIRECT, 节点选择, 美国, 香港, 台湾, 日本, 韩国, 新加坡, include-all-proxies=true
 HTTPDNS控制 = select, DIRECT, REJECT
+
+# ==== 兜底入口：FINAL 与没有专用规则的海外流量；规则直接指向 Smart总，这里只保留一个可手动切换的组 ====
+漏网之鱼 = select, Smart总, Load-Balance, 免费订阅1+2总测速, 香港Smart, 台湾Smart, 日本Smart, 韩国Smart, 美国Smart, 新加坡Smart, 其他国家Smart, 其他付费备用, DIRECT
+
+# ==== 服务入口（沿用原组名，规则文件无需改动；第一项=默认去向）====
+# --- 付费体系 ---
+人工智能 = select, 付费URL-Test, AI专用, 其他付费备用
+Grok人工智能 = select, 付费URL-Test, AI专用, 其他付费备用
+Perplexity搜索 = select, 付费URL-Test, AI专用, 其他付费备用
+微软AI = select, 付费URL-Test, AI专用, 其他付费备用
+Cursor编程 = select, AI专用, 付费URL-Test, 其他付费备用
+苹果智能 = select, AI专用, DIRECT, 付费URL-Test
+GitHub = select, GitHub专用, 付费URL-Test, 其他付费备用
+X推特 = select, 新加坡付费Fallback, 日本付费Fallback, 香港付费Fallback, 台湾付费Fallback, 美国付费Fallback, 其他地区付费Fallback, Smart总
+电报 = select, 新加坡付费Fallback, 日本付费Fallback, 香港付费Fallback, 台湾付费Fallback, 美国付费Fallback, 其他地区付费Fallback, Smart总
+TikTok国际版 = select, TikTok专用Fallback, 日本付费Fallback, 新加坡付费Fallback, 台湾付费Fallback, 美国付费Fallback, Smart总
+# --- 免费体系 ---
+谷歌服务 = select, Smart总, 香港Smart, 台湾Smart, 日本Smart, 韩国Smart, 美国Smart, 新加坡Smart, 其他国家Smart, Load-Balance, DIRECT
+谷歌网盘 = select, Smart总, 香港Smart, 台湾Smart, 日本Smart, 韩国Smart, 美国Smart, 新加坡Smart, 其他国家Smart, DIRECT
+微软网盘 = select, DIRECT, Smart总, 香港Smart, 台湾Smart, 日本Smart, 韩国Smart, 美国Smart, 新加坡Smart, 其他国家Smart
+国外邮箱 = select, Smart总, 香港Smart, 台湾Smart, 日本Smart, 韩国Smart, 美国Smart, 新加坡Smart, 其他国家Smart, 香港固定Fallback, 台湾固定Fallback, 日本固定Fallback, 韩国固定Fallback, 美国固定Fallback, 新加坡固定Fallback, 其他地区固定Fallback
+加密货币 = select, Smart总, 香港Smart, 台湾Smart, 日本Smart, 韩国Smart, 美国Smart, 新加坡Smart, 其他国家Smart, 香港固定Fallback, 台湾固定Fallback, 日本固定Fallback, 韩国固定Fallback, 美国固定Fallback, 新加坡固定Fallback, 其他地区固定Fallback, DIRECT
+Discord社群 = select, Smart总, 香港Smart, 台湾Smart, 日本Smart, 韩国Smart, 美国Smart, 新加坡Smart, 其他国家Smart, DIRECT
+Reddit论坛 = select, Smart总, 香港Smart, 台湾Smart, 日本Smart, 韩国Smart, 美国Smart, 新加坡Smart, 其他国家Smart, DIRECT
+Twitch直播 = select, Smart总, 香港Smart, 台湾Smart, 日本Smart, 韩国Smart, 美国Smart, 新加坡Smart, 其他国家Smart, DIRECT
+学术论文 = select, Smart总, DIRECT, 香港Smart, 台湾Smart, 日本Smart, 韩国Smart, 美国Smart, 新加坡Smart, 其他国家Smart
+Steam游戏 = select, Smart总, 香港Smart, 台湾Smart, 日本Smart, 韩国Smart, 美国Smart, 新加坡Smart, 其他国家Smart, DIRECT
+游戏平台 = select, Smart总, 香港Smart, 台湾Smart, 日本Smart, 韩国Smart, 美国Smart, 新加坡Smart, 其他国家Smart, DIRECT
+游戏下载 = select, DIRECT, Smart总, 香港Smart, 台湾Smart, 日本Smart, 韩国Smart, 美国Smart, 新加坡Smart, 其他国家Smart
+文件下载 = select, DIRECT, Load-Balance, Smart总, 香港Smart, 台湾Smart, 日本Smart, 韩国Smart, 美国Smart, 新加坡Smart, 其他国家Smart
+PT下载 = select, DIRECT, Smart总, 香港Smart, 台湾Smart, 日本Smart, 韩国Smart, 美国Smart, 新加坡Smart, 其他国家Smart
+网络测速 = select, DIRECT, Smart总, 香港Smart, 台湾Smart, 日本Smart, 韩国Smart, 美国Smart, 新加坡Smart, 其他国家Smart
+Emby影院 = select, Smart总, DIRECT, 香港Smart, 台湾Smart, 日本Smart, 韩国Smart, 美国Smart, 新加坡Smart, 其他国家Smart
+微软服务 = select, DIRECT, Smart总, 香港Smart, 台湾Smart, 日本Smart, 韩国Smart, 美国Smart, 新加坡Smart, 其他国家Smart
+奈飞视频 = select, 美国Smart, 日本Smart, 新加坡Smart, 香港Smart, 台湾Smart, 韩国Smart, 其他国家Smart, Smart总, include-other-group="免费订阅1,免费订阅2", policy-regex-filter=(nf|解锁NF|NF|奈|Netflix)
+国际流媒体 = select, 新加坡Smart, 美国Smart, 日本Smart, 香港Smart, 台湾Smart, 韩国Smart, 其他国家Smart, Smart总
+CapCut剪辑 = select, Smart总, 日本Smart, 美国Smart, 新加坡Smart, DIRECT
+# PayPal：固定选一个真实节点（不用 Smart/测速，避免出口频繁变化触发风控）。
+贝宝支付 = select, include-other-group="免费订阅1,免费订阅2", policy-regex-filter=(?i)^(?!.*(?:剩余|到期|过期|重置|套餐|官网|客户端|电报群|防失联|订阅|公告|https?:|t[.]me|直连|自动选择|DIRECT|REJECT)).+$
+Moonlight远程 = select, DIRECT, 香港固定Fallback, 台湾固定Fallback, 日本固定Fallback, 韩国固定Fallback, 美国固定Fallback, 新加坡固定Fallback, 其他地区固定Fallback
+
+# ==== 付费体系（只用 主订阅 节点；AI 与 GitHub 使用互不重叠的两个节点池）====
+# ① AI专用：A池=美国+日本+英国（不含香港）
+AI专用 = smart, include-other-group=主订阅, policy-regex-filter=(?i)^(?!.*(?:剩余|到期|过期|重置|套餐|官网|客户端|电报群|防失联|订阅|公告|https?:|t[.]me|直连|自动选择|DIRECT|REJECT|香港|港|🇭🇰|Hong.?Kong|(?<![A-Za-z])HK(?![A-Za-z])))(?=.*(?:美国|美國|洛杉矶|圣何塞|硅谷|旧金山|西雅图|芝加哥|纽约|达拉斯|凤凰城|🇺🇸|United.?States|(?<![A-Za-z])USA?(?![A-Za-z])|日本|东京|東京|大阪|埼玉|名古屋|🇯🇵|Japan|Tokyo|Osaka|(?<![A-Za-z])JP(?![A-Za-z])|英国|英國|伦敦|倫敦|🇬🇧|United.?Kingdom|London|(?<![A-Za-z])UK(?![A-Za-z])|(?<![A-Za-z])GB(?![A-Za-z]))).+$
+# ② GitHub专用：B池=香港+新加坡+台湾+韩国
+GitHub专用 = smart, include-other-group=主订阅, policy-regex-filter=(?i)^(?!.*(?:剩余|到期|过期|重置|套餐|官网|客户端|电报群|防失联|订阅|公告|https?:|t[.]me|直连|自动选择|DIRECT|REJECT))(?=.*(?:香港|港|🇭🇰|Hong.?Kong|(?<![A-Za-z])HK(?![A-Za-z])|新加坡|狮城|星加坡|🇸🇬|Singapore|(?<![A-Za-z])SG(?![A-Za-z])|台湾|台灣|臺灣|台北|新北|🇹🇼|Taiwan|(?<![A-Za-z])TW(?![A-Za-z])|韩国|韓國|首尔|首爾|春川|🇰🇷|Korea|Seoul|(?<![A-Za-z])KR(?![A-Za-z]))).+$
+# ③ 其他付费备用：手动选择（暂不放普通海外网站）
+其他付费备用 = select, 付费URL-Test, 新加坡付费Fallback, 日本付费Fallback, 香港付费Fallback, 台湾付费Fallback, 美国付费Fallback, 其他地区付费Fallback, include-other-group=主订阅, policy-regex-filter=(?i)^(?!.*(?:剩余|到期|过期|重置|套餐|官网|客户端|电报群|防失联|订阅|公告|https?:|t[.]me|直连|自动选择|DIRECT|REJECT)).+$
+# 付费URL-Test：AI网页/GitHub网页/GreasyFork/毒奶，自动选低延迟节点（排除香港：OpenAI/Claude 不支持）
+付费URL-Test = url-test, include-other-group=主订阅, policy-regex-filter=(?i)^(?!.*(?:剩余|到期|过期|重置|套餐|官网|客户端|电报群|防失联|订阅|公告|https?:|t[.]me|直连|自动选择|DIRECT|REJECT|香港|港|🇭🇰|Hong.?Kong|(?<![A-Za-z])HK(?![A-Za-z]))).+$, interval=900, tolerance=150, no-alert=true
+# ④ TikTok专用Fallback：固定日本，主备同一国家（想换国家改 policy-regex-filter 里的地区词）
+TikTok专用Fallback = fallback, include-other-group=主订阅, policy-regex-filter=(?i)^(?!.*(?:剩余|到期|过期|重置|套餐|官网|客户端|电报群|防失联|订阅|公告|https?:|t[.]me|直连|自动选择|DIRECT|REJECT))(?=.*(?:日本|东京|東京|大阪|埼玉|名古屋|🇯🇵|Japan|Tokyo|Osaka|(?<![A-Za-z])JP(?![A-Za-z]))).+$, interval=600, no-alert=true
+# 付费地区 Fallback：每个地区只用对应地区真实节点，主节点=订阅里该地区排第一的节点
+香港付费Fallback = fallback, include-other-group=主订阅, policy-regex-filter=(?i)^(?!.*(?:剩余|到期|过期|重置|套餐|官网|客户端|电报群|防失联|订阅|公告|https?:|t[.]me|直连|自动选择|DIRECT|REJECT))(?=.*(?:香港|港|🇭🇰|Hong.?Kong|(?<![A-Za-z])HK(?![A-Za-z]))).+$, interval=600, no-alert=true
+台湾付费Fallback = fallback, include-other-group=主订阅, policy-regex-filter=(?i)^(?!.*(?:剩余|到期|过期|重置|套餐|官网|客户端|电报群|防失联|订阅|公告|https?:|t[.]me|直连|自动选择|DIRECT|REJECT))(?=.*(?:台湾|台灣|臺灣|台北|新北|🇹🇼|Taiwan|(?<![A-Za-z])TW(?![A-Za-z]))).+$, interval=600, no-alert=true
+日本付费Fallback = fallback, include-other-group=主订阅, policy-regex-filter=(?i)^(?!.*(?:剩余|到期|过期|重置|套餐|官网|客户端|电报群|防失联|订阅|公告|https?:|t[.]me|直连|自动选择|DIRECT|REJECT))(?=.*(?:日本|东京|東京|大阪|埼玉|名古屋|🇯🇵|Japan|Tokyo|Osaka|(?<![A-Za-z])JP(?![A-Za-z]))).+$, interval=600, no-alert=true
+# 韩国付费Fallback：当前付费订阅没有韩国节点，不建空组；有节点后取消下一行注释，并把它加进 X推特/电报/其他付费备用 的成员里。
+# 韩国付费Fallback = fallback, include-other-group=主订阅, policy-regex-filter=(?i)^(?!.*(?:剩余|到期|过期|重置|套餐|官网|客户端|电报群|防失联|订阅|公告|https?:|t[.]me|直连|自动选择|DIRECT|REJECT))(?=.*(?:韩国|韓國|首尔|首爾|春川|🇰🇷|Korea|Seoul|(?<![A-Za-z])KR(?![A-Za-z]))).+$, interval=600, no-alert=true
+美国付费Fallback = fallback, include-other-group=主订阅, policy-regex-filter=(?i)^(?!.*(?:剩余|到期|过期|重置|套餐|官网|客户端|电报群|防失联|订阅|公告|https?:|t[.]me|直连|自动选择|DIRECT|REJECT))(?=.*(?:美国|美國|洛杉矶|圣何塞|硅谷|旧金山|西雅图|芝加哥|纽约|达拉斯|凤凰城|🇺🇸|United.?States|(?<![A-Za-z])USA?(?![A-Za-z]))).+$, interval=600, no-alert=true
+新加坡付费Fallback = fallback, include-other-group=主订阅, policy-regex-filter=(?i)^(?!.*(?:剩余|到期|过期|重置|套餐|官网|客户端|电报群|防失联|订阅|公告|https?:|t[.]me|直连|自动选择|DIRECT|REJECT))(?=.*(?:新加坡|狮城|星加坡|🇸🇬|Singapore|(?<![A-Za-z])SG(?![A-Za-z]))).+$, interval=600, no-alert=true
+其他地区付费Fallback = fallback, include-other-group=主订阅, policy-regex-filter=(?i)^(?!.*(?:剩余|到期|过期|重置|套餐|官网|客户端|电报群|防失联|订阅|公告|https?:|t[.]me|直连|自动选择|DIRECT|REJECT|香港|港|🇭🇰|Hong.?Kong|(?<![A-Za-z])HK(?![A-Za-z])|台湾|台灣|臺灣|台北|新北|🇹🇼|Taiwan|(?<![A-Za-z])TW(?![A-Za-z])|日本|东京|東京|大阪|埼玉|名古屋|🇯🇵|Japan|Tokyo|Osaka|(?<![A-Za-z])JP(?![A-Za-z])|韩国|韓國|首尔|首爾|春川|🇰🇷|Korea|Seoul|(?<![A-Za-z])KR(?![A-Za-z])|美国|美國|洛杉矶|圣何塞|硅谷|旧金山|西雅图|芝加哥|纽约|达拉斯|凤凰城|🇺🇸|United.?States|(?<![A-Za-z])USA?(?![A-Za-z])|新加坡|狮城|星加坡|🇸🇬|Singapore|(?<![A-Za-z])SG(?![A-Za-z]))).+$, interval=600, no-alert=true
+
+# ==== 免费体系（免费订阅1+2；与付费完全分开）====
+# ⑤~⑪ 地区 Smart（Smart 成员只能是节点，所以用 include-other-group 动态引入）
+香港Smart = smart, include-other-group="免费订阅1,免费订阅2", policy-regex-filter=(?i)^(?!.*(?:剩余|到期|过期|重置|套餐|官网|客户端|电报群|防失联|订阅|公告|https?:|t[.]me|直连|自动选择|DIRECT|REJECT))(?=.*(?:香港|港|🇭🇰|Hong.?Kong|(?<![A-Za-z])HK(?![A-Za-z]))).+$
+台湾Smart = smart, include-other-group="免费订阅1,免费订阅2", policy-regex-filter=(?i)^(?!.*(?:剩余|到期|过期|重置|套餐|官网|客户端|电报群|防失联|订阅|公告|https?:|t[.]me|直连|自动选择|DIRECT|REJECT))(?=.*(?:台湾|台灣|臺灣|台北|新北|🇹🇼|Taiwan|(?<![A-Za-z])TW(?![A-Za-z]))).+$
+日本Smart = smart, include-other-group="免费订阅1,免费订阅2", policy-regex-filter=(?i)^(?!.*(?:剩余|到期|过期|重置|套餐|官网|客户端|电报群|防失联|订阅|公告|https?:|t[.]me|直连|自动选择|DIRECT|REJECT))(?=.*(?:日本|东京|東京|大阪|埼玉|名古屋|🇯🇵|Japan|Tokyo|Osaka|(?<![A-Za-z])JP(?![A-Za-z]))).+$
+韩国Smart = smart, include-other-group="免费订阅1,免费订阅2", policy-regex-filter=(?i)^(?!.*(?:剩余|到期|过期|重置|套餐|官网|客户端|电报群|防失联|订阅|公告|https?:|t[.]me|直连|自动选择|DIRECT|REJECT))(?=.*(?:韩国|韓國|首尔|首爾|春川|🇰🇷|Korea|Seoul|(?<![A-Za-z])KR(?![A-Za-z]))).+$
+美国Smart = smart, include-other-group="免费订阅1,免费订阅2", policy-regex-filter=(?i)^(?!.*(?:剩余|到期|过期|重置|套餐|官网|客户端|电报群|防失联|订阅|公告|https?:|t[.]me|直连|自动选择|DIRECT|REJECT))(?=.*(?:美国|美國|洛杉矶|圣何塞|硅谷|旧金山|西雅图|芝加哥|纽约|达拉斯|凤凰城|🇺🇸|United.?States|(?<![A-Za-z])USA?(?![A-Za-z]))).+$
+新加坡Smart = smart, include-other-group="免费订阅1,免费订阅2", policy-regex-filter=(?i)^(?!.*(?:剩余|到期|过期|重置|套餐|官网|客户端|电报群|防失联|订阅|公告|https?:|t[.]me|直连|自动选择|DIRECT|REJECT))(?=.*(?:新加坡|狮城|星加坡|🇸🇬|Singapore|(?<![A-Za-z])SG(?![A-Za-z]))).+$
+其他国家Smart = smart, include-other-group="免费订阅1,免费订阅2", policy-regex-filter=(?i)^(?!.*(?:剩余|到期|过期|重置|套餐|官网|客户端|电报群|防失联|订阅|公告|https?:|t[.]me|直连|自动选择|DIRECT|REJECT|香港|港|🇭🇰|Hong.?Kong|(?<![A-Za-z])HK(?![A-Za-z])|台湾|台灣|臺灣|台北|新北|🇹🇼|Taiwan|(?<![A-Za-z])TW(?![A-Za-z])|日本|东京|東京|大阪|埼玉|名古屋|🇯🇵|Japan|Tokyo|Osaka|(?<![A-Za-z])JP(?![A-Za-z])|韩国|韓國|首尔|首爾|春川|🇰🇷|Korea|Seoul|(?<![A-Za-z])KR(?![A-Za-z])|美国|美國|洛杉矶|圣何塞|硅谷|旧金山|西雅图|芝加哥|纽约|达拉斯|凤凰城|🇺🇸|United.?States|(?<![A-Za-z])USA?(?![A-Za-z])|新加坡|狮城|星加坡|🇸🇬|Singapore|(?<![A-Za-z])SG(?![A-Za-z]))).+$
+# ⑫ Smart总：免费1+2全部真实节点（排除流量/到期提示与 direct 占位）
+Smart总 = smart, include-other-group="免费订阅1,免费订阅2", policy-regex-filter=(?i)^(?!.*(?:剩余|到期|过期|重置|套餐|官网|客户端|电报群|防失联|订阅|公告|https?:|t[.]me|直连|自动选择|DIRECT|REJECT)).+$
+# ⑬ 10 个 URL-Test 测速组；带②的三个只取免费订阅2，免费订阅2 目前没有节点，先注释，修好后取消注释并加回 Load-Balance
+香港测速① = url-test, include-other-group=免费订阅1, policy-regex-filter=(?i)^(?!.*(?:剩余|到期|过期|重置|套餐|官网|客户端|电报群|防失联|订阅|公告|https?:|t[.]me|直连|自动选择|DIRECT|REJECT))(?=.*(?:香港|港|🇭🇰|Hong.?Kong|(?<![A-Za-z])HK(?![A-Za-z]))).+$, interval=900, tolerance=100, no-alert=true
+# 香港测速② = url-test, include-other-group=免费订阅2, policy-regex-filter=(?i)^(?!.*(?:剩余|到期|过期|重置|套餐|官网|客户端|电报群|防失联|订阅|公告|https?:|t[.]me|直连|自动选择|DIRECT|REJECT))(?=.*(?:香港|港|🇭🇰|Hong.?Kong|(?<![A-Za-z])HK(?![A-Za-z]))).+$, interval=900, tolerance=100, no-alert=true
+台湾测速 = url-test, include-other-group="免费订阅1,免费订阅2", policy-regex-filter=(?i)^(?!.*(?:剩余|到期|过期|重置|套餐|官网|客户端|电报群|防失联|订阅|公告|https?:|t[.]me|直连|自动选择|DIRECT|REJECT))(?=.*(?:台湾|台灣|臺灣|台北|新北|🇹🇼|Taiwan|(?<![A-Za-z])TW(?![A-Za-z]))).+$, interval=900, tolerance=100, no-alert=true
+日本测速① = url-test, include-other-group=免费订阅1, policy-regex-filter=(?i)^(?!.*(?:剩余|到期|过期|重置|套餐|官网|客户端|电报群|防失联|订阅|公告|https?:|t[.]me|直连|自动选择|DIRECT|REJECT))(?=.*(?:日本|东京|東京|大阪|埼玉|名古屋|🇯🇵|Japan|Tokyo|Osaka|(?<![A-Za-z])JP(?![A-Za-z]))).+$, interval=900, tolerance=100, no-alert=true
+# 日本测速② = url-test, include-other-group=免费订阅2, policy-regex-filter=(?i)^(?!.*(?:剩余|到期|过期|重置|套餐|官网|客户端|电报群|防失联|订阅|公告|https?:|t[.]me|直连|自动选择|DIRECT|REJECT))(?=.*(?:日本|东京|東京|大阪|埼玉|名古屋|🇯🇵|Japan|Tokyo|Osaka|(?<![A-Za-z])JP(?![A-Za-z]))).+$, interval=900, tolerance=100, no-alert=true
+韩国测速 = url-test, include-other-group="免费订阅1,免费订阅2", policy-regex-filter=(?i)^(?!.*(?:剩余|到期|过期|重置|套餐|官网|客户端|电报群|防失联|订阅|公告|https?:|t[.]me|直连|自动选择|DIRECT|REJECT))(?=.*(?:韩国|韓國|首尔|首爾|春川|🇰🇷|Korea|Seoul|(?<![A-Za-z])KR(?![A-Za-z]))).+$, interval=900, tolerance=100, no-alert=true
+美国测速① = url-test, include-other-group=免费订阅1, policy-regex-filter=(?i)^(?!.*(?:剩余|到期|过期|重置|套餐|官网|客户端|电报群|防失联|订阅|公告|https?:|t[.]me|直连|自动选择|DIRECT|REJECT))(?=.*(?:美国|美國|洛杉矶|圣何塞|硅谷|旧金山|西雅图|芝加哥|纽约|达拉斯|凤凰城|🇺🇸|United.?States|(?<![A-Za-z])USA?(?![A-Za-z]))).+$, interval=900, tolerance=100, no-alert=true
+# 美国测速② = url-test, include-other-group=免费订阅2, policy-regex-filter=(?i)^(?!.*(?:剩余|到期|过期|重置|套餐|官网|客户端|电报群|防失联|订阅|公告|https?:|t[.]me|直连|自动选择|DIRECT|REJECT))(?=.*(?:美国|美國|洛杉矶|圣何塞|硅谷|旧金山|西雅图|芝加哥|纽约|达拉斯|凤凰城|🇺🇸|United.?States|(?<![A-Za-z])USA?(?![A-Za-z]))).+$, interval=900, tolerance=100, no-alert=true
+新加坡测速 = url-test, include-other-group="免费订阅1,免费订阅2", policy-regex-filter=(?i)^(?!.*(?:剩余|到期|过期|重置|套餐|官网|客户端|电报群|防失联|订阅|公告|https?:|t[.]me|直连|自动选择|DIRECT|REJECT))(?=.*(?:新加坡|狮城|星加坡|🇸🇬|Singapore|(?<![A-Za-z])SG(?![A-Za-z]))).+$, interval=900, tolerance=100, no-alert=true
+免费订阅1+2总测速 = url-test, include-other-group="免费订阅1,免费订阅2", policy-regex-filter=(?i)^(?!.*(?:剩余|到期|过期|重置|套餐|官网|客户端|电报群|防失联|订阅|公告|https?:|t[.]me|直连|自动选择|DIRECT|REJECT)).+$, interval=900, tolerance=100, no-alert=true
+# ⑭ Load-Balance：只引用上面的 URL-Test 测速组（不引用 Smart）；persistent=true 让同一主机名固定在同一成员
+# 重要：Surge 对「没有成员的组」会静默改走 DIRECT。免费订阅1 我无法在这里验证，若某个测速组在手机里是空的，请把它从下面一行删掉。
+Load-Balance = load-balance, 香港测速①, 台湾测速, 日本测速①, 韩国测速, 美国测速①, 新加坡测速, 免费订阅1+2总测速, persistent=true, interval=900
+# 启用上面三个②测速组后，把 Load-Balance 改成：
+# Load-Balance = load-balance, 香港测速①, 香港测速②, 台湾测速, 日本测速①, 日本测速②, 韩国测速, 美国测速①, 美国测速②, 新加坡测速, 免费订阅1+2总测速, persistent=true, interval=900
+# ⑮ 7 个独立固定 Fallback：不引用 Smart；主节点=该地区在订阅里排第一的节点（想手动指定主备：把节点名写在 fallback, 后面）
+香港固定Fallback = fallback, include-other-group="免费订阅1,免费订阅2", policy-regex-filter=(?i)^(?!.*(?:剩余|到期|过期|重置|套餐|官网|客户端|电报群|防失联|订阅|公告|https?:|t[.]me|直连|自动选择|DIRECT|REJECT))(?=.*(?:香港|港|🇭🇰|Hong.?Kong|(?<![A-Za-z])HK(?![A-Za-z]))).+$, interval=600, no-alert=true
+台湾固定Fallback = fallback, include-other-group="免费订阅1,免费订阅2", policy-regex-filter=(?i)^(?!.*(?:剩余|到期|过期|重置|套餐|官网|客户端|电报群|防失联|订阅|公告|https?:|t[.]me|直连|自动选择|DIRECT|REJECT))(?=.*(?:台湾|台灣|臺灣|台北|新北|🇹🇼|Taiwan|(?<![A-Za-z])TW(?![A-Za-z]))).+$, interval=600, no-alert=true
+日本固定Fallback = fallback, include-other-group="免费订阅1,免费订阅2", policy-regex-filter=(?i)^(?!.*(?:剩余|到期|过期|重置|套餐|官网|客户端|电报群|防失联|订阅|公告|https?:|t[.]me|直连|自动选择|DIRECT|REJECT))(?=.*(?:日本|东京|東京|大阪|埼玉|名古屋|🇯🇵|Japan|Tokyo|Osaka|(?<![A-Za-z])JP(?![A-Za-z]))).+$, interval=600, no-alert=true
+韩国固定Fallback = fallback, include-other-group="免费订阅1,免费订阅2", policy-regex-filter=(?i)^(?!.*(?:剩余|到期|过期|重置|套餐|官网|客户端|电报群|防失联|订阅|公告|https?:|t[.]me|直连|自动选择|DIRECT|REJECT))(?=.*(?:韩国|韓國|首尔|首爾|春川|🇰🇷|Korea|Seoul|(?<![A-Za-z])KR(?![A-Za-z]))).+$, interval=600, no-alert=true
+美国固定Fallback = fallback, include-other-group="免费订阅1,免费订阅2", policy-regex-filter=(?i)^(?!.*(?:剩余|到期|过期|重置|套餐|官网|客户端|电报群|防失联|订阅|公告|https?:|t[.]me|直连|自动选择|DIRECT|REJECT))(?=.*(?:美国|美國|洛杉矶|圣何塞|硅谷|旧金山|西雅图|芝加哥|纽约|达拉斯|凤凰城|🇺🇸|United.?States|(?<![A-Za-z])USA?(?![A-Za-z]))).+$, interval=600, no-alert=true
+新加坡固定Fallback = fallback, include-other-group="免费订阅1,免费订阅2", policy-regex-filter=(?i)^(?!.*(?:剩余|到期|过期|重置|套餐|官网|客户端|电报群|防失联|订阅|公告|https?:|t[.]me|直连|自动选择|DIRECT|REJECT))(?=.*(?:新加坡|狮城|星加坡|🇸🇬|Singapore|(?<![A-Za-z])SG(?![A-Za-z]))).+$, interval=600, no-alert=true
+其他地区固定Fallback = fallback, include-other-group="免费订阅1,免费订阅2", policy-regex-filter=(?i)^(?!.*(?:剩余|到期|过期|重置|套餐|官网|客户端|电报群|防失联|订阅|公告|https?:|t[.]me|直连|自动选择|DIRECT|REJECT|香港|港|🇭🇰|Hong.?Kong|(?<![A-Za-z])HK(?![A-Za-z])|台湾|台灣|臺灣|台北|新北|🇹🇼|Taiwan|(?<![A-Za-z])TW(?![A-Za-z])|日本|东京|東京|大阪|埼玉|名古屋|🇯🇵|Japan|Tokyo|Osaka|(?<![A-Za-z])JP(?![A-Za-z])|韩国|韓國|首尔|首爾|春川|🇰🇷|Korea|Seoul|(?<![A-Za-z])KR(?![A-Za-z])|美国|美國|洛杉矶|圣何塞|硅谷|旧金山|西雅图|芝加哥|纽约|达拉斯|凤凰城|🇺🇸|United.?States|(?<![A-Za-z])USA?(?![A-Za-z])|新加坡|狮城|星加坡|🇸🇬|Singapore|(?<![A-Za-z])SG(?![A-Za-z]))).+$, interval=600, no-alert=true

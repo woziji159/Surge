@@ -1,61 +1,142 @@
 [Rule]
+# 酷狗开屏补强：只拦截两处广告网关的 QUIC，使 HTTPS 可经 MITM 处理（非业务域整域拦截）。
+AND,((DOMAIN,gateway.kugou.com),(PROTOCOL,QUIC)),REJECT
+AND,((DOMAIN,gatewayretry.kugou.com),(PROTOCOL,QUIC)),REJECT
+# 局域网/本机/链路本地一律 DIRECT（Moonlight 局域网、NAS、打印机等）。
+IP-CIDR,10.0.0.0/8,DIRECT,no-resolve
+IP-CIDR,100.64.0.0/10,DIRECT,no-resolve
+IP-CIDR,127.0.0.0/8,DIRECT,no-resolve
+IP-CIDR,169.254.0.0/16,DIRECT,no-resolve
+IP-CIDR,172.16.0.0/12,DIRECT,no-resolve
+IP-CIDR,192.168.0.0/16,DIRECT,no-resolve
+IP-CIDR6,fe80::/10,DIRECT,no-resolve
+IP-CIDR6,fc00::/7,DIRECT,no-resolve
+DOMAIN-SUFFIX,local,DIRECT
+# Moonlight 远程串流：把下面一行的 IP 换成你的中转服务器公网 IP 后取消注释（组「Moonlight远程」默认 DIRECT，可选固定 Fallback）。
+# IP-CIDR,203.0.113.10/32,Moonlight远程,no-resolve
+# 91short 网页/视频 DIRECT；毒奶远程脚本/样式走独立代理，与「漏网之鱼」无关。
+# GitHub Raw 走「GitHub专用」（付费B池 Smart）；毒奶脚本站 limbopro.com 走「付费URL-Test」。
+DOMAIN,cdn.jsdelivr.net,Smart总
+DOMAIN-SUFFIX,limbopro.com,付费URL-Test
+DOMAIN,raw.githubusercontent.com,GitHub专用
+# >>> LIMBO_SITE_DIRECT_BEGIN (auto-generated, do not edit)
+DOMAIN-KEYWORD,91short,DIRECT
+# <<< LIMBO_SITE_DIRECT_END
 # 手动规则优先；只编辑前两份列表即可增加直连/代理覆盖。
 # 主规则按首次匹配生效，广告规则不使用pre-matching，以保留重写和URL例外。
-RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-custom-direct.list,DIRECT,update-interval=86400
-RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-custom-proxy.list,节点选择,update-interval=86400
-RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-ios-update.list,iOS系统更新,update-interval=86400
-RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-mail.list,国外邮箱,update-interval=86400
-RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-apple-intelligence.list,苹果智能,update-interval=86400
+RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-custom-direct.list,DIRECT,"update-interval=86400"
+RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-custom-proxy.list,Smart总,"update-interval=86400"
+RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-ios-update.list,iOS系统更新,"update-interval=86400"
+RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-mail.list,国外邮箱,"update-interval=86400"
+RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-apple-intelligence.list,苹果智能,"update-interval=86400"
 # Bili核心精确放行先于广告；广告由官方Bili重写继续处理。
-RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-bili-core.list,DIRECT,update-interval=86400
+RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-bili-core.list,DIRECT,"update-interval=86400"
 # 仅字幕/点播内容清单的URL例外；pubads其余请求继续被广告规则拦截。
-RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-subtitle-content.list,谷歌服务,update-interval=86400
-RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-service-ai-exceptions.list,人工智能,update-interval=86400
-RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-service-google-exceptions.list,谷歌服务,update-interval=86400
-RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-local-direct-exceptions.list,DIRECT,update-interval=86400
+RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-subtitle-content.list,谷歌服务,"update-interval=86400"
+RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-service-ai-exceptions.list,人工智能,"update-interval=86400"
+RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-service-google-exceptions.list,谷歌服务,"update-interval=86400"
+RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-local-direct-exceptions.list,DIRECT,"update-interval=86400"
 # 默认DIRECT，可在HTTPDNS控制组切换REJECT。
-RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-httpdns.list,HTTPDNS控制,update-interval=86400
-DOMAIN-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-apple.txt,DIRECT,update-interval=86400
-RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-apple.list,DIRECT,update-interval=86400
-DOMAIN-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-ads.txt,广告拦截,update-interval=86400
-RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-ads.list,广告拦截,update-interval=86400
-RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-wechat.list,DIRECT,update-interval=86400
-RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-github.list,GitHub,update-interval=86400
-RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-grok.list,Grok人工智能,update-interval=86400
-RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-perplexity.list,Perplexity搜索,update-interval=86400
-RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-cursor.list,Cursor编程,update-interval=86400
-RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-game-download.list,游戏下载,update-interval=86400
-RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-download.list,文件下载,update-interval=86400
-RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-private-tracker.list,PT下载,update-interval=86400
-RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-netflix.list,奈飞视频,update-interval=86400
-RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-speedtest.list,网络测速,update-interval=86400
-RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-emby.list,Emby影院,update-interval=86400
-RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-onedrive.list,微软网盘,update-interval=86400
-RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-google-drive.list,谷歌网盘,update-interval=86400
-RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-paypal.list,贝宝支付,update-interval=86400
-RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-discord.list,Discord社群,update-interval=86400
-RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-reddit.list,Reddit论坛,update-interval=86400
-RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-twitch.list,Twitch直播,update-interval=86400
-RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-scholar.list,学术论文,update-interval=86400
-RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-steam.list,Steam游戏,update-interval=86400
-RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-game.list,游戏平台,update-interval=86400
-RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-ai.list,人工智能,update-interval=86400
-RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-copilot.list,微软AI,update-interval=86400
-RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-microsoft.list,微软服务,update-interval=86400
-RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-tiktok.list,TikTok国际版,update-interval=86400
-RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-twitter.list,X推特,update-interval=86400
-RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-cryptocurrency.list,加密货币,update-interval=86400
-RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-telegram.list,电报,update-interval=86400
-RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-google.list,谷歌服务,update-interval=86400
-RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-direct.list,DIRECT,update-interval=86400
-DOMAIN-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-global-media.txt,节点选择,update-interval=86400
-RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-global-media.list,节点选择,update-interval=86400
-DOMAIN-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-global.txt,节点选择,update-interval=86400
-RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-global.list,节点选择,update-interval=86400
+RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-httpdns.list,HTTPDNS控制,"update-interval=86400"
+DOMAIN-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-apple.txt,DIRECT,"update-interval=86400"
+RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-apple.list,DIRECT,"update-interval=86400"
+DOMAIN-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-ads.txt,广告拦截,"update-interval=86400"
+RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-ads.list,广告拦截,"update-interval=86400"
+# ===== 2026-10-20 分流覆盖：具体域名放在宽泛规则集之前；必须位于广告规则之后，避免放行广告域名 =====
+# --- AI 专用接口（App/API）→ AI专用（付费A池 Smart）---
+DOMAIN,api.openai.com,AI专用
+DOMAIN-SUFFIX,anthropic.com,AI专用
+DOMAIN,generativelanguage.googleapis.com,AI专用
+DOMAIN,sydney.bing.com,AI专用
+DOMAIN,services.bingapis.com,AI专用
+DOMAIN,api.x.ai,AI专用
+DOMAIN,api.perplexity.ai,AI专用
+DOMAIN-SUFFIX,githubcopilot.com,AI专用
+DOMAIN,copilot-proxy.githubusercontent.com,AI专用
+DOMAIN,copilot-workspace.githubnext.com,AI专用
+# Trae / MarsCode 属于 AI 开发工具，先于 TikTok 规则集，避免被字节系规则误覆盖。
+DOMAIN-SUFFIX,trae.ai,AI专用
+DOMAIN-SUFFIX,marscode.com,AI专用
+DOMAIN,trae-api-sg.mchost.guru,AI专用
+# --- AI 网页（其余已在 surge-ai.list 等规则集中，默认走付费URL-Test）---
+DOMAIN,aistudio.google.com,人工智能
+DOMAIN,notebooklm.google.com,人工智能
+# --- GitHub：网页→付费URL-Test；API/Raw/Releases/Git(SSH)→GitHub专用 ---
+# 注意：git clone(HTTPS) 与网页共用 github.com，域名规则无法区分，只能走网页那一组；SSH(22端口)可单独区分。
+AND,((DOMAIN,github.com),(DEST-PORT,22)),GitHub专用
+DOMAIN,ssh.github.com,GitHub专用
+DOMAIN,api.github.com,GitHub专用
+DOMAIN,uploads.github.com,GitHub专用
+DOMAIN,codeload.github.com,GitHub专用
+DOMAIN,avatars.githubusercontent.com,付费URL-Test
+DOMAIN,camo.githubusercontent.com,付费URL-Test
+DOMAIN-SUFFIX,githubassets.com,付费URL-Test
+DOMAIN-SUFFIX,githubusercontent.com,GitHub专用
+DOMAIN-SUFFIX,github.com,付费URL-Test
+DOMAIN-SUFFIX,greasyfork.org,付费URL-Test
+# --- YouTube / Google 统一出口：全部走「谷歌服务」，且先于全球媒体规则（原先网页走节点选择、视频走谷歌服务，出口可能不一致）---
+DOMAIN-SUFFIX,youtube.com,谷歌服务
+DOMAIN-SUFFIX,youtu.be,谷歌服务
+DOMAIN-SUFFIX,ytimg.com,谷歌服务
+DOMAIN-SUFFIX,youtube-nocookie.com,谷歌服务
+DOMAIN-SUFFIX,youtubekids.com,谷歌服务
+DOMAIN-SUFFIX,googlevideo.com,谷歌服务
+DOMAIN,youtubei.googleapis.com,谷歌服务
+DOMAIN-SUFFIX,ggpht.com,谷歌服务
+# --- CapCut 单独处理，不混入 TikTok ---
+DOMAIN-SUFFIX,capcut.com,CapCut剪辑
+# --- 流媒体：Hulu→美国Smart；Disney+/Prime Video/Spotify→国际流媒体（手动选地区 Smart）---
+DOMAIN-SUFFIX,hulu.com,美国Smart
+DOMAIN-SUFFIX,huluim.com,美国Smart
+DOMAIN-SUFFIX,hulustream.com,美国Smart
+DOMAIN-SUFFIX,disneyplus.com,国际流媒体
+DOMAIN-SUFFIX,disney-plus.net,国际流媒体
+DOMAIN-SUFFIX,dssott.com,国际流媒体
+DOMAIN-SUFFIX,bamgrid.com,国际流媒体
+DOMAIN-SUFFIX,disneystreaming.com,国际流媒体
+DOMAIN-SUFFIX,primevideo.com,国际流媒体
+DOMAIN-SUFFIX,spotify.com,国际流媒体
+DOMAIN-SUFFIX,scdn.co,国际流媒体
+DOMAIN-SUFFIX,spotifycdn.com,国际流媒体
+DOMAIN-KEYWORD,spotify,国际流媒体
+# ===== 分流覆盖结束 =====
+RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-wechat.list,DIRECT,"update-interval=86400"
+RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-github.list,GitHub,"update-interval=86400"
+RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-grok.list,Grok人工智能,"update-interval=86400"
+RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-perplexity.list,Perplexity搜索,"update-interval=86400"
+RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-cursor.list,Cursor编程,"update-interval=86400"
+RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-game-download.list,游戏下载,"update-interval=86400"
+RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-download.list,文件下载,"update-interval=86400"
+RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-private-tracker.list,PT下载,"update-interval=86400"
+RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-netflix.list,奈飞视频,"update-interval=86400"
+RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-speedtest.list,网络测速,"update-interval=86400"
+RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-emby.list,Emby影院,"update-interval=86400"
+RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-onedrive.list,微软网盘,"update-interval=86400"
+RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-google-drive.list,谷歌网盘,"update-interval=86400"
+RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-paypal.list,贝宝支付,"update-interval=86400"
+RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-discord.list,Discord社群,"update-interval=86400"
+RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-reddit.list,Reddit论坛,"update-interval=86400"
+RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-twitch.list,Twitch直播,"update-interval=86400"
+RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-scholar.list,学术论文,"update-interval=86400"
+RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-steam.list,Steam游戏,"update-interval=86400"
+RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-game.list,游戏平台,"update-interval=86400"
+RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-ai.list,人工智能,"update-interval=86400"
+RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-copilot.list,微软AI,"update-interval=86400"
+RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-microsoft.list,微软服务,"update-interval=86400"
+RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-tiktok.list,TikTok国际版,"update-interval=86400"
+RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-twitter.list,X推特,"update-interval=86400"
+RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-cryptocurrency.list,加密货币,"update-interval=86400"
+RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-telegram.list,电报,"update-interval=86400"
+RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-google.list,谷歌服务,"update-interval=86400"
+RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-direct.list,DIRECT,"update-interval=86400"
+DOMAIN-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-global-media.txt,Smart总,"update-interval=86400"
+RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-global-media.list,Smart总,"update-interval=86400"
+DOMAIN-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-global.txt,Smart总,"update-interval=86400"
+RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-global.list,Smart总,"update-interval=86400"
 # 国内域名与IP放在明确业务分类后、最终兜底前。
-DOMAIN-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-china.txt,DIRECT,update-interval=86400
+DOMAIN-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-china.txt,DIRECT,"update-interval=86400"
 # 国内域名与IP放在明确业务分类后、最终兜底前。
-RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-china.list,DIRECT,update-interval=86400
-RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-china-ip.list,DIRECT,update-interval=86400
-# 未命中默认进入节点选择；DNS失败仍允许由代理继续解析。
+RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-china.list,DIRECT,"update-interval=86400"
+RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-china-ip.list,DIRECT,"update-interval=86400"
+# 未命中默认进入漏网之鱼（默认 Smart总）；DNS失败仍允许由代理继续解析。
 FINAL,漏网之鱼,dns-failed
