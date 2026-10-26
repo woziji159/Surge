@@ -14,6 +14,15 @@ IP-CIDR6,fc00::/7,DIRECT,no-resolve
 DOMAIN-SUFFIX,local,DIRECT
 # Moonlight 远程串流：把下面一行的 IP 换成你的中转服务器公网 IP 后取消注释（组「Moonlight远程」默认 DIRECT，可选固定 Fallback）。
 # IP-CIDR,203.0.113.10/32,Moonlight远程,no-resolve
+# 闲鱼/淘宝 AMDC 调度：App 用明文 HTTP 向固定 IP 取「域名→IP」列表，随后直连 IP，绕开按域名匹配的 MITM/重写，开屏广告因此漏过。
+# 默认拒绝，让 App 回落到正常域名连接（组「阿里AMDC」可切回 DIRECT）。第一条取自可莉/sooyaaabo 闲鱼规则，第二条按你日志里的 appkey 精确匹配。
+AND,((URL-REGEX,^http://.+/amdc/mobileDispatch),(USER-AGENT,%E9%97%B2%E9%B1%BC*)),阿里AMDC
+URL-REGEX,^http://[^/]+/amdc/mobileDispatch\?appkey=12431167,阿里AMDC
+# 淘宝同理：UA 为「手机淘宝」的 AMDC 调度（Ventus/可莉同款规则）。
+AND,((URL-REGEX,^http://.+/amdc/mobileDispatch),(USER-AGENT,%E6%89%8B%E6%9C%BA%E6%B7%98%E5%AE%9D*)),阿里AMDC
+# 抖音：拒绝发往 amemv.com / snssdk.com 的 QUIC(HTTP/3)，让 App 回落 TCP，下面的 MITM 才能看到 /api/ad/ 路径（与酷狗网关的做法相同）。
+AND,((DOMAIN-SUFFIX,amemv.com),(PROTOCOL,QUIC)),REJECT
+AND,((DOMAIN-SUFFIX,snssdk.com),(PROTOCOL,QUIC)),REJECT
 # 91short 网页/视频 DIRECT；毒奶远程脚本/样式走独立代理，与「漏网之鱼」无关。
 # GitHub Raw 走「GitHub专用」（付费B池 Smart）；毒奶脚本站 limbopro.com 走「付费URL-Test」。
 DOMAIN,cdn.jsdelivr.net,Smart总
@@ -43,6 +52,13 @@ RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-apple.list
 DOMAIN-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-ads.txt,广告拦截,"update-interval=86400"
 RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-ads.list,广告拦截,"update-interval=86400"
 # ===== 2026-10-20 分流覆盖：具体域名放在宽泛规则集之前；必须位于广告规则之后，避免放行广告域名 =====
+# --- 抖音 / 淘宝：广告子域与埋点域名（其余广告域名已在你的广告列表里）---
+DOMAIN-WILDCARD,*ads*-normal.zijieapi.com,广告拦截
+DOMAIN,ut.taobao.com,广告拦截
+DOMAIN,hudong.alicdn.com,广告拦截
+# --- 抖音国内版：snssdk.com 直连。TikTok 规则集里带了 snssdk.com，会把 aweme.snssdk.com 等请求抓去走 TikTok 付费节点；
+# 广告/埋点子域在上面的广告规则里已被拦，国际版 TikTok 用的 isnssdk.com 不受影响。
+DOMAIN-SUFFIX,snssdk.com,DIRECT
 # --- AI 专用接口（App/API）→ AI专用（付费A池 Smart）---
 DOMAIN,api.openai.com,AI专用
 DOMAIN-SUFFIX,anthropic.com,AI专用

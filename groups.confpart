@@ -15,6 +15,8 @@
 苹果服务 = select, DIRECT
 iOS系统更新 = select, REJECT, DIRECT
 HTTPDNS控制 = select, DIRECT, REJECT
+# 阿里系 AMDC 调度开关（闲鱼、淘宝共用）：默认 REJECT（原因见规则段最前面的说明）；App 启动变慢或异常时切到 DIRECT 即可恢复
+阿里AMDC = select, REJECT, DIRECT
 
 # ==== 兜底入口：FINAL 与没有专用规则的海外流量；规则直接指向 Smart总，这里只保留一个可手动切换的组 ====
 漏网之鱼 = select, Smart总, Load-Balance, 免费订阅1+2总测速, 香港Smart, 台湾Smart, 日本Smart, 韩国Smart, 美国Smart, 新加坡Smart, 其他国家Smart, 其他付费备用, DIRECT
