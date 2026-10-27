@@ -20,9 +20,7 @@ AND,((URL-REGEX,^http://.+/amdc/mobileDispatch),(USER-AGENT,%E9%97%B2%E9%B1%BC*)
 URL-REGEX,^http://[^/]+/amdc/mobileDispatch\?appkey=12431167,阿里AMDC
 # 淘宝同理：UA 为「手机淘宝」的 AMDC 调度（Ventus/可莉同款规则）。
 AND,((URL-REGEX,^http://.+/amdc/mobileDispatch),(USER-AGENT,%E6%89%8B%E6%9C%BA%E6%B7%98%E5%AE%9D*)),阿里AMDC
-# 抖音：拒绝发往 amemv.com / snssdk.com 的 QUIC(HTTP/3)，让 App 回落 TCP，下面的 MITM 才能看到 /api/ad/ 路径（与酷狗网关的做法相同）。
-AND,((DOMAIN-SUFFIX,amemv.com),(PROTOCOL,QUIC)),REJECT
-AND,((DOMAIN-SUFFIX,snssdk.com),(PROTOCOL,QUIC)),REJECT
+
 # 91short 网页/视频 DIRECT；毒奶远程脚本/样式走独立代理，与「漏网之鱼」无关。
 # GitHub Raw 走「GitHub专用」（付费B池 Smart）；毒奶脚本站 limbopro.com 走「付费URL-Test」。
 DOMAIN,cdn.jsdelivr.net,Smart总
@@ -52,8 +50,7 @@ RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-apple.list
 DOMAIN-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-ads.txt,广告拦截,"update-interval=86400"
 RULE-SET,https://raw.githubusercontent.com/woziji159/Surge/main/surge-ads.list,广告拦截,"update-interval=86400"
 # ===== 2026-10-20 分流覆盖：具体域名放在宽泛规则集之前；必须位于广告规则之后，避免放行广告域名 =====
-# --- 抖音 / 淘宝：广告子域与埋点域名（其余广告域名已在你的广告列表里）---
-DOMAIN-WILDCARD,*ads*-normal.zijieapi.com,广告拦截
+# --- 淘宝：埋点/互动域名（其余广告域名已在你的广告列表里）---
 DOMAIN,ut.taobao.com,广告拦截
 DOMAIN,hudong.alicdn.com,广告拦截
 # --- 抖音国内版：snssdk.com 直连。TikTok 规则集里带了 snssdk.com，会把 aweme.snssdk.com 等请求抓去走 TikTok 付费节点；
