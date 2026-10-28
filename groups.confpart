@@ -19,20 +19,20 @@ HTTPDNS控制 = select, DIRECT, REJECT
 阿里AMDC = select, REJECT, DIRECT
 
 # ==== 兜底入口：FINAL 与没有专用规则的海外流量；规则直接指向 Smart总，这里只保留一个可手动切换的组 ====
-漏网之鱼 = select, Smart总, Load-Balance, 免费订阅1+2总测速, 香港Smart, 台湾Smart, 日本Smart, 韩国Smart, 美国Smart, 新加坡Smart, 其他国家Smart, 其他付费备用, DIRECT
+漏网之鱼 = select, Smart总, 付费Smart总, DIRECT
 
 # ==== 服务入口（沿用原组名，规则文件无需改动；第一项=默认去向）====
 # --- 付费体系 ---
-人工智能 = select, 付费URL-Test, AI专用, 其他付费备用
-Grok人工智能 = select, 付费URL-Test, AI专用, 其他付费备用
-Perplexity搜索 = select, 付费URL-Test, AI专用, 其他付费备用
-微软AI = select, 付费URL-Test, AI专用, 其他付费备用
-Cursor编程 = select, AI专用, 付费URL-Test, 其他付费备用
-苹果智能 = select, AI专用, DIRECT, 付费URL-Test
-GitHub = select, GitHub专用, 付费URL-Test, 其他付费备用
-X推特 = select, 新加坡付费Fallback, 日本付费Fallback, 香港付费Fallback, 台湾付费Fallback, 美国付费Fallback, 其他地区付费Fallback, Smart总
-电报 = select, 新加坡付费Fallback, 日本付费Fallback, 香港付费Fallback, 台湾付费Fallback, 美国付费Fallback, 其他地区付费Fallback, Smart总
-TikTok国际版 = select, TikTok专用Fallback, 日本付费Fallback, 新加坡付费Fallback, 台湾付费Fallback, 美国付费Fallback, Smart总
+人工智能 = select, 付费URL-Test, 付费Smart总, 其他付费备用
+Grok人工智能 = select, 付费URL-Test, 付费Smart总, 其他付费备用
+Perplexity搜索 = select, 付费URL-Test, 付费Smart总, 其他付费备用
+微软AI = select, 付费URL-Test, 付费Smart总, 其他付费备用
+Cursor编程 = select, 付费Smart总, 付费URL-Test, 其他付费备用
+苹果智能 = select, 付费Smart总, DIRECT, 付费URL-Test
+GitHub = select, 付费Smart总, 付费URL-Test, 其他付费备用
+X推特 = select, 新加坡付费Fallback, 日本付费Fallback, 香港付费Fallback, 台湾付费Fallback, 美国付费Fallback, 其他地区付费Fallback, 付费Smart总
+电报 = select, 付费均衡负载, 新加坡付费Fallback, 日本付费Fallback, 香港付费Fallback, 台湾付费Fallback, 美国付费Fallback, 其他地区付费Fallback, 付费Smart总
+TikTok国际版 = select, TikTok专用Fallback, 日本付费Fallback, 新加坡付费Fallback, 台湾付费Fallback, 美国付费Fallback, 付费Smart总
 # --- 免费体系 ---
 谷歌服务 = select, Smart总, 香港Smart, 台湾Smart, 日本Smart, 韩国Smart, 美国Smart, 新加坡Smart, 其他国家Smart, Load-Balance, DIRECT
 谷歌网盘 = select, Smart总, 香港Smart, 台湾Smart, 日本Smart, 韩国Smart, 美国Smart, 新加坡Smart, 其他国家Smart, DIRECT
@@ -54,17 +54,17 @@ Emby影院 = select, Smart总, DIRECT, 香港Smart, 台湾Smart, 日本Smart, �
 奈飞视频 = select, 美国Smart, 日本Smart, 新加坡Smart, 香港Smart, 台湾Smart, 韩国Smart, 其他国家Smart, Smart总, include-other-group="免费订阅1,免费订阅2", policy-regex-filter=(nf|解锁NF|NF|奈|Netflix)
 国际流媒体 = select, 新加坡Smart, 美国Smart, 日本Smart, 香港Smart, 台湾Smart, 韩国Smart, 其他国家Smart, Smart总
 CapCut剪辑 = select, Smart总, 日本Smart, 美国Smart, 新加坡Smart, DIRECT
-# PayPal：固定选一个真实节点（不用 Smart/测速，避免出口频繁变化触发风控）。
-贝宝支付 = select, include-other-group="免费订阅1,免费订阅2", policy-regex-filter=(?i)^(?!.*(?:剩余|到期|过期|重置|套餐|官网|客户端|电报群|防失联|订阅|公告|https?:|t[.]me|直连|自动选择|DIRECT|REJECT)).+$
+# PayPal：用免费各地区固定 Fallback（主备固定，不随测速跳变，避免出口频繁变化触发风控）。
+贝宝支付 = select, 香港固定Fallback, 台湾固定Fallback, 日本固定Fallback, 韩国固定Fallback, 美国固定Fallback, 新加坡固定Fallback, 其他地区固定Fallback
 Moonlight远程 = select, DIRECT, 香港固定Fallback, 台湾固定Fallback, 日本固定Fallback, 韩国固定Fallback, 美国固定Fallback, 新加坡固定Fallback, 其他地区固定Fallback
 
-# ==== 付费体系（只用 主订阅 节点；AI 与 GitHub 使用互不重叠的两个节点池）====
-# ① AI专用：A池=美国+日本+英国（不含香港）
-AI专用 = smart, include-other-group=主订阅, policy-regex-filter=(?i)^(?!.*(?:剩余|到期|过期|重置|套餐|官网|客户端|电报群|防失联|订阅|公告|https?:|t[.]me|直连|自动选择|DIRECT|REJECT|香港|港|🇭🇰|Hong.?Kong|(?<![A-Za-z])HK(?![A-Za-z])))(?=.*(?:美国|美國|洛杉矶|圣何塞|硅谷|旧金山|西雅图|芝加哥|纽约|达拉斯|凤凰城|🇺🇸|United.?States|(?<![A-Za-z])USA?(?![A-Za-z])|日本|东京|東京|大阪|埼玉|名古屋|🇯🇵|Japan|Tokyo|Osaka|(?<![A-Za-z])JP(?![A-Za-z])|英国|英國|伦敦|倫敦|🇬🇧|United.?Kingdom|London|(?<![A-Za-z])UK(?![A-Za-z])|(?<![A-Za-z])GB(?![A-Za-z]))).+$
-# ② GitHub专用：B池=香港+新加坡+台湾+韩国
-GitHub专用 = smart, include-other-group=主订阅, policy-regex-filter=(?i)^(?!.*(?:剩余|到期|过期|重置|套餐|官网|客户端|电报群|防失联|订阅|公告|https?:|t[.]me|直连|自动选择|DIRECT|REJECT))(?=.*(?:香港|港|🇭🇰|Hong.?Kong|(?<![A-Za-z])HK(?![A-Za-z])|新加坡|狮城|星加坡|🇸🇬|Singapore|(?<![A-Za-z])SG(?![A-Za-z])|台湾|台灣|臺灣|台北|新北|🇹🇼|Taiwan|(?<![A-Za-z])TW(?![A-Za-z])|韩国|韓國|首尔|首爾|春川|🇰🇷|Korea|Seoul|(?<![A-Za-z])KR(?![A-Za-z]))).+$
+# ==== 付费体系（只用 主订阅 节点）====
+# 付费Smart总：主订阅全部真实节点，不含香港（OpenAI/Claude/TikTok 在香港不可用，Smart 容易选到香港）。AI 专用接口、GitHub 接口和各入口组都指向它，不再单独分 A/B 池
+付费Smart总 = smart, include-other-group=主订阅, policy-regex-filter=(?i)^(?!.*(?:剩余|到期|过期|重置|套餐|官网|客户端|电报群|防失联|订阅|公告|https?:|t[.]me|直连|自动选择|DIRECT|REJECT|香港|港|🇭🇰|Hong.?Kong|(?<![A-Za-z])HK(?![A-Za-z]))).+$
+# 付费均衡负载：电报使用；成员是各付费地区 Fallback（每个地区主节点出站，主节点坏了该地区自动换备用），persistent=true 让同一主机名固定在同一成员
+付费均衡负载 = load-balance, 香港付费Fallback, 台湾付费Fallback, 日本付费Fallback, 美国付费Fallback, 新加坡付费Fallback, 其他地区付费Fallback, persistent=true, interval=900
 # ③ 其他付费备用：手动选择（暂不放普通海外网站）
-其他付费备用 = select, 付费URL-Test, 新加坡付费Fallback, 日本付费Fallback, 香港付费Fallback, 台湾付费Fallback, 美国付费Fallback, 其他地区付费Fallback, include-other-group=主订阅, policy-regex-filter=(?i)^(?!.*(?:剩余|到期|过期|重置|套餐|官网|客户端|电报群|防失联|订阅|公告|https?:|t[.]me|直连|自动选择|DIRECT|REJECT)).+$
+其他付费备用 = select, 付费URL-Test, 付费Smart总, 付费均衡负载, 新加坡付费Fallback, 日本付费Fallback, 香港付费Fallback, 台湾付费Fallback, 美国付费Fallback, 其他地区付费Fallback, include-other-group=主订阅, policy-regex-filter=(?i)^(?!.*(?:剩余|到期|过期|重置|套餐|官网|客户端|电报群|防失联|订阅|公告|https?:|t[.]me|直连|自动选择|DIRECT|REJECT)).+$
 # 付费URL-Test：AI网页/GitHub网页/GreasyFork/毒奶，自动选低延迟节点（排除香港：OpenAI/Claude 不支持）
 付费URL-Test = url-test, include-other-group=主订阅, policy-regex-filter=(?i)^(?!.*(?:剩余|到期|过期|重置|套餐|官网|客户端|电报群|防失联|订阅|公告|https?:|t[.]me|直连|自动选择|DIRECT|REJECT|香港|港|🇭🇰|Hong.?Kong|(?<![A-Za-z])HK(?![A-Za-z]))).+$, interval=900, tolerance=150, no-alert=true
 # ④ TikTok专用Fallback：固定日本，主备同一国家（想换国家改 policy-regex-filter 里的地区词）

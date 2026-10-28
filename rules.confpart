@@ -22,10 +22,10 @@ URL-REGEX,^http://[^/]+/amdc/mobileDispatch\?appkey=12431167,阿里AMDC
 AND,((URL-REGEX,^http://.+/amdc/mobileDispatch),(USER-AGENT,%E6%89%8B%E6%9C%BA%E6%B7%98%E5%AE%9D*)),阿里AMDC
 
 # 91short 网页/视频 DIRECT；毒奶远程脚本/样式走独立代理，与「漏网之鱼」无关。
-# GitHub Raw 走「GitHub专用」（付费B池 Smart）；毒奶脚本站 limbopro.com 走「付费URL-Test」。
+# GitHub Raw 走「付费Smart总」；毒奶脚本站 limbopro.com 走「付费URL-Test」。
 DOMAIN,cdn.jsdelivr.net,Smart总
 DOMAIN-SUFFIX,limbopro.com,付费URL-Test
-DOMAIN,raw.githubusercontent.com,GitHub专用
+DOMAIN,raw.githubusercontent.com,付费Smart总
 # >>> LIMBO_SITE_DIRECT_BEGIN (auto-generated, do not edit)
 DOMAIN-KEYWORD,91short,DIRECT
 # <<< LIMBO_SITE_DIRECT_END
@@ -56,35 +56,35 @@ DOMAIN,hudong.alicdn.com,广告拦截
 # --- 抖音国内版：snssdk.com 直连。TikTok 规则集里带了 snssdk.com，会把 aweme.snssdk.com 等请求抓去走 TikTok 付费节点；
 # 广告/埋点子域在上面的广告规则里已被拦，国际版 TikTok 用的 isnssdk.com 不受影响。
 DOMAIN-SUFFIX,snssdk.com,DIRECT
-# --- AI 专用接口（App/API）→ AI专用（付费A池 Smart）---
-DOMAIN,api.openai.com,AI专用
-DOMAIN-SUFFIX,anthropic.com,AI专用
-DOMAIN,generativelanguage.googleapis.com,AI专用
-DOMAIN,sydney.bing.com,AI专用
-DOMAIN,services.bingapis.com,AI专用
-DOMAIN,api.x.ai,AI专用
-DOMAIN,api.perplexity.ai,AI专用
-DOMAIN-SUFFIX,githubcopilot.com,AI专用
-DOMAIN,copilot-proxy.githubusercontent.com,AI专用
-DOMAIN,copilot-workspace.githubnext.com,AI专用
+# --- AI 专用接口（App/API）→ 付费Smart总 ---
+DOMAIN,api.openai.com,付费Smart总
+DOMAIN-SUFFIX,anthropic.com,付费Smart总
+DOMAIN,generativelanguage.googleapis.com,付费Smart总
+DOMAIN,sydney.bing.com,付费Smart总
+DOMAIN,services.bingapis.com,付费Smart总
+DOMAIN,api.x.ai,付费Smart总
+DOMAIN,api.perplexity.ai,付费Smart总
+DOMAIN-SUFFIX,githubcopilot.com,付费Smart总
+DOMAIN,copilot-proxy.githubusercontent.com,付费Smart总
+DOMAIN,copilot-workspace.githubnext.com,付费Smart总
 # Trae / MarsCode 属于 AI 开发工具，先于 TikTok 规则集，避免被字节系规则误覆盖。
-DOMAIN-SUFFIX,trae.ai,AI专用
-DOMAIN-SUFFIX,marscode.com,AI专用
-DOMAIN,trae-api-sg.mchost.guru,AI专用
+DOMAIN-SUFFIX,trae.ai,付费Smart总
+DOMAIN-SUFFIX,marscode.com,付费Smart总
+DOMAIN,trae-api-sg.mchost.guru,付费Smart总
 # --- AI 网页（其余已在 surge-ai.list 等规则集中，默认走付费URL-Test）---
 DOMAIN,aistudio.google.com,人工智能
 DOMAIN,notebooklm.google.com,人工智能
-# --- GitHub：网页→付费URL-Test；API/Raw/Releases/Git(SSH)→GitHub专用 ---
+# --- GitHub：网页→付费URL-Test；API/Raw/Releases/Git(SSH)→付费Smart总 ---
 # 注意：git clone(HTTPS) 与网页共用 github.com，域名规则无法区分，只能走网页那一组；SSH(22端口)可单独区分。
-AND,((DOMAIN,github.com),(DEST-PORT,22)),GitHub专用
-DOMAIN,ssh.github.com,GitHub专用
-DOMAIN,api.github.com,GitHub专用
-DOMAIN,uploads.github.com,GitHub专用
-DOMAIN,codeload.github.com,GitHub专用
+AND,((DOMAIN,github.com),(DEST-PORT,22)),付费Smart总
+DOMAIN,ssh.github.com,付费Smart总
+DOMAIN,api.github.com,付费Smart总
+DOMAIN,uploads.github.com,付费Smart总
+DOMAIN,codeload.github.com,付费Smart总
 DOMAIN,avatars.githubusercontent.com,付费URL-Test
 DOMAIN,camo.githubusercontent.com,付费URL-Test
 DOMAIN-SUFFIX,githubassets.com,付费URL-Test
-DOMAIN-SUFFIX,githubusercontent.com,GitHub专用
+DOMAIN-SUFFIX,githubusercontent.com,付费Smart总
 DOMAIN-SUFFIX,github.com,付费URL-Test
 DOMAIN-SUFFIX,greasyfork.org,付费URL-Test
 # --- YouTube / Google 统一出口：全部走「谷歌服务」，且先于全球媒体规则（原先网页走节点选择、视频走谷歌服务，出口可能不一致）---
