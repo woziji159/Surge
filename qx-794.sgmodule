@@ -1,0 +1,16 @@
+# 来源：https://raw.githubusercontent.com/ddgksf2013/Rewrite/master/AdBlock/XiaoYuZhouAds.conf
+# 上游作者：@ddgksf2013
+#!name=小宇宙FM去广告
+#!desc=由 Quantumult X 静态规则转换
+
+[Map Local]
+^https?:\/\/api\.xiaoyuzhoufm\.com\/v\d\/search\/get-express data-type=text data="" status-code=200
+^https?:\/\/api\.xiaoyuzhoufm\.com\/v\d\/search\/get-preset data-type=text data="" status-code=200
+^https?:\/\/api\.xiaoyuzhoufm\.com\/v\d\/category\/list-daily-suggestion data-type=text data="" status-code=200
+^https?:\/\/api\.xiaoyuzhoufm\.com\/v\d\/flash-screen\/list data-type=text data="" status-code=200
+
+[Body Rewrite]
+http-response-jq ^https?:\/\/api\.xiaoyuzhoufm\.com\/v\d\/discovery-feed\/list '.data |= map(select(.type != "DISCOVERY_BANNER"))'
+
+[MITM]
+hostname = %APPEND% api.xiaoyuzhoufm.com, 118.31.123.175, 112.124.203.116, 118.31.125.171, 47.57.181.112, 47.57.182.96
