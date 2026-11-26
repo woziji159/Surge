@@ -1,0 +1,9 @@
+#!name=VPS 流量信息（个人地址）
+#!desc=使用 GetSomeCats 原版脚本。请在本机填写你自己的监控服务地址。
+#!arguments=ENDPOINT:http://127.0.0.1:7122
+#!arguments-desc=ENDPOINT 是从本机可访问的监控服务 URL。默认回环地址只适用于服务位于本机时。
+[Panel]
+我的 VPS 用量 = script-name=我的 VPS 用量, update-interval=3600
+
+[Script]
+我的 VPS 用量 = type=generic, timeout=15, script-path=https://raw.githubusercontent.com/getsomecat/GetSomeCats/Surge/script/serverinfo.js, argument=url={{{ENDPOINT}}}&name=VPS&icon=server.rack

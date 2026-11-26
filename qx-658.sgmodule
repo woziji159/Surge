@@ -1,0 +1,9 @@
+#!name=人民日报信息流去广告
+#!desc=保留人民日报新闻列表中的普通条目，移除标记为广告的卡片。
+# 来源 https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/rmrb.conf
+
+[Body Rewrite]
+http-response-jq ^https://app\.peopleapp\.com/Api/\d+/HomeApi/getContentList(?:[/?]|$) 'if (.data | type) == "array" then .data |= map(select(if type == "object" then (((.view_type | type) == "string") and (.view_type | tostring | startswith("advert"))) | not else true end)) else . end'
+
+[MITM]
+hostname = %APPEND% app.peopleapp.com
