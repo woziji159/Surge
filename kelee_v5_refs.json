@@ -1,0 +1,462 @@
+{
+  "12306_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/12306%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "123NetWorkDisk_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/123%E4%BA%91%E7%9B%98%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "360SmartCamera_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/360%E6%91%84%E5%83%8F%E6%9C%BA%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "51Job_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E5%89%8D%E7%A8%8B%E6%97%A0%E5%BF%A7%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "91160_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E5%81%A5%E5%BA%B7160%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "Aiinquiry_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E7%88%B1%E4%BC%81%E6%9F%A5%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "Amap_remove_ads": [
+    "https://raw.githubusercontent.com/Repcz/Tool/X/Surge/Module/Kelee/Amap_remove_ads.sgmodule"
+  ],
+  "BabyTree_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E5%AE%9D%E5%AE%9D%E6%A0%91%E5%AD%95%E8%82%B2%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "BaiduNetDisk_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E7%99%BE%E5%BA%A6%E7%BD%91%E7%9B%98%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "BaiduPhoto_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E4%B8%80%E5%88%BB%E7%9B%B8%E5%86%8C%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "BaiduWenku_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E7%99%BE%E5%BA%A6%E6%96%87%E5%BA%93%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "Baidu_input_method_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E7%99%BE%E5%BA%A6%E8%BE%93%E5%85%A5%E6%B3%95%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "Beike_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E8%B4%9D%E5%A3%B3%E6%89%BE%E6%88%BF%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "BiliComic_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E5%93%94%E5%93%A9%E5%93%94%E5%93%A9%E6%BC%AB%E7%94%BB%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "BitqiuPan_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E6%AF%94%E7%89%B9%E7%90%83%E4%BA%91%E7%9B%98%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "Block_HTTPDNS": [
+    "https://raw.githubusercontent.com/Repcz/Tool/X/Surge/Module/Kelee/Block_HTTPDNS.sgmodule"
+  ],
+  "BodianMusic_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E6%B3%A2%E7%82%B9%E9%9F%B3%E4%B9%90%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "BooHee_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E8%96%84%E8%8D%B7%E5%81%A5%E5%BA%B7%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "CCLive_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/CC%E7%9B%B4%E6%92%AD%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "Cainiao_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E8%8F%9C%E9%B8%9F%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "CatEarFM_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E7%8C%AB%E8%80%B3FM%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "ChengFenMiao_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E6%88%90%E5%88%86%E5%96%B5%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "Chuzhan_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E8%A7%A6%E7%AB%99%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "ColorfulClouds_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E5%BD%A9%E4%BA%91%E5%A4%A9%E6%B0%94%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "CoolApk_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E9%85%B7%E5%AE%89%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "CosmosPodcast_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E5%B0%8F%E5%AE%87%E5%AE%99%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "DREAME_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/DREAME%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "Daily_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E6%8E%A8%E6%A0%8F%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "Damai_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E5%A4%A7%E9%BA%A6%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "Dewu_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E5%BE%97%E7%89%A9%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "DigitalHeartbeat_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E6%95%B0%E5%AD%97%E5%BF%83%E5%8A%A8%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "DingdongMaicai_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E5%8F%AE%E5%92%9A%E4%B9%B0%E8%8F%9C%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "Dlabel_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/Dlabel%E4%BA%91%E6%A0%87%E7%AD%BE%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "DoubanRead_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E8%B1%86%E7%93%A3%E9%98%85%E8%AF%BB%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "Douyu_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E6%96%97%E9%B1%BC%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "DragonRead_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E7%95%AA%E8%8C%84%E5%B0%8F%E8%AF%B4%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "DubbingShow_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E9%85%8D%E9%9F%B3%E7%A7%80%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "DuiTang_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E5%A0%86%E7%B3%96%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "EcovacsHome_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/ECOVACS%20HOME%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "EtouchEcalendar_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E4%B8%AD%E5%8D%8E%E4%B8%87%E5%B9%B4%E5%8E%86%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "FenBi_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E7%B2%89%E7%AC%94%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "FleaMarket_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E9%97%B2%E9%B1%BC%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "FlyerTea_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E9%A3%9E%E5%AE%A2%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "GaoDing_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E7%A8%BF%E5%AE%9A%E8%AE%BE%E8%AE%A1%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "GuideRank_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E7%9B%96%E5%BE%97%E6%8E%92%E8%A1%8C%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "HKDouYin_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E9%A6%99%E6%B8%AF%E6%8A%96%E9%9F%B3%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "HUPU_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E8%99%8E%E6%89%91%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "Himalaya_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E5%96%9C%E9%A9%AC%E6%8B%89%E9%9B%85%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "JDWaimai_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E4%BA%AC%E4%B8%9C%E5%A4%96%E5%8D%96%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "JiaKaoBaoDian_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E9%A9%BE%E8%80%83%E5%AE%9D%E5%85%B8%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "Jump_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/Jump%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "KGRing_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E9%85%B7%E7%8B%97%E9%93%83%E5%A3%B0%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "KOOK_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/KOOK%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "KebidaDushu_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E5%B8%86%E4%B9%A6%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "Keep_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/Keep%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "KingdeeMyMoney_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E9%9A%8F%E6%89%8B%E8%AE%B0%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "KuGouYouth_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E9%85%B7%E7%8B%97%E6%A6%82%E5%BF%B5%E7%89%88%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "KuaiDi100_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E5%BF%AB%E9%80%92100%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "KuaiDuiZuoYe_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E5%BF%AB%E5%AF%B9%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "KuaiKanComic_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E5%BF%AB%E7%9C%8B%E6%BC%AB%E7%94%BB%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "KuaiShou_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E5%BF%AB%E6%89%8B%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "KuroBBS_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E5%BA%93%E8%A1%97%E5%8C%BA%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "Kuwo_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E9%85%B7%E6%88%91%E9%9F%B3%E4%B9%90%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "KwaiVideoeditor_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E5%BF%AB%E5%BD%B1%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "LOL_Bible_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E6%8E%8C%E4%B8%8A%E8%8B%B1%E9%9B%84%E8%81%94%E7%9B%9F%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "Line_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/Line%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "MKZ_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E6%BC%AB%E5%AE%A2%E6%A0%88%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "MaFengWo_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E9%A9%AC%E8%9C%82%E7%AA%9D%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "MailMaster_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E7%BD%91%E6%98%93%E9%82%AE%E7%AE%B1%E5%A4%A7%E5%B8%88%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "MangoTV_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E8%8A%92%E6%9E%9CTV%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "MeetYou_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E7%BE%8E%E6%9F%9A%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "MeiShiJie_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E7%BE%8E%E9%A3%9F%E6%9D%B0%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "MeiTu_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E7%BE%8E%E5%9B%BE%E7%A7%80%E7%A7%80%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "MeituMYXJ_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E7%BE%8E%E9%A2%9C%E7%9B%B8%E6%9C%BA%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "Meizhixiuxing_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E7%BE%8E%E4%B8%BD%E4%BF%AE%E8%A1%8C%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "MiaoRead_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E5%B0%8F%E5%96%B5%E7%9C%8B%E4%B9%A6%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "MoeGirlWiki_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E8%90%8C%E5%A8%98%E7%99%BE%E7%A7%91%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "MojiWeather_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E5%A2%A8%E8%BF%B9%E5%A4%A9%E6%B0%94%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "NarwelRobots_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E4%BA%91%E9%B2%B8%E6%99%BA%E8%83%BD%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "NetEaseGodlike_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E7%BD%91%E6%98%93%E5%A4%A7%E7%A5%9E%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "NeteaseNews_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E7%BD%91%E6%98%93%E6%96%B0%E9%97%BB%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "OraySunlogin_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E5%90%91%E6%97%A5%E8%91%B5%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "PangguaiLife_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E8%83%96%E4%B9%96%E7%94%9F%E6%B4%BB%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "PiPiXia_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E7%9A%AE%E7%9A%AE%E8%99%BE%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "PinDuoDuo_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E6%8B%BC%E5%A4%9A%E5%A4%9A%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "QQMusic_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/QQ%E9%9F%B3%E4%B9%90%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "QiDian_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E8%B5%B7%E7%82%B9%E8%AF%BB%E4%B9%A6%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "QiXinBao_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E5%90%AF%E4%BF%A1%E5%AE%9D%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "QtingFM_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E8%9C%BB%E8%9C%93FM%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "QuarkBrowser_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E5%A4%B8%E5%85%8B%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "QuarkScanking_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E5%A4%B8%E5%85%8B%E6%89%AB%E6%8F%8F%E7%8E%8B%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "RQrun_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/RQrun%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "Reddit_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/Reddit%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "ReelShort_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/ReelShort%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "Remove_ads_by_keli": [
+    "https://raw.githubusercontent.com/Repcz/Tool/X/Surge/Module/Kelee/Remove_ads_by_keli.sgmodule"
+  ],
+  "RiskBird_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E9%A3%8E%E9%B8%9F%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "RoboTaxi_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E8%90%9D%E5%8D%9C%E5%BF%AB%E8%B7%91%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "Roborock_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/Roborock%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "SF-Express_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E9%A1%BA%E4%B8%B0%E9%80%9F%E8%BF%90%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "SafetyHome_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/360%E6%99%BA%E6%85%A7%E7%94%9F%E6%B4%BB%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "SevenCat_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E4%B8%83%E7%8C%AB%E5%B0%8F%E8%AF%B4%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "ShopKeeperAdmin_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E5%B0%8F%E5%BA%97%E6%8E%8C%E6%9F%9C%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "ShouYinTongMerchant_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E6%94%B6%E9%93%B6%E9%80%9A%E5%95%86%E6%88%B7%E7%AB%AF%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "ShuQiCenterReader_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E4%B9%A6%E6%97%97%E5%B0%8F%E8%AF%B4%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "SnowCamera_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/B612%E5%92%94%E5%8F%BD%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "Snowball_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E9%9B%AA%E7%90%83%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "SodaMusic_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E6%B1%BD%E6%B0%B4%E9%9F%B3%E4%B9%90%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "Soul_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/Soul%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "TV_Assistant_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E4%B9%90%E6%92%AD%E6%8A%95%E5%B1%8F%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "TXDocs_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E8%85%BE%E8%AE%AF%E6%96%87%E6%A1%A3%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "TaobaoTravel_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E9%A3%9E%E7%8C%AA%E6%97%85%E8%A1%8C%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "Taopiaopiao_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E6%B7%98%E7%A5%A8%E7%A5%A8%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "TeraBox_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/TeraBox%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "TuGuaiShou_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E5%9B%BE%E6%80%AA%E5%85%BD%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "TubeMax_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/TubeMax%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "Uki_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/Uki%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "UnnooQuan_remove_watermark": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E7%9F%A5%E8%AF%86%E6%98%9F%E7%90%83%E5%8E%BB%E6%B0%B4%E5%8D%B0.sgmodule"
+  ],
+  "ValorantBible_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E6%8E%8C%E4%B8%8A%E6%97%A0%E7%95%8F%E5%A5%91%E7%BA%A6%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "VideoGo_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E8%90%A4%E7%9F%B3%E4%BA%91%E8%A7%86%E9%A2%91%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "WPForum_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E5%A8%81%E9%94%8B%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "WPS_Documents_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E9%87%91%E5%B1%B1%E6%96%87%E6%A1%A3%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "WaCaiJiZhang_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E6%8C%96%E8%B4%A2%E8%AE%B0%E8%B4%A6%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "Wacai_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E6%8C%96%E8%B4%A2%E8%AE%B0%E8%B4%A6%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "Weibo_intl_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E5%BE%AE%E5%8D%9A%E5%9B%BD%E9%99%85%E7%89%88%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule",
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E5%BE%AE%E5%8D%9A%E8%BD%BB%E4%BA%AB%E7%89%88%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "Weimai_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E5%BE%AE%E8%84%89%E5%9C%88%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "Weixin_Official_Accounts_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E5%BE%AE%E4%BF%A1%E5%85%AC%E4%BC%97%E5%8F%B7%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "WexinMiniPrograms_Remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E5%BE%AE%E4%BF%A1%E5%B0%8F%E7%A8%8B%E5%BA%8F%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "WutaCamera_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E6%97%A0%E4%BB%96%E7%9B%B8%E6%9C%BA%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "XFuse_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E7%A3%81%E5%8A%9B%E5%AE%85%E6%92%AD%E6%94%BE%E5%99%A8%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "XiaChuFang_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E4%B8%8B%E5%8E%A8%E6%88%BF%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "XiaoCan_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E5%B0%8F%E8%9A%95%E9%9C%B8%E7%8E%8B%E9%A4%90%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "XiaoHeiHe_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E5%B0%8F%E9%BB%91%E7%9B%92%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "XiaojukejiCharge_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E5%B0%8F%E6%A1%94%E5%85%85%E7%94%B5%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "XiaomiSpeaker_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E5%B0%8F%E7%B1%B3%E9%9F%B3%E7%AE%B1%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "XunLei_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E8%BF%85%E9%9B%B7%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "YYVoiceTool_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/YY%E8%AF%AD%E9%9F%B3%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "YY_Voice_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/YY%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "YiKaoBang_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E5%8C%BB%E8%80%83%E5%B8%AE%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "Yitian_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E4%B8%80%E7%94%9C%E7%9B%B8%E6%9C%BA%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "YouKu_Video_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E4%BC%98%E9%85%B7%E8%A7%86%E9%A2%91%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "YoudaoDict_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E7%BD%91%E6%98%93%E6%9C%89%E9%81%93%E8%AF%8D%E5%85%B8%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "YoudaoNote_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E6%9C%89%E9%81%93%E4%BA%91%E7%AC%94%E8%AE%B0%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "YoudaoTrans_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E6%9C%89%E9%81%93%E7%BF%BB%E8%AF%91%E5%AE%98%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "YueDanBa_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E7%9C%81%E9%92%B1%E5%BF%AB%E6%8A%A5%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "Yueyou_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E9%98%85%E5%8F%8B%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "ZAKER_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/ZAKER%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "ZongHeng_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E7%BA%B5%E6%A8%AA%E5%B0%8F%E8%AF%B4%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "ZuiYou_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E6%9C%80%E5%8F%B3%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "iMaiCai_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E5%B0%8F%E8%B1%A1%E8%B6%85%E5%B8%82%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "iReaderDejian_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E5%BE%97%E9%97%B4%E5%B0%8F%E8%AF%B4%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "iReader_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E6%8E%8C%E9%98%85%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "miHoYoBBS_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E7%B1%B3%E6%B8%B8%E7%A4%BE%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ],
+  "smzdm_remove_ads": [
+    "https://raw.githubusercontent.com/QingRex/LoonKissSurge/main/Surge/%E4%BB%80%E4%B9%88%E5%80%BC%E5%BE%97%E4%B9%B0%E5%8E%BB%E5%B9%BF%E5%91%8A.sgmodule"
+  ]
+}

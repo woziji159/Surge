@@ -1,0 +1,252 @@
+{
+  "1.1.1.1": [
+    {
+      "author": "VirgilClyne、I-am-R-E",
+      "kind": "原作者 Surge",
+      "url": "https://raw.githubusercontent.com/VirgilClyne/Cloudflare/main/modules/Cloudflare.1.1.1.1.sgmodule"
+    }
+  ],
+  "12306_remove_ads": [
+    {
+      "author": "Repcz（移植）",
+      "kind": "可莉 Surge 移植",
+      "url": "https://raw.githubusercontent.com/Repcz/Tool/X/Surge/Module/Kelee/12306_remove_ads.sgmodule"
+    }
+  ],
+  "Amap_remove_ads": [
+    {
+      "author": "Repcz（移植）",
+      "kind": "可莉 Surge 移植",
+      "url": "https://raw.githubusercontent.com/Repcz/Tool/X/Surge/Module/Kelee/Amap_remove_ads.sgmodule"
+    }
+  ],
+  "BaiduNetDisk_remove_ads": [
+    {
+      "author": "Repcz（移植）",
+      "kind": "可莉 Surge 移植",
+      "url": "https://raw.githubusercontent.com/Repcz/Tool/X/Surge/Module/Kelee/BaiduNetDisk_remove_ads.sgmodule"
+    }
+  ],
+  "Block_HTTPDNS": [
+    {
+      "author": "Repcz（移植）",
+      "kind": "可莉 Surge 移植",
+      "url": "https://raw.githubusercontent.com/Repcz/Tool/X/Surge/Module/Kelee/Block_HTTPDNS.sgmodule"
+    }
+  ],
+  "BoxJs": [
+    {
+      "author": "chavyleung",
+      "kind": "原作者 Surge",
+      "url": "https://raw.githubusercontent.com/chavyleung/scripts/master/box/rewrite/boxjs.rewrite.surge.sgmodule"
+    }
+  ],
+  "CoolApk_remove_ads": [
+    {
+      "author": "Repcz（移植）",
+      "kind": "可莉 Surge 移植",
+      "url": "https://raw.githubusercontent.com/Repcz/Tool/X/Surge/Module/Kelee/CoolApk_remove_ads.sgmodule"
+    }
+  ],
+  "DiDi_remove_ads": [
+    {
+      "author": "Repcz（移植）",
+      "kind": "可莉 Surge 移植",
+      "url": "https://raw.githubusercontent.com/Repcz/Tool/X/Surge/Module/Kelee/DiDi_remove_ads.sgmodule"
+    }
+  ],
+  "Fileball_mount": [
+    {
+      "author": "githubdulong（小白脸）",
+      "kind": "原作者 Surge",
+      "url": "https://raw.githubusercontent.com/githubdulong/Script/master/Surge/Fileball.sgmodule"
+    }
+  ],
+  "IThome_remove_ads": [
+    {
+      "author": "Repcz（移植）",
+      "kind": "可莉 Surge 移植",
+      "url": "https://raw.githubusercontent.com/Repcz/Tool/X/Surge/Module/Kelee/IThome_remove_ads.sgmodule"
+    }
+  ],
+  "JD_Price": [
+    {
+      "author": "githubdulong（小白脸）",
+      "kind": "原作者 Surge",
+      "url": "https://raw.githubusercontent.com/githubdulong/Script/master/Surge/jd_price.sgmodule"
+    }
+  ],
+  "JD_remove_ads": [
+    {
+      "author": "Repcz（移植）",
+      "kind": "可莉 Surge 移植",
+      "url": "https://raw.githubusercontent.com/Repcz/Tool/X/Surge/Module/Kelee/JD_remove_ads.sgmodule"
+    }
+  ],
+  "Line_remove_ads": [
+    {
+      "author": "jkgtw",
+      "kind": "原作者 Surge",
+      "url": "https://raw.githubusercontent.com/jkgtw/Surge/master/Modules/LINE-ADs.sgmodule"
+    }
+  ],
+  "LuckinCoffee_remove_ads": [
+    {
+      "author": "Repcz（移植）",
+      "kind": "可莉 Surge 移植",
+      "url": "https://raw.githubusercontent.com/Repcz/Tool/X/Surge/Module/Kelee/LuckinCoffee_remove_ads.sgmodule"
+    }
+  ],
+  "MrHema_remove_ads": [
+    {
+      "author": "Repcz（移植）",
+      "kind": "可莉 Surge 移植",
+      "url": "https://raw.githubusercontent.com/Repcz/Tool/X/Surge/Module/Kelee/MrHema_remove_ads.sgmodule"
+    }
+  ],
+  "NeteaseCloudMusic_remove_ads": [
+    {
+      "author": "Keywos",
+      "kind": "原作者 Surge",
+      "url": "https://raw.githubusercontent.com/Keywos/rule/main/script/wy/wy.sgmodule"
+    }
+  ],
+  "NodeLinkCheck": [
+    {
+      "author": "I-am-R-E",
+      "kind": "原作者 Surge",
+      "url": "https://raw.githubusercontent.com/I-am-R-E/Functional-Store-Hub/Master/NodeLinkCheck/Surge.sgmodule"
+    }
+  ],
+  "PinDuoDuo_remove_ads": [
+    {
+      "author": "Repcz（移植）",
+      "kind": "可莉 Surge 移植",
+      "url": "https://raw.githubusercontent.com/Repcz/Tool/X/Surge/Module/Kelee/PinDuoDuo_remove_ads.sgmodule"
+    }
+  ],
+  "RedPaper_remove_ads": [
+    {
+      "author": "fmz200",
+      "kind": "原作者 Surge",
+      "url": "https://raw.githubusercontent.com/fmz200/wool_scripts/main/Surge/module/split/partX/Xiaohongshu.sgmodule"
+    },
+    {
+      "author": "Repcz（移植）",
+      "kind": "可莉 Surge 移植",
+      "url": "https://raw.githubusercontent.com/Repcz/Tool/X/Surge/Module/Kelee/RedPaper_remove_ads.sgmodule"
+    }
+  ],
+  "Remove_ads_by_keli": [
+    {
+      "author": "Repcz（移植）",
+      "kind": "可莉 Surge 移植",
+      "url": "https://raw.githubusercontent.com/Repcz/Tool/X/Surge/Module/Kelee/Remove_ads_by_keli.sgmodule"
+    }
+  ],
+  "Script-Hub": [
+    {
+      "author": "Script-Hub-Org",
+      "kind": "原作者 Surge",
+      "url": "https://raw.githubusercontent.com/Script-Hub-Org/Script-Hub/main/modules/script-hub.surge.sgmodule"
+    }
+  ],
+  "Spotify_lyrics_translation": [
+    {
+      "author": "DualSubs / VirgilClyne",
+      "kind": "原作者 Surge",
+      "url": "https://github.com/DualSubs/Spotify/releases/latest/download/DualSubs.Spotify.sgmodule"
+    }
+  ],
+  "Sub-Store": [
+    {
+      "author": "Sub-Store 项目组",
+      "kind": "原作者 Surge",
+      "url": "https://raw.githubusercontent.com/sub-store-org/Sub-Store/master/config/Surge.sgmodule"
+    }
+  ],
+  "Taobao_remove_ads": [
+    {
+      "author": "Repcz（移植）",
+      "kind": "可莉 Surge 移植",
+      "url": "https://raw.githubusercontent.com/Repcz/Tool/X/Surge/Module/Kelee/Taobao_remove_ads.sgmodule"
+    }
+  ],
+  "Tieba_remove_ads": [
+    {
+      "author": "app2smile",
+      "kind": "原作者 Surge",
+      "url": "https://raw.githubusercontent.com/app2smile/rules/master/module/tieba.sgmodule"
+    }
+  ],
+  "Umetrip_remove_ads": [
+    {
+      "author": "Repcz（移植）",
+      "kind": "可莉 Surge 移植",
+      "url": "https://raw.githubusercontent.com/Repcz/Tool/X/Surge/Module/Kelee/Umetrip_remove_ads.sgmodule"
+    }
+  ],
+  "VVebo_repair": [
+    {
+      "author": "Repcz（移植）",
+      "kind": "可莉 Surge 移植",
+      "url": "https://raw.githubusercontent.com/Repcz/Tool/X/Surge/Module/Kelee/VVebo_repair.sgmodule"
+    }
+  ],
+  "Weibo_remove_ads": [
+    {
+      "author": "zmqcherish",
+      "kind": "原作者 Surge",
+      "url": "https://raw.githubusercontent.com/zmqcherish/proxy-script/main/weibo.sgmodule"
+    }
+  ],
+  "Weixin_Official_Accounts_remove_ads": [
+    {
+      "author": "Repcz（移植）",
+      "kind": "可莉 Surge 移植",
+      "url": "https://raw.githubusercontent.com/Repcz/Tool/X/Surge/Module/Kelee/Weixin_Official_Accounts_remove_ads.sgmodule"
+    }
+  ],
+  "WexinMiniPrograms_Remove_ads": [
+    {
+      "author": "Repcz（移植）",
+      "kind": "可莉 Surge 移植",
+      "url": "https://raw.githubusercontent.com/Repcz/Tool/X/Surge/Module/Kelee/WexinMiniPrograms_Remove_ads.sgmodule"
+    }
+  ],
+  "XiaoCan_remove_ads": [
+    {
+      "author": "Sliverkiss",
+      "kind": "原作者 Surge",
+      "url": "https://raw.githubusercontent.com/Sliverkiss/QuantumultX/main/AdBlock/xmApp/xcbwc.sgmodule"
+    }
+  ],
+  "YouTubeSubtitlesTranslation": [
+    {
+      "author": "DualSubs / VirgilClyne",
+      "kind": "原作者 Surge",
+      "url": "https://github.com/DualSubs/YouTube/releases/latest/download/DualSubs.YouTube.sgmodule"
+    }
+  ],
+  "YouTube_remove_ads": [
+    {
+      "author": "Maasea",
+      "kind": "原作者 Surge",
+      "url": "https://raw.githubusercontent.com/Maasea/sgmodule/master/YouTube.Enhance.sgmodule"
+    }
+  ],
+  "Zhihu_remove_ads": [
+    {
+      "author": "Repcz（移植）",
+      "kind": "可莉 Surge 移植",
+      "url": "https://raw.githubusercontent.com/Repcz/Tool/X/Surge/Module/Kelee/Zhihu_remove_ads.sgmodule"
+    }
+  ],
+  "ZhuanZhuan_remove_ads": [
+    {
+      "author": "Repcz（移植）",
+      "kind": "可莉 Surge 移植",
+      "url": "https://raw.githubusercontent.com/Repcz/Tool/X/Surge/Module/Kelee/ZhuanZhuan_remove_ads.sgmodule"
+    }
+  ]
+}
