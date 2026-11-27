@@ -1,0 +1,12 @@
+#!name=语文趣配音
+#!desc=语文趣配音解锁会员
+#!homepage=https://yfamily.ml
+#!author= lutqhysky
+#!icon=https://raw.githubusercontent.com/deezertidal/private/main/icons/ywqpy.png
+# 原始来源: https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/ywqpy.conf
+
+[Script]
+SM-110-13 = type=http-response,pattern=^https?:\/\/cnapi\.qupeiyin\.com\/(user\/memberData|member|top\/showTop),requires-body=true,script-path=https://raw.githubusercontent.com/lutqhysky/quantumultx/mylove/wenyuqupeiyin/Script/yuwenqupeiyin.js
+
+[MITM]
+hostname = %APPEND% cnapi.qupeiyin.com

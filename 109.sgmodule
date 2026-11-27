@@ -1,0 +1,10 @@
+#!name=螺畤大语文解锁会员
+#!author=lutqhysky
+#!desc=Surge格式候选，未实机验证
+# 原始来源: https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/lsdyw.conf
+
+[Script]
+SM-109-01 = type=http-response,pattern=^https?://api8\.luosijiaoyu\.com/api/(HZLSJY20200817Controller/selectFMVideoById\.html|LsjyMyContoller/selectUserInfo\.html),requires-body=true,script-path=https://raw.githubusercontent.com/lutqhysky/quantumultx/mylove/luosidayuwen/Script/luosidayuwen.js
+
+[MITM]
+hostname = %APPEND% api8.luosijiaoyu.com

@@ -1,0 +1,10 @@
+#!name=布丁锁屏
+#!desc=替代脚本候选，未实机验证
+#!author=彭于晏 (89996462)
+# 来源: https://raw.githubusercontent.com/89996462/Quantumult-X/main/ycdz/budingsuoping.js
+
+[Script]
+URLM-052 = type=http-response,pattern=^https?:\/\/screen-lock\.sm-check\.com\/userApi\/saveUser,requires-body=true,script-path=https://raw.githubusercontent.com/89996462/Quantumult-X/main/ycdz/budingsuoping.js
+
+[MITM]
+hostname = %APPEND% screen-lock.sm-check.com

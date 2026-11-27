@@ -1,0 +1,12 @@
+#!name=幻影相册
+#!desc=幻影相册VIP
+#!icon=https://raw.githubusercontent.com/deezertidal/private/main/icons/hyxc.png
+#!homepage=https://yfamily.ml
+#!author=89996462
+# 原始来源: https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/hyxc.conf
+
+[Script]
+SM-121-08 = type=http-response,pattern=^https?:\/\/buy\.itunes\.apple\.com\/verifyReceipt$,requires-body=true,script-path=https://raw.githubusercontent.com/89996462/Quantumult-X/main/ycdz/hyxc.js
+
+[MITM]
+hostname = %APPEND% buy.itunes.apple.com

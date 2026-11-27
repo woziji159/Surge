@@ -1,0 +1,12 @@
+#!name=Pocket Lists
+#!desc=Pocket Lists解锁会员
+#!icon=https://raw.githubusercontent.com/deezertidal/private/main/icons/pocketlist.png
+#!homepage=https://yfamily.ml
+#!author=superuv
+# 原始来源: https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/pocketlists.conf
+
+[Script]
+SM-097-08 = type=http-response,pattern=^https:\/\/pocketlists\.com\/api\/v1\/pocketlists.me.get,requires-body=true,script-path=https://raw.githubusercontent.com/deezertidal/private/main/pocketlists.js
+
+[MITM]
+hostname = %APPEND% pocketlists.com

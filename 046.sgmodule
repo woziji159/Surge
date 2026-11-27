@@ -1,0 +1,12 @@
+#!name=Workout For Women
+#!desc=Workout For Women解锁
+#!icon=https://raw.githubusercontent.com/deezertidal/private/main/icons/wfw.png
+#!homepage=https://yfamily.ml
+#!author=Marol62926
+# 原始来源: https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/wfw.conf
+
+[Script]
+SM-046-07 = type=http-response,pattern=https://buy.itunes.apple.com/verifyReceipt,requires-body=true,script-path=https://raw.githubusercontent.com/Marol62926/MarScrpt/main/workoutForWomen.js
+
+[MITM]
+hostname = %APPEND% buy.itunes.apple.com

@@ -1,0 +1,12 @@
+#!name=新语听书
+#!desc=新语听书解锁会员
+#!homepage=https://yfamily.ml
+#!author=yqc007
+#!icon=https://raw.githubusercontent.com/deezertidal/private/main/icons/xyts.png
+# 原始来源: https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/xyts.conf
+
+[Script]
+SM-087-11 = type=http-response,pattern=^https?:\/\/i\.xinyulib\.com\.cn\/api\/querytoken.+,requires-body=true,script-path=https://raw.githubusercontent.com/yqc007/QuantumultX/master/XinYuLibraryProCrack.js
+
+[MITM]
+hostname = %APPEND% i.xinyulib.com.cn

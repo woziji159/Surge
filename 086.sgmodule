@@ -1,0 +1,12 @@
+#!name=WallCraft
+#!desc=WallCraft解锁永久专业版
+#!homepage=https://yfamily.ml
+#!author=yqc007
+#!icon=https://raw.githubusercontent.com/deezertidal/private/main/icons/wallcraft.png
+# 原始来源: https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/wallcraft.conf
+
+[Script]
+SM-086-11 = type=http-response,pattern=^https?:\/\/billing-ios\.wallpaperscraft\.com\/verify_receipt\/remove_ads$,requires-body=true,script-path=https://raw.githubusercontent.com/yqc007/QuantumultX/master/WallCraftFProCrack.js
+
+[MITM]
+hostname = %APPEND% *.wallpaperscraft.com

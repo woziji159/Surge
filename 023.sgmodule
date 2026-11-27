@@ -1,0 +1,12 @@
+#!name=Aloha浏览器
+#!desc=Aloha VPN浏览器会员解锁
+#!homepage=https://yfamily.ml
+#!author=Marol62926
+#!icon=https://raw.githubusercontent.com/deezertidal/private/main/icons/aloha.png
+# 原始来源: https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/aloha.conf
+
+[Script]
+SM-023-07 = type=http-response,pattern=https://api.alohaprofile.com/v1/profile_info,requires-body=true,script-path=https://raw.githubusercontent.com/Marol62926/MarScrpt/main/aloha.js
+
+[MITM]
+hostname = %APPEND% api.alohaprofile.com

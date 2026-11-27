@@ -1,0 +1,15 @@
+#!name=Xmind思维导图
+#!desc=解锁Xmind思维导图订阅到2030年
+#!openUrl=https://t.me/Functional_Store_Hub
+#!homepage=https://yfamily.ml
+#!author=@R·E https://t.me/Functional_Store_Hub
+#!manual=https://t.me/Functional_Store_Hub/10
+#!icon=https://raw.githubusercontent.com/deezertidal/private/main/icons/xmind.png
+#!other=Xmind.Loon.plugin
+# 原始来源: https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/xmind.conf
+
+[Script]
+SM-090-11 = type=http-response,pattern=https?:\/\/www\.xmind\.(cn|net|app)\/\_res\/devices,requires-body=true,script-path=https://raw.githubusercontent.com/I-am-R-E/Functional-Store-Hub/Master/Xmind/Script/Xmind.js
+
+[MITM]
+hostname = %APPEND% www.xmind.cn, www.xmind.net, www.xmind.app

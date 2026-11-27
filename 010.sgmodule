@@ -1,0 +1,12 @@
+#!name=财新会员
+#!desc=财新会员解锁
+#!homepage=https://yfamily.ml
+#!author=cuttlefish
+#!icon=https://raw.githubusercontent.com/deezertidal/private/main/icons/caixin.png
+# 原始来源: https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/caixin.conf
+
+[Script]
+SM-010-07 = type=http-request,pattern=^https?:\/\/gateway\.caixin\.com\/api\/app\-api\/auth\/(validate|validateAudioAuth),requires-body=false,script-path=https://raw.githubusercontent.com/deezertidal/shadowrocket-rules/main/js/caixin.js
+
+[MITM]
+hostname = %APPEND% gateway.caixin.com

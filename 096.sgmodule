@@ -1,0 +1,12 @@
+#!name=Pillow
+#!desc=Pillow解锁会员
+#!icon=https://raw.githubusercontent.com/deezertidal/private/main/icons/pillow.png
+#!homepage=https://yfamily.ml
+#!author=CheeryTodo
+# 原始来源: https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/pillow.conf
+
+[Script]
+SM-096-08 = type=http-response,pattern=https:\/\/api\.revenuecat\.com\/v1\/(subscribers|receipts),requires-body=true,script-path=https://raw.githubusercontent.com/deezertidal/shadowrocket-rules/main/js/pillow.js
+
+[MITM]
+hostname = %APPEND% api.revenuecat.com

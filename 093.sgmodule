@@ -1,0 +1,12 @@
+#!name=第一弹
+#!desc=第一弹去广告+原画
+#!icon=https://raw.githubusercontent.com/deezertidal/private/main/icons/dyd.png
+#!homepage=https://yfamily.ml
+#!author=MiaoMiao
+# 原始来源: https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/dyd.conf
+
+[Script]
+SM-093-08 = type=http-response,pattern=^https:\/\/api\.diyidan\.net\/v0\.3\/(user\/personal_homepage|vip_user\/info|tv_series\/index\?appChanne),requires-body=true,script-path=https://raw.githubusercontent.com/deezertidal/shadowrocket-rules/main/js/dyd.js
+
+[MITM]
+hostname = %APPEND% api.diyidan.net

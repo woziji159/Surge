@@ -1,0 +1,12 @@
+#!name=SoundCloud
+#!desc=解锁SoundCloud Go+
+#!icon=https://raw.githubusercontent.com/deezertidal/private/main/icons/soundcloud.png
+#!homepage=https://yfamily.ml
+#!author=Marol62926
+# 原始来源: https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/soundcloud.conf
+
+[Script]
+SM-012-06 = type=http-response,pattern=https://api-mobile.soundcloud.com/configuration/ios,requires-body=true,script-path=https://raw.githubusercontent.com/Marol62926/MarScrpt/main/soundcloud.js
+
+[MITM]
+hostname = %APPEND% api-mobile.soundcloud.com

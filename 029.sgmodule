@@ -1,0 +1,12 @@
+#!name=Invideo
+#!desc=Invideo会员解锁
+#!icon=https://raw.githubusercontent.com/deezertidal/private/main/icons/invideo.png
+#!homepage=https://yfamily.ml
+#!author=Marol62926
+# 原始来源: https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/invideo.conf
+
+[Script]
+SM-029-07 = type=http-response,pattern=https://payments.invideo.io/(verify_purchase|subscription),requires-body=true,script-path=https://raw.githubusercontent.com/Marol62926/MarScrpt/main/filmr.js
+
+[MITM]
+hostname = %APPEND% payments.invideo.io

@@ -1,0 +1,12 @@
+#!name=Now 冥想
+#!desc=Now 冥想 解锁
+#!icon=https://raw.githubusercontent.com/deezertidal/private/main/icons/now.png
+#!homepage=https://yfamily.ml
+#!author=Marol62926
+# 原始来源: https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/now.conf
+
+[Script]
+SM-036-08 = type=http-response,pattern=https://nowapi.navoinfo.cn/h2/user/*,requires-body=true,script-path=https://raw.githubusercontent.com/Marol62926/MarScrpt/main/nowPonder.js
+
+[MITM]
+hostname = %APPEND% nowapi.navoinfo.cn

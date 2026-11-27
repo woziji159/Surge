@@ -1,0 +1,12 @@
+#!name=Alarmy Premium
+#!desc=使命闹钟会员解锁
+#!icon=https://raw.githubusercontent.com/deezertidal/private/main/icons/alarmy.png
+#!homepage=https://yfamily.ml
+#!author=Marol62926
+# 原始来源: https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/alarmy.conf
+
+[Script]
+SM-022-07 = type=http-response,pattern=https://ars.alar.my/api/v2/user/sync,requires-body=true,script-path=https://raw.githubusercontent.com/Marol62926/MarScrpt/main/alarmy.js
+
+[MITM]
+hostname = %APPEND% ars.alar.my

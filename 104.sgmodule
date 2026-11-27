@@ -1,0 +1,12 @@
+#!name=Notability Plus
+#!desc=Notability解锁
+#!icon=https://raw.githubusercontent.com/deezertidal/private/main/icons/notability.png
+#!homepage=https://yfamily.ml
+#!author=litieyin
+# 原始来源: https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/notability.conf
+
+[Script]
+SM-104-11 = type=http-response,pattern=^https://notability.com/subscriptions,requires-body=true,script-path=https://raw.githubusercontent.com/litieyin/AD_VIP/main/Script/notability.js
+
+[MITM]
+hostname = %APPEND% notability.com

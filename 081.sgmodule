@@ -1,0 +1,12 @@
+#!name=IMuseum
+#!desc=IMuseum会员解锁
+#!homepage=https://yfamily.ml
+#!author=Marol62926
+#!icon=https://raw.githubusercontent.com/deezertidal/private/main/icons/imuseum.png
+# 原始来源: https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/imuseum.conf
+
+[Script]
+SM-081-07 = type=http-response,pattern=https://icity-imsm.2q10.com/api/v1/users/mark_paid,requires-body=true,script-path=https://raw.githubusercontent.com/Marol62926/MarScrpt/main/imuseum.js
+
+[MITM]
+hostname = %APPEND% icity-imsm.2q10.com

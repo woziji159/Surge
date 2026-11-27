@@ -1,0 +1,12 @@
+#!name=大蓝鲸
+#!desc=大蓝鲸解锁会员
+#!homepage=https://yfamily.ml
+#!author= lutqhysky
+#!icon=https://raw.githubusercontent.com/deezertidal/private/main/icons/dalanjing.png
+# 原始来源: https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/dalanjing.conf
+
+[Script]
+SM-108-13 = type=http-response,pattern=^https?:\/\/(publish-dalanjing|publish-dalanjing|user-dalanjing)\.jstv\.com\/(search\/byArticleType|nav\/1554|PassportUser\/userinfo\/get),requires-body=true,script-path=https://raw.githubusercontent.com/lutqhysky/quantumultx/mylove/dalanjing/Script/dalanjing.js
+
+[MITM]
+hostname = %APPEND% *.jstv.com

@@ -1,0 +1,12 @@
+#!name=Darkroom
+#!desc=Darkroom解锁会员 进去app恢复购买
+#!homepage=https://yfamily.ml
+#!author=Marol62926
+#!icon=https://raw.githubusercontent.com/deezertidal/private/main/icons/darkroom.png
+# 原始来源: https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/darkroom.conf
+
+[Script]
+SM-027-07 = type=http-response,pattern=https://api.revenuecat.com/v1/(receipts|subscribers)/*,requires-body=true,script-path=https://raw.githubusercontent.com/Marol62926/MarScrpt/main/darkroom.js
+
+[MITM]
+hostname = %APPEND% api.revenuecat.com

@@ -1,0 +1,12 @@
+#!name=美图秀秀VIP
+#!desc=美图秀秀解锁
+#!homepage=https://yfamily.ml
+#!author=I-am-R-E
+#!icon=https://raw.githubusercontent.com/deezertidal/private/main/icons/meituxx.png
+# 原始来源: https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/meituxx.conf
+
+[Script]
+SM-060-11 = type=http-response,pattern=^https?:\/\/(h5|api)\.xiuxiu\.meitu\.com\/v\d\/(h\d\/vip|vip|user)\/,requires-body=true,script-path=https://raw.githubusercontent.com/I-am-R-E/QuantumultX/main/JavaScript/MeiTuXiuXiu.js
+
+[MITM]
+hostname = %APPEND% api.xiuxiu.meitu.com  h5.xiuxiu.meitu.com

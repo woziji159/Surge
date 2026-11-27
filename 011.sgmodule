@@ -1,0 +1,13 @@
+#!name=Spotify Premium
+#!desc=部分解锁premium,建议重新登录,音质不能设置为超高
+#!icon=https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Spotify.png
+#!homepage=https://yfamily.ml
+#!author=app2smile
+# 原始来源: https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/SpotifyPremium.conf
+
+# 与001互斥；二进制参数参照原作者Surge版。
+[Script]
+SM-011-10 = type=http-response,pattern=^https:\/\/spclient\.wg\.spotify\.com\/(bootstrap\/v1\/bootstrap|user-customization-service\/v1\/customize)$,requires-body=true,binary-body-mode=1,max-size=0,script-path=https://raw.githubusercontent.com/app2smile/rules/master/js/spotify-proto.js
+
+[MITM]
+hostname = %APPEND% spclient.wg.spotify.com

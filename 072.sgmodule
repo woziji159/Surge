@@ -1,0 +1,10 @@
+#!name=Fantastical解锁
+#!desc=替代脚本候选，未实机验证
+#!author=Nguyễn Ngọc Anh Tú (z3rokaze)
+# 来源: https://raw.githubusercontent.com/K4Z3X0R/NguyenNgocAnhTu/master/Module/js/revenuecat_multi.js
+
+[Script]
+URLM-072 = type=http-response,pattern=^https:\/\/api\.flexibits\.com\/(v1\/auth\/device|v1\/account\/details),requires-body=true,script-path=https://raw.githubusercontent.com/K4Z3X0R/NguyenNgocAnhTu/master/Module/js/revenuecat_multi.js
+
+[MITM]
+hostname = %APPEND% api.flexibits.com

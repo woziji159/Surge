@@ -1,0 +1,12 @@
+#!name=Peak
+#!desc=Peak解锁Pro
+#!icon=https://raw.githubusercontent.com/deezertidal/private/main/icons/peak.png
+#!homepage=https://yfamily.ml
+#!author=chamberlen
+# 原始来源: https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/peak.conf
+
+[Script]
+SM-095-08 = type=http-response,pattern=^https:\/\/billing\.peakcloud\.org\/billing\/2\/user\/me?,requires-body=true,script-path=https://raw.githubusercontent.com/deezertidal/shadowrocket-rules/main/js/peak.js
+
+[MITM]
+hostname = %APPEND% billing.peakcloud.org

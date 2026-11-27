@@ -1,0 +1,12 @@
+#!name=Iam
+#!desc=Iam解锁会员
+#!author=Marol62926
+#!icon=https://raw.githubusercontent.com/deezertidal/private/main/icons/iam.png
+# 原始来源: https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/iam.conf
+
+# 原名单标记❌；原JS可读取且使用$response.body与$done；功能未验证。共享RevenueCat域，仅按需单独测试。
+[Script]
+SM-080-06 = type=http-response,pattern=^https://api\.revenuecat\.com/v1/(?:receipts|subscribers)(?:/|\?|$),requires-body=true,script-path=https://raw.githubusercontent.com/Marol62926/MarScrpt/main/iAm.js
+
+[MITM]
+hostname = %APPEND% api.revenuecat.com

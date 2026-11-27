@@ -1,0 +1,12 @@
+#!name=香蕉视频
+#!desc=解锁观看限制
+#!icon=https://raw.githubusercontent.com/deezertidal/private/main/icons/xjsp.png
+#!homepage=https://yfamily.ml
+#!author=NobyDa
+# 原始来源: https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/xjsp.conf
+
+[Script]
+SM-020-07 = type=http-response,pattern=https?:\/\/.+?\.(pipi|fuli|xiang(jiao|xiang))apps\.com\/(ucp\/index|getGlobalData|(\/|)vod\/reqplay\/),requires-body=true,script-path=https://raw.githubusercontent.com/NobyDa/Script/master/QuantumultX/File/xjsp.js
+
+[MITM]
+hostname = %APPEND% ios.fuliapps.com  apple.fuliapps.com  ios.xiangjiaoapps.com  apple.xiangjiaoapps.com  *.xiangxiangapps.com  *.pipiapps.com

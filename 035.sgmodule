@@ -1,0 +1,12 @@
+#!name=MyFitnessPal
+#!desc=MyFitnessPal会员解锁
+#!icon=https://raw.githubusercontent.com/deezertidal/private/main/icons/myfitnesspal.png
+#!homepage=https://yfamily.ml
+#!author=Marol62926
+# 原始来源: https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/myfitnesspal.conf
+
+[Script]
+SM-035-07 = type=http-response,pattern=https://premium-api.myfitnesspal.com/v3/subscriptions/MFP/*,requires-body=true,script-path=https://raw.githubusercontent.com/Marol62926/MarScrpt/main/myFitnessPal.js
+
+[MITM]
+hostname = %APPEND% premium-api.myfitnesspal.com

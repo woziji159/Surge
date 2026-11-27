@@ -1,0 +1,10 @@
+#!name=SSA丝社
+#!author=lutqhysky
+#!desc=Surge格式候选，未实机验证
+# 原始来源: https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/ssa.conf
+
+[Script]
+SM-119-01 = type=http-response,pattern=^https?://www\.ssalegs\.store/cms/Appapi/username/username/\d+,requires-body=true,script-path=https://raw.githubusercontent.com/lutqhysky/quantumultx/mylove/SSA/Script/SSA.js,script-update-interval=0
+
+[MITM]
+hostname = %APPEND% www.ssalegs.store

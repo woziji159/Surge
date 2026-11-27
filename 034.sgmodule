@@ -1,0 +1,12 @@
+#!name=Musixmatch
+#!desc=Musixmatch解锁
+#!icon=https://raw.githubusercontent.com/deezertidal/private/main/icons/musixmatch.png
+#!homepage=https://yfamily.ml
+#!author=Marol62926
+# 原始来源: https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/musixmatch.conf
+
+[Script]
+SM-034-07 = type=http-response,pattern=https://apic.musixmatch.com/ws/1.1/config.get,requires-body=true,script-path=https://raw.githubusercontent.com/Marol62926/MarScrpt/main/musixmatch.js
+
+[MITM]
+hostname = %APPEND% apic.musixmatch.com

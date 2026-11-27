@@ -1,0 +1,12 @@
+#!name=忆飞Gif
+#!desc=忆飞Gif解锁
+#!icon=https://raw.githubusercontent.com/deezertidal/private/main/icons/giftr.png
+#!homepage=https://yfamily.ml
+#!author=Marol62926
+# 原始来源: https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/giftr.conf
+
+[Script]
+SM-030-09 = type=http-response,pattern=https://(us-central1-giftr-83d83|us-central1-infltr).cloudfunctions.net/verifySubscription,requires-body=true,script-path=https://raw.githubusercontent.com/Marol62926/MarScrpt/main/yifei.js
+
+[MITM]
+hostname = %APPEND% *.cloudfunctions.net

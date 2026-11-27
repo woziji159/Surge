@@ -1,0 +1,10 @@
+#!name=Bilibili 1080P
+#!desc=替代脚本候选，未实机验证
+#!author=ddgksf2013 / Moli-X 镜像
+# 来源: https://raw.githubusercontent.com/Moli-X/Resources/main/Script/Bilibili/bilibili_json.js
+
+[Script]
+URLM-053 = type=http-response,pattern=^https?:\/\/app\.bilibili\.com\/x\/v2\/account\/myinfo\?,requires-body=true,script-path=https://raw.githubusercontent.com/Moli-X/Resources/main/Script/Bilibili/bilibili_json.js
+
+[MITM]
+hostname = %APPEND% app.bilibili.com

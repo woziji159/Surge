@@ -1,0 +1,12 @@
+#!name=Polarr
+#!desc=polarr解锁
+#!icon=https://raw.githubusercontent.com/deezertidal/private/main/icons/polarr.png
+#!homepage=https://yfamily.ml
+#!author=NobyDa
+# 原始来源: https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/polarr.conf
+
+[Script]
+SM-017-07 = type=http-response,pattern=^https:\/\/api\.polaxiong\.com\/v1\/payments\/appleiap\/receipts\/confirmation,requires-body=true,script-path=https://raw.githubusercontent.com/NobyDa/Script/master/Surge/JS/Polarr.js
+
+[MITM]
+hostname = %APPEND% api.polaxiong.com

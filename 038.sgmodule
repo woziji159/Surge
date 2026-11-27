@@ -1,0 +1,12 @@
+#!name=Piccollage
+#!desc=Piccollage解锁
+#!icon=https://raw.githubusercontent.com/deezertidal/private/main/icons/piccollage.png
+#!homepage=https://yfamily.ml
+#!author=Marol62926
+# 原始来源: https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/piccollage.conf
+
+[Script]
+SM-038-08 = type=http-response,pattern=https://piccollage.com/api/graphql,requires-body=true,script-path=https://raw.githubusercontent.com/Marol62926/MarScrpt/main/picCollage.js
+
+[MITM]
+hostname = %APPEND% piccollage.com

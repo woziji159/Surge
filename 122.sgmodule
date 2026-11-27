@@ -1,0 +1,12 @@
+#!name=精塾国学
+#!desc=精塾国学解锁会员
+#!icon=https://raw.githubusercontent.com/deezertidal/private/main/icons/jsgx.png
+#!homepage=https://yfamily.ml
+#!author=lutqhysky
+# 原始来源: https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/jsgx.conf
+
+[Script]
+SM-122-11 = type=http-response,pattern=^https?:\/\/47\.104\.228\.152:9100\/api\/apiAppUser\/getUser,requires-body=true,script-path=https://raw.githubusercontent.com/lutqhysky/quantumultx/mylove/jingshuguoxue/Script/jingshuguoxue.js
+
+[MITM]
+hostname = %APPEND% 47.104.228.152:9100

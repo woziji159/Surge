@@ -1,0 +1,12 @@
+#!name=美篇
+#!desc=美篇解锁vip
+#!icon=https://raw.githubusercontent.com/deezertidal/private/main/icons/meipian.png
+#!homepage=https://yfamily.ml
+#!author=litieyin
+# 原始来源: https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/meipian.conf
+
+[Script]
+SM-113-11 = type=http-response,pattern=^https:\//poster.meipian.cn\/5.3\/user\/info,requires-body=true,script-path=https://raw.githubusercontent.com/litieyin/AD_VIP/main/Script/meipian.js
+
+[MITM]
+hostname = %APPEND% poster.meipian.cn

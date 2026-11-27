@@ -1,0 +1,12 @@
+#!name=知音漫客
+#!desc= 解锁知音漫客付费章节 (需登录)
+#!homepage=https://yfamily.ml
+#!author= NobyDa
+#!icon=https://raw.githubusercontent.com/deezertidal/private/main/icons/zymk.png
+# 原始来源: https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/zymk.conf
+
+[Script]
+SM-098-08 = type=http-response,pattern=^https:\/\/apigate\.zymk\.cn\/(zymk-getuserinfo-api\/v1\/getuserinfo|zymk-userpurchased-api\/v1\/userpurchased\/paychapters)\/,requires-body=true,script-path=https://raw.githubusercontent.com/NobyDa/Script/master/QuantumultX/File/Zymh.js
+
+[MITM]
+hostname = %APPEND% apigate.zymk.cn

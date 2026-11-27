@@ -1,0 +1,12 @@
+#!name=石墨文档
+#!desc=石墨文档解锁
+#!icon=https://raw.githubusercontent.com/deezertidal/private/main/icons/smwd.png
+#!homepage=https://yfamily.ml
+#!author=litieyin
+# 原始来源: https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/smwd.conf
+
+[Script]
+SM-112-11 = type=http-response,pattern=^https:\//shimo.im\/lizard-api\/users\/me,requires-body=true,script-path=https://raw.githubusercontent.com/litieyin/AD_VIP/main/Script/shimo.js
+
+[MITM]
+hostname = %APPEND% shimo.im

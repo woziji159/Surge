@@ -1,0 +1,12 @@
+#!name=网易蜗牛读书
+#!desc=网易蜗牛读书解锁会员
+#!icon=https://raw.githubusercontent.com/deezertidal/private/main/icons/wnds.png
+#!homepage=https://yfamily.ml
+#!author=yxiaocai & JO2EY
+# 原始来源: https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/wnds.conf
+
+[Script]
+SM-091-12 = type=http-response,pattern=^https?:\/\/p\.du\.163\.com\/gain\/readtime\/info\.json,requires-body=true,script-path=https://raw.githubusercontent.com/deezertidal/private/main/wnds.js
+
+[MITM]
+hostname = %APPEND% p.du.163.com

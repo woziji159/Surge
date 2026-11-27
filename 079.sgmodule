@@ -1,0 +1,12 @@
+#!name=My Plate
+#!desc=My Plate解锁会员
+#!homepage=https://yfamily.ml
+#!author=Marol62926
+#!icon=https://raw.githubusercontent.com/deezertidal/private/main/icons/myplate.png
+# 原始来源: https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/myplate.conf
+
+[Script]
+SM-079-07 = type=http-response,pattern=https://www.livestrong.com/service/user/profile/*,requires-body=true,script-path=https://raw.githubusercontent.com/Marol62926/MarScrpt/main/myPlate.js
+
+[MITM]
+hostname = %APPEND% www.livestrong.com
