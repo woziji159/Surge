@@ -1,0 +1,186 @@
+name: K4 Surge 自动同步
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 19 * * *' # 北京时间每天 03:17
+
+permissions:
+  contents: write
+
+concurrency:
+  group: k4-surge-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    if: github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: 下载、过滤和校验
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/sync_k4.py" <<'PYTHON'
+          #!/usr/bin/env python3
+          """Fetch upstream Surge module and produce a locally filtered compatibility module."""
+          import argparse
+          from collections import Counter
+          from pathlib import Path
+          import re
+          import subprocess
+          import sys
+          
+          URL = 'https://raw.githubusercontent.com/K4Z3X0R/NguyenNgocAnhTu/master/Module/NguyenNgocAnhTu_Surge.sgmodule'
+          YOUTUBE = re.compile(r'youtube|googlevideo|(?:^|\W)yt-(?:req|res)\b', re.I)
+          SECTION = re.compile(r'^\s*\[([^]]+)\]\s*$')
+          # Keep only narrowly scoped transport rules and Spotify-specific ad rejects.
+          APP_QUIC_HOSTS = {'firebaseremoteconfig.googleapis.com', 'api.locketcamera.com', 'locketcamera.com',
+                            'us-central1-locket-4252a.cloudfunctions.net', 'api.revenuecat.com',
+                            'api.rc-backup.com', 'buy.itunes.apple.com', 'sub.store', 'spotify'}
+          
+          def spotify_ad_reject(line):
+              fields = [x.strip().lower() for x in line.split(',')]
+              if len(fields) != 3 or fields[-1] not in {'reject', 'reject-drop', 'reject-tinygif'}:
+                  return False
+              if fields[0] not in {'domain', 'domain-suffix', 'domain-keyword'}:
+                  return False
+              h = fields[1]
+              return h in {'spotify-ads', 'audio-fa.scdn.co', 'creativeservice-production.scdn.co',
+                           'audio-sp-sto.pscdn.co', 'audio-sp-ash.pscdn.co', 'audio-sp-dca.pscdn.co', 'audio-sp-lon.pscdn.co'} or (h.endswith('.spotify.com') and any(s in h for s in ('ads', 'analytics', 'adeventtracker', 'log.')))
+          
+          def app_quic(line):
+              compact = re.sub(r'\s+', '', line).lower()
+              m = re.fullmatch(r'and,\(\(domain(?:-suffix|-keyword)?,([^,()]+)\),\(protocol,udp\)\),reject', compact)
+              return bool(m and m[1] in APP_QUIC_HOSTS)
+          
+          def filter_module(raw):
+              if not re.search(r'^#!name=.*Anh T', raw, re.M) or '[Script]' not in raw or '[MITM]' not in raw:
+                  raise ValueError('上游文件标识或结构不符，停止生成，避免覆盖。')
+              sections = {}; headers = []; section = None; removed = Counter(); kept = Counter(); seen = set(); names = Counter()
+              original_scripts = 0
+              for line in raw.splitlines():
+                  s = line.strip(); m = SECTION.fullmatch(s)
+                  if m:
+                      section = m[1]
+                      if section not in {'General','Rule','Script','URL Rewrite','Map Local','Header Rewrite','Body Rewrite','Panel','MITM'}:
+                          raise ValueError(f'未知段 [{section}]，停止同步。')
+                      if section in seen: raise ValueError(f'重复段 [{section}]，停止同步。')
+                      seen.add(section); sections.setdefault(section, []); continue
+                  if not s or s.startswith(('#',';','//')):
+                      if section is None and s.startswith('#!'):
+                          if s.startswith(('#!version=', '#!date=', '#!author=', '#!homepage=', '#!icon=')):
+                              headers.append(line)
+                      continue
+                  if section is None:
+                      raise ValueError('模块头出现无法识别的内容。')
+                  if section == 'Script':
+                      original_scripts += 1
+                  if section == 'General':
+                      if not re.match(r'^force-http-engine-hosts\s*=', s, re.I):
+                          removed['General'] += 1; continue
+                      if '=' not in line: raise ValueError('force-http-engine-hosts 格式异常')
+                      key, val = line.split('=',1)
+                      # Prevent upstream from replacing the user's existing list.
+                      items = [x.strip() for x in val.replace('%APPEND%','').split(',') if x.strip() and not YOUTUBE.search(x)]
+                      if not items: continue
+                      line = key.strip()+' = %APPEND% '+', '.join(dict.fromkeys(items))
+                  elif section == 'Rule':
+                      if YOUTUBE.search(s) or not (app_quic(s) or spotify_ad_reject(s)):
+                          removed['Rule'] += 1; continue
+                  elif section in {'Script','URL Rewrite','Map Local','Header Rewrite','Body Rewrite','Panel'}:
+                      if YOUTUBE.search(s):
+                          removed[section] += 1; continue
+                      if section == 'Script':
+                          if '=' not in line or not re.search(r'(?:^|,)\s*script-path=https://[^,\s]+', line):
+                              raise ValueError('上游脚本格式变化，停止生成。')
+                          key, val = line.split('=',1); name=key.strip(); names[name] += 1
+                          if names[name] > 1:
+                              line = f'{name}-K4-{names[name]} = {val.strip()}'; removed['重复脚本名称已重命名'] += 1
+                  elif section == 'MITM':
+                      if not re.match(r'^hostname\s*=', s, re.I):
+                          removed['MITM 全局设置'] += 1; continue
+                      if '=' not in line: raise ValueError('MITM hostname 格式异常')
+                      key,val=line.split('=',1); items=[]
+                      for host in val.replace('%APPEND%','').split(','):
+                          host=host.strip()
+                          if not host: continue
+                          if YOUTUBE.search(host): removed['MITM YouTube 域名'] += 1
+                          else: items.append(host)
+                      if not items: raise ValueError('MITM 域名为空，停止同步。')
+                      line='hostname = %APPEND% '+', '.join(dict.fromkeys(items))
+                  else:
+                      raise ValueError(f'上游出现未审查的新段 [{section}]，停止生成，请先检查。')
+                  sections[section].append(line); kept[section] += 1
+              if len(sections.get('Script', [])) < 20 or not sections.get('MITM') or removed['Script'] < 2:
+                  raise ValueError('没有找到预期的 YouTube 脚本或其他必要规则，停止生成。')
+              if original_scripts != kept['Script'] + removed['Script']:
+                  raise ValueError('脚本数量不一致。')
+              out = ['#!name=Anh Tu - Surge 精简兼容版', '#!desc=保留非 YouTube 应用规则与远程脚本；移除全局分流，避免覆盖主配置。', *headers,
+                     '# Derived from '+URL, '# Local filter: YouTube and global routing removed; scoped app transport rules retained.']
+              for name, lines in sections.items():
+                  if lines: out += ['', '['+name+']', *lines]
+              result='\n'.join(out)+'\n'
+              if any(YOUTUBE.search(l) for n,lines in sections.items() for l in lines):
+                  raise ValueError('仍有 YouTube 内容，停止生成。')
+              if any(not (app_quic(l) or spotify_ad_reject(l)) for l in sections.get('Rule',[])):
+                  raise ValueError('仍有未允许的分流规则，停止生成。')
+              return result, kept, removed
+          
+          def main():
+              p=argparse.ArgumentParser(description=__doc__)
+              p.add_argument('--source',type=Path,help='可选：已下载的作者原始 sgmodule')
+              p.add_argument('--output',type=Path,default=Path.home()/'Downloads'/'K4_精简兼容版.sgmodule')
+              a=p.parse_args()
+              try:
+                  raw=a.source.read_text(encoding='utf-8-sig') if a.source else subprocess.run(['curl','--fail','--location','--silent','--show-error','--max-time','90',URL],check=True,capture_output=True).stdout.decode('utf-8-sig')
+                  result, kept, removed=filter_module(raw)
+                  a.output.parent.mkdir(parents=True,exist_ok=True)
+                  tmp=a.output.with_suffix('.tmp'); tmp.write_text(result,encoding='utf-8'); tmp.replace(a.output)
+                  print('生成成功:',a.output)
+                  print('保留规则:',dict(kept)); print('移除/调整:',dict(removed))
+                  print('请关闭原版 K4 模块后，再安装此文件。原配置保持不变。')
+              except (OSError,ValueError,subprocess.CalledProcessError) as e:
+                  print('生成失败:',e,file=sys.stderr); return 1
+              return 0
+          
+          if __name__=='__main__':
+              raise SystemExit(main())
+          PYTHON
+          python3 "$RUNNER_TEMP/sync_k4.py" --output "$RUNNER_TEMP/K4_Compatible.sgmodule"
+          # 防止一次上游异常更新导致模块大幅缩水。
+          python3 - <<'CHECK'
+          from pathlib import Path
+          import os
+          def count(p):
+              section = ''
+              n = 0
+              for line in p.read_text(encoding='utf-8').splitlines():
+                  if line.startswith('[') and line.endswith(']'):
+                      section = line
+                  elif section == '[Script]' and line.strip() and not line.lstrip().startswith('#'):
+                      n += 1
+              return n
+          old = Path('K4_Compatible.sgmodule')
+          new = Path(os.environ['RUNNER_TEMP']) / old.name
+          if old.exists() and count(new) < count(old) * 0.8:
+              raise SystemExit('脚本数量下降超过 20%，需人工检查；旧模块保留。')
+          print('Script count:', count(new))
+          CHECK
+          cp "$RUNNER_TEMP/K4_Compatible.sgmodule" K4_Compatible.sgmodule
+      - name: 有变化时提交
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add -- K4_Compatible.sgmodule
+          if git diff --cached --quiet; then
+            echo '上游模块无变化，无需提交。'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Sync K4 Surge compatible module'
+          git push
