@@ -1,0 +1,8 @@
+#!name=Reddit增强
+# 原始来源: https://raw.githubusercontent.com/ddgksf2013/Rewrite/master/AdBlock/RedditAds.conf
+
+[Script]
+SM-247-20 = type=http-response,pattern=^https?:\/\/gql-fed\.reddit\.com\/$,requires-body=true,script-path=https://raw.githubusercontent.com/ddgksf2013/Scripts/refs/heads/master/reddit.js
+
+[MITM]
+hostname = %APPEND% gql-fed.reddit.com

@@ -1,0 +1,20 @@
+#!name=Emby增强[墨鱼整理版]
+#!author=renzhipengBot / AppleArcade / ddgksf2013
+#!desc=Surge格式候选，未实机验证
+# 原始来源: https://raw.githubusercontent.com/ddgksf2013/Rewrite/master/Function/EmbyPlugin.conf
+# 实验性：仅原始列出的服务域名；自定义服务器需同步修改MITM和匹配前缀；外部播放器跳转需实测。
+
+[URL Rewrite]
+^https?://(?:[^/]+\.)?(?:emby\.wtf|plusmedia\.site)(?::\d+)?/plugin/scheme/((?:infuse:|nplayer-|vlc-x-callback:|iina:|movistpro:|shu:).+)$ $1 302
+
+[Header Rewrite]
+http-request ^https?://(?:[^/]+\.)?(?:emby\.wtf|plusmedia\.site)(?::\d+)?/Users/\w{32}/Items/\d+\? header-replace Accept-Encoding "gzip, deflate, br"
+
+[Script]
+SM-248-01 = type=http-response,pattern=^https?://mb3admin\.com/admin/service/registration/validateDevice,requires-body=true,script-path=https://raw.githubusercontent.com/rartv/EmbyPublic/test/quantumult-x/unlock.js
+SM-248-02 = type=http-response,pattern=^https?://(?:[^/]+\.)?(?:emby\.wtf|plusmedia\.site)(?::\d+)?/[Uu]sers/\w{32}/[Ii]tems/\d+\??,requires-body=true,script-path=https://raw.githubusercontent.com/rartv/EmbyPublic/refs/heads/test/surge/emby-plugin.js
+SM-248-03 = type=http-request,pattern=^https?://(?:[^/]+\.)?(?:emby\.wtf|plusmedia\.site)(?::\d+)?/(?:[Vv]ideos/\d+/stream/.+\?.+&filename|[Vv]ideos/\d+/\w{32}/[Ss]ubtitles/\d+/.+\?.+&filename),requires-body=false,script-path=https://raw.githubusercontent.com/rartv/EmbyPublic/refs/heads/test/surge/emby-plugin.js
+SM-248-04 = type=http-response,pattern=^https?://(?:[^/]+\.)?(?:emby\.wtf|plusmedia\.site)(?::\d+)?/(?:[Vv]ideos/\d+/stream\?.+&filename|[Vv]ideos/\d+/\w{32}/[Ss]ubtitles/.+&filename),requires-body=false,script-path=https://raw.githubusercontent.com/rartv/EmbyPublic/refs/heads/test/surge/download_file_rename.js
+
+[MITM]
+hostname = %APPEND% mb3admin.com, *.emby.wtf, *.plusmedia.site

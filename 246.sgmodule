@@ -1,0 +1,29 @@
+#!name=Keep应用净化
+#!author=ddgksf2013
+#!desc=Surge格式候选，未实机验证
+# 原始来源: https://raw.githubusercontent.com/ddgksf2013/Rewrite/master/AdBlock/KeepAds.conf
+# 修正原规则中未转义域名点号。
+
+[Map Local]
+^https?://api\.gotokeep\.com/guide-webapp/v\d/popup/getPopUp data-type=text data="" status-code=200
+^https?://api\.gotokeep\.com/running/v\d/home/dialog data-type=text data="" status-code=200
+^https?://api\.gotokeep\.com/kprime/v\d/popups/primeGuide data-type=text data="" status-code=200
+^https?://api\.gotokeep\.com/cauchy/growth/init data-type=text data="" status-code=200
+^https?://api\.gotokeep\.com/search/v\d/default/keyword/list data-type=text data="" status-code=200
+^https?://api\.gotokeep\.com/search/v\d/hotword/list data-type=text data="" status-code=200
+^https?://api\.gotokeep\.com/search/v\d/hotHashtag/list data-type=text data="" status-code=200
+^https?://api\.gotokeep\.com/search/v\d/hotCourse/list data-type=text data="" status-code=200
+^https?://api\.gotokeep\.com/op-engine-webapp/v\d/ad data-type=text data="" status-code=200
+^https?://api\.gotokeep\.com/ads/v\d/ads/preload data-type=text data="" status-code=200
+^https?://api\.gotokeep\.com/training/box/config data-type=text data="" status-code=200
+^https?://api\.gotokeep\.com/anno/v\d/upgrade/check data-type=text data="" status-code=200
+^https?://hc-ssp\.sm\.cn data-type=text data="" status-code=200
+^https?://kad\.gotokeep\.com/op-engine-webapp/v\d/ad data-type=text data="" status-code=200
+
+[Script]
+SM-246-01 = type=http-response,pattern=^https?://api\.gotokeep\.com/athena/v\d/people/my$,requires-body=true,script-path=https://raw.githubusercontent.com/ddgksf2013/Scripts/refs/heads/master/keepStyle.js
+SM-246-02 = type=http-response,pattern=^https?://api\.gotokeep\.com/config/v\d/basic,requires-body=true,script-path=https://raw.githubusercontent.com/ddgksf2013/Scripts/refs/heads/master/keepStyle.js
+SM-246-03 = type=http-response,pattern=^https?://api\.gotokeep\.com/twins/v4/feed/course,requires-body=true,script-path=https://raw.githubusercontent.com/ddgksf2013/Scripts/refs/heads/master/keepStyle.js
+
+[MITM]
+hostname = %APPEND% hc-ssp.sm.cn, api.gotokeep.com, 42.187.199.248, kad.gotokeep.com

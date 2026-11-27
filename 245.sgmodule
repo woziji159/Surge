@@ -1,0 +1,24 @@
+#!name=彩云天气净化
+#!author=ddgksf2013
+#!desc=Surge格式候选，未实机验证
+# 原始来源: https://raw.githubusercontent.com/ddgksf2013/Rewrite/master/AdBlock/CaiYunAds.conf
+# 沿用原始MITM范围；biz.cyapi.cn未主动加入。
+
+[Map Local]
+^https?://ad\.cyapi\.cn/v\d data-type=text data="" status-code=200
+
+[Script]
+SM-245-01 = type=http-response,pattern=^https?://biz\.cyapi\.cn/api/v\d/user_detail,requires-body=true,script-path=https://raw.githubusercontent.com/ddgksf2013/Scripts/refs/heads/master/caiyun_json.js
+SM-245-02 = type=http-response,pattern=^https?://biz\.cyapi\.cn/v\d/user,requires-body=true,script-path=https://raw.githubusercontent.com/ddgksf2013/Scripts/refs/heads/master/caiyun_json.js
+SM-245-03 = type=http-response,pattern=^https?://wrapper\.cyapi\.cn/v\d/activity,requires-body=true,script-path=https://raw.githubusercontent.com/ddgksf2013/Scripts/refs/heads/master/caiyun_json.js
+SM-245-04 = type=http-response,pattern=^https?://api\.caiyunapp\.com/v\d/activity,requires-body=true,script-path=https://raw.githubusercontent.com/ddgksf2013/Scripts/refs/heads/master/caiyun_json.js
+SM-245-05 = type=http-response,pattern=^https?://starplucker\.cyapi\.cn/v\d/operation/homefeatures,requires-body=true,script-path=https://raw.githubusercontent.com/ddgksf2013/Scripts/refs/heads/master/caiyun_json.js
+SM-245-06 = type=http-response,pattern=^https?://starplucker\.cyapi\.cn/v\d/notification/message_center,requires-body=true,script-path=https://raw.githubusercontent.com/ddgksf2013/Scripts/refs/heads/master/caiyun_json.js
+SM-245-07 = type=http-response,pattern=^https?://starplucker\.cyapi\.cn/v\d/config/cypage,requires-body=true,script-path=https://raw.githubusercontent.com/ddgksf2013/Scripts/refs/heads/master/caiyun_json.js
+SM-245-08 = type=http-response,pattern=^https?://starplucker\.cyapi\.cn/v\d/operation/feeds,requires-body=true,script-path=https://raw.githubusercontent.com/ddgksf2013/Scripts/refs/heads/master/caiyun_json.js
+SM-245-09 = type=http-response,pattern=^https?://starplucker\.cyapi\.cn/v\d/operation/banners,requires-body=true,script-path=https://raw.githubusercontent.com/ddgksf2013/Scripts/refs/heads/master/caiyun_json.js
+SM-245-10 = type=http-response,pattern=^https?://starplucker\.cyapi\.cn/v\d/operation/features,requires-body=true,script-path=https://raw.githubusercontent.com/ddgksf2013/Scripts/refs/heads/master/caiyun_json.js
+SM-245-11 = type=http-response,pattern=^https?://starplucker\.cyapi\.cn/v\d/campaigns,requires-body=true,script-path=https://raw.githubusercontent.com/ddgksf2013/Scripts/refs/heads/master/caiyun_json.js
+
+[MITM]
+hostname = %APPEND% wrapper.cyapi.cn, api.caiyunapp.com, starplucker.cyapi.cn, ad.cyapi.cn
