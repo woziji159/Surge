@@ -1,0 +1,13 @@
+#!name=WPS稻壳会员
+#!desc=稻壳会员解锁
+#!homepage=https://yfamily.ml
+#!author= yqc007
+#!icon=https://raw.githubusercontent.com/deezertidal/private/main/icons/doc.png
+# 原始来源: https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/doc.conf
+
+[Script]
+SM-145-09 = type=http-response,pattern=^https?:\/\/account\.wps\.cn\/api\/v3\/mine\/vips,requires-body=true,script-path=https://raw.githubusercontent.com/yqc007/QuantumultX/master/WPSDocerVIPuserCrack.js
+SM-145-10 = type=http-request,pattern=^https?:\/\/.+\.(docer.)?wps.cn\/(user\/v1\/vip|android\/mb\/buy|download\/v1\/ios|partner\/invoke\/usable|(api|rank)\/v1(\/mobile\/mb)?\/detail),requires-body=false,script-path=https://raw.githubusercontent.com/yqc007/QuantumultX/master/WPSDocerVIPowerCrack.js
+
+[MITM]
+hostname = %APPEND% *.docer.wps.cn, vipapi.wps.cn, account.wps.cn

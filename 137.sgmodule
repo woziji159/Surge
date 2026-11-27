@@ -1,0 +1,12 @@
+#!name=微信听书
+#!desc=微信听书解锁
+#!homepage=https://yfamily.ml
+#!author=
+#!icon=https://raw.githubusercontent.com/deezertidal/private/main/icons/wxts.png
+# 原始来源: https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/wxts.conf
+
+[Script]
+SM-137-08 = type=http-response,pattern=^https:\/\/i\.at\.qq\.com\/pay\/memberinfo,requires-body=true,script-path=https://raw.githubusercontent.com/sngxmini/crack/master/wxts/wxts.js
+
+[MITM]
+hostname = %APPEND% i.at.qq.com

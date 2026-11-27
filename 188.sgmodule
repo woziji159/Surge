@@ -1,0 +1,12 @@
+#!name=色采
+#!desc=色采解锁会员
+#!homepage=https://yfamily.ml
+#!author= 89996462
+#!icon=https://raw.githubusercontent.com/deezertidal/private/main/icons/sc.png
+# 原始来源: https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/sc.conf
+
+[Script]
+SM-188-11 = type=http-response,pattern=^https:\/\/buy\.itunes\.apple\.com\/verifyReceipt,requires-body=true,script-path=https://raw.githubusercontent.com/89996462/Quantumult-X/main/ycdz/sc.js
+
+[MITM]
+hostname = %APPEND% buy.itunes.apple.com

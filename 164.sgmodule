@@ -1,0 +1,11 @@
+#!name=Ego Reader
+#!desc=Ego Reader解锁会员
+#!homepage=https://yfamily.ml
+#!icon=https://raw.githubusercontent.com/deezertidal/private/main/icons/ego.png
+# 原始来源: https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/ego.conf
+
+[Script]
+SM-164-07 = type=http-response,pattern=^https?:\/\/api\.pxmage\.com\/egoreader\/user\/info,requires-body=true,script-path=https://raw.githubusercontent.com/deezertidal/private/main/ego.js
+
+[MITM]
+hostname = %APPEND% api.pxmage.com

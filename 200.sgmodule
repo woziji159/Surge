@@ -1,0 +1,12 @@
+#!name=Todo清单
+#!desc=Todo清单解锁会员
+#!homepage=https://yfamily.ml
+#!author=89996462
+#!icon=https://raw.githubusercontent.com/deezertidal/private/main/icons/todo.png
+# 原始来源: https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/todo.conf
+
+[Script]
+SM-200-08 = type=http-response,pattern=^https:\/\/www\.evestudio\.cn\/todoList\/getDetailUser,requires-body=true,script-path=https://raw.githubusercontent.com/89996462/Quantumult-X/main/ycdz/Todo.js
+
+[MITM]
+hostname = %APPEND% www.evestudio.cn

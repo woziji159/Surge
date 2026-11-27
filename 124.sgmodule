@@ -1,0 +1,12 @@
+#!name=Cubox
+#!desc=Cubox解锁
+#!icon=https://raw.githubusercontent.com/deezertidal/private/main/icons/cubox.png
+#!homepage=https://yfamily.ml
+#!author=89996462
+# 原始来源: https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/cubox.conf
+
+[Script]
+SM-124-08 = type=http-response,pattern=^https:\/\/cubox\.pro\/c\/api\/userInfo,requires-body=true,script-path=https://raw.githubusercontent.com/89996462/Quantumult-X/main/ycdz/cubox.js
+
+[MITM]
+hostname = %APPEND% cubox.pro

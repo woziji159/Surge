@@ -1,0 +1,12 @@
+#!name=proKnockout
+#!desc=proKnockout解锁会员
+#!icon=https://raw.githubusercontent.com/deezertidal/private/main/icons/proknockout.png
+#!homepage=https://yfamily.ml
+#!author=lutqhysky
+# 原始来源: https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/proknockout.conf
+
+[Script]
+SM-134-11 = type=http-response,pattern=https://buy.itunes.apple.com/verifyReceipt,requires-body=true,script-path=https://raw.githubusercontent.com/deezertidal/shadowrocket-rules/main/js/proKnockout.js
+
+[MITM]
+hostname = %APPEND% buy.itunes.apple.com

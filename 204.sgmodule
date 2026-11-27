@@ -1,0 +1,12 @@
+#!name=傲软PDF编辑
+#!desc=傲软PDF编辑解锁会员
+#!homepage=https://yfamily.ml
+#!author=89996462
+#!icon=https://raw.githubusercontent.com/deezertidal/private/main/icons/arpdfbj.png
+# 原始来源: https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/arpdfbj.conf
+
+[Script]
+SM-204-08 = type=http-response,pattern=^https:\/\/gw\.aoscdn\.com\/base\/vip\/client\/authorizations,requires-body=true,script-path=https://raw.githubusercontent.com/89996462/Quantumult-X/main/ycdz/arpdf.js
+
+[MITM]
+hostname = %APPEND% gw.aoscdn.com

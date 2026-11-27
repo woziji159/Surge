@@ -1,0 +1,13 @@
+#!name=简讯
+#!author=89996462
+#!desc=Surge格式候选，未实机验证
+# 原始来源: https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/jianxun.conf
+
+[Map Local]
+^https?://api\.tipsoon\.com/api/v1/top/ad data-type=tiny-gif status-code=200
+
+[Script]
+SM-221-01 = type=http-response,pattern=^https://api\.tipsoon\.com/api/v1/user/info,requires-body=true,script-path=https://raw.githubusercontent.com/89996462/Quantumult-X/main/ycdz/JX.js
+
+[MITM]
+hostname = %APPEND% api.tipsoon.com

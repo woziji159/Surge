@@ -1,0 +1,12 @@
+#!name=阿布睡前故事
+#!desc=阿布睡前故事解锁会员
+#!homepage=https://yfamily.ml
+#!author= 89996462
+#!icon=https://raw.githubusercontent.com/deezertidal/private/main/icons/absqgs.png
+# 原始来源: https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/absqgs.conf
+
+[Script]
+SM-147-09 = type=http-response,pattern=http:\/\/tutugushiapi\.tutuerge\.com,requires-body=true,script-path=https://raw.githubusercontent.com/89996462/Quantumult-X/main/ycdz/abushuiqiangushi.js
+
+[MITM]
+hostname = %APPEND% tutugushiapi.tutuerge.com

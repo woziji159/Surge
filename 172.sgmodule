@@ -1,0 +1,12 @@
+#!name=谜底时钟
+#!desc=谜底时钟解锁会员
+#!homepage=https://yfamily.ml
+#!author= lutqhysky
+#!icon=https://raw.githubusercontent.com/deezertidal/private/main/icons/mdsz.png
+# 原始来源: https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/mdsz.conf
+
+[Script]
+SM-172-09 = type=http-response,pattern=^https?:\/\/api\.revenuecat\.com\/v1\/(receipts|subscribers\/\$RCAnonymousID%3A\w{32})$,requires-body=true,script-path=https://raw.githubusercontent.com/89996462/Quantumult-X/main/ycdz/mdsz.js
+
+[MITM]
+hostname = %APPEND% api.revenuecat.com

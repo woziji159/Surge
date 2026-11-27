@@ -1,0 +1,12 @@
+#!name=黄油相机
+#!desc=黄油相机解锁会员
+#!homepage=https://yfamily.ml
+#!author= 89996462
+#!icon=https://raw.githubusercontent.com/deezertidal/private/main/icons/hyxj.png
+# 原始来源: https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/hyxj.conf
+
+[Script]
+SM-157-11 = type=http-response,pattern=https:\/\/api4\.bybutter\.com\/v4\/*,requires-body=true,script-path=https://raw.githubusercontent.com/89996462/Quantumult-X/main/ycdz/hy.js
+
+[MITM]
+hostname = %APPEND% api4.bybutter.com

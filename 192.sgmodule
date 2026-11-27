@@ -1,0 +1,12 @@
+#!name=一木记账
+#!desc=一木记账解锁会员
+#!homepage=https://yfamily.ml
+#!author= I-am-R-E
+#!icon=https://raw.githubusercontent.com/deezertidal/private/main/icons/ymjz.png
+# 原始来源: https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/ymjz.conf
+
+[Script]
+SM-192-09 = type=http-response,pattern=^https?:\/\/yimuapp\.com(:8082)?\/bookkeeping\/user\/getUser\/,requires-body=true,script-path=https://raw.githubusercontent.com/I-am-R-E/QuantumultX/main/JavaScript/YiMuJiZhang.js
+
+[MITM]
+hostname = %APPEND% yimuapp.com

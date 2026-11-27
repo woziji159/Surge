@@ -1,0 +1,12 @@
+#!name=即刻运动
+#!desc=即刻运动解锁会员
+#!homepage=https://yfamily.ml
+#!author=89996462
+#!icon=https://raw.githubusercontent.com/deezertidal/private/main/icons/jkyd.png
+# 原始来源: https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/jkyd.conf
+
+[Script]
+SM-169-08 = type=http-response,pattern=http:\/\/ec\.myjkyd\.com\/ftec,requires-body=true,script-path=https://raw.githubusercontent.com/89996462/Quantumult-X/main/ycdz/jkyd.js
+
+[MITM]
+hostname = %APPEND% ec.myjkyd.com

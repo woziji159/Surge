@@ -1,0 +1,12 @@
+#!name=Pandora订阅管理
+#!desc=Pandora订阅管理会员
+#!author=89996462
+#!icon=https://raw.githubusercontent.com/deezertidal/private/main/icons/pandora.png
+#!homepage=https://yfamily.ml
+# 原始来源: https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/pandora.conf
+
+[Script]
+SM-125-08 = type=http-response,pattern=^https:\/\/buy\.itunes\.apple\.com\/verifyReceipt,requires-body=true,script-path=https://raw.githubusercontent.com/89996462/Quantumult-X/main/ycdz/Pandora.js
+
+[MITM]
+hostname = %APPEND% buy.itunes.apple.com

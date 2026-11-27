@@ -1,0 +1,12 @@
+#!name=Drafts
+#!desc=Drafts解锁会员
+#!homepage=https://yfamily.ml
+#!author=89996462
+#!icon=https://raw.githubusercontent.com/deezertidal/private/main/icons/drafts.png
+# 原始来源: https://raw.githubusercontent.com/deezertidal/QuantumultX-Rewrite/master/rewrite/drafts.conf
+
+[Script]
+SM-193-08 = type=http-response,pattern=^https:\/\/backend\.getdrafts\.com\/api\/v1\/verification\/verify_receipt,requires-body=true,script-path=https://raw.githubusercontent.com/89996462/Quantumult-X/main/ycdz/Drafts.js
+
+[MITM]
+hostname = %APPEND% backend.getdrafts.com
