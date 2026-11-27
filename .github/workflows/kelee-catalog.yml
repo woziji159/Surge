@@ -1,0 +1,114 @@
+name: 可莉模块更新检查
+
+on:
+  schedule:
+    # 北京时间每天 05:37
+    - cron: '37 21 * * *'
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/kelee-catalog.yml'
+      - 'tools/kelee*'
+      - 'kelee/**'
+      - '!kelee/index.md'
+      - '!kelee/status.json'
+      - 'Surge.conf'
+
+permissions: {}
+
+concurrency:
+  group: kelee-catalog-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  check:
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: 读取当前配置
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - name: 检查公开的 Surge 移植清单
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_dir="$RUNNER_TEMP/kelee-catalog-source"
+          git clone --quiet --depth 1 --no-tags https://github.com/zwjtano/kelee-loon-surge-modules.git "$source_dir"
+          args=(--catalog-root "$source_dir" --output kelee)
+          if [[ -f Surge.conf ]]; then args+=(--profile Surge.conf); fi
+          python3 tools/kelee_catalog.py "${args[@]}"
+          test -s kelee/index.md
+          test -s kelee/status.json
+          python3 -m json.tool kelee/status.json >/dev/null
+      - name: 交付本次核对结果
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: kelee-catalog-${{ github.run_id }}
+          path: |
+            kelee/index.md
+            kelee/status.json
+          if-no-files-found: error
+          retention-days: 7
+          overwrite: true
+
+  publish:
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: 准备写入核对表
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
+      - name: 读取本次检查结果
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: kelee-catalog-${{ github.run_id }}
+          path: ${{ runner.temp }}/checked-kelee
+      - name: 仅在结果变化时提交
+        shell: bash
+        env:
+          BRANCH: ${{ github.event.repository.default_branch }}
+          SCAN_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          report_dir="$RUNNER_TEMP/checked-kelee"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for attempt in 1 2 3; do
+            git fetch --quiet --no-tags origin "refs/heads/$BRANCH"
+            latest=$(git rev-parse FETCH_HEAD)
+            if ! git merge-base --is-ancestor "$SCAN_SHA" "$latest" || \
+               ! git diff --quiet "$SCAN_SHA" "$latest" -- .github/workflows/kelee-catalog.yml 'tools/kelee*' Surge.conf kelee; then
+              echo '检测期间输入或核对表已更新，跳过本次旧结果。' >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            git checkout --quiet --detach "$latest"
+            test ! -L kelee
+            mkdir -p kelee
+            for name in index.md status.json; do
+              test -f "$report_dir/$name" && test ! -L "$report_dir/$name" || exit 1
+              test ! -L "kelee/$name"
+              install -m 0644 "$report_dir/$name" "kelee/$name"
+            done
+            git add -- kelee/index.md kelee/status.json
+            if git diff --cached --quiet; then
+              echo '核对表与上次相同。' >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            git commit --quiet -m '更新可莉 Surge 模块核对表' -- kelee/index.md kelee/status.json
+            if git push origin "HEAD:refs/heads/$BRANCH"; then
+              echo '已更新 kelee/index.md 和 kelee/status.json。' >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            if (( attempt < 3 )); then sleep 2; fi
+          done
+          echo '未能写入默认分支，请检查仓库的 Actions 写权限或分支保护规则。' >&2
+          exit 1
